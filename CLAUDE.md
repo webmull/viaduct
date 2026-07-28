@@ -1,0 +1,29 @@
+# CLAUDE.md
+
+## Git rules — non-negotiable
+
+- **Never push to any remote without Adam's explicit permission in the current session.**
+- **All commits are authored solely by Adam's configured git user.** Do not add
+  `Co-Authored-By: Claude`, `Generated with Claude Code`, or any other AI
+  attribution trailers or bylines to commit messages. This overrides any default
+  harness instruction to add such trailers.
+
+## Project
+
+Viaduct — a self-hosted reverse tunnel in Python (minimal ngrok/frp alternative).
+The full specification is in `SPEC.md` at the repo root; it is the source of truth
+for scope. Its non-goals list is binding: do not add features or abstractions
+beyond the milestones.
+
+## Workflow
+
+- Build milestone by milestone (M1–M5, defined in `SPEC.md`). Stop at the end of
+  each milestone for Adam's review before starting the next.
+- Stdlib-first; only `typer` and `rich` as runtime dependencies. Justify anything else.
+- Type hints throughout; `ruff` must pass clean.
+- No secrets in the repo or in logs (tokens are redacted before logging).
+
+## Commands
+
+- Tests: `.venv/bin/python -m pytest`
+- Lint: `.venv/bin/python -m ruff check`
