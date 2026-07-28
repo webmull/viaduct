@@ -1,7 +1,9 @@
 """Viaduct server (`viaductd`): public listener, tunnel registry, idle pools.
 
-M1: single hardcoded token, no persistence, no TLS. Runtime state lives in a
-`dict[str, Tunnel]` and dies with the process — clients redial on restart.
+Auth: each subdomain has a persistent reservation (SQLite) storing the sha256
+of its token; hello/data_hello frames are checked against it. Runtime state
+lives in a `dict[str, Tunnel]` and dies with the process — clients redial on
+restart; a persisted binding to a dead socket would be worse than nothing.
 """
 
 from __future__ import annotations
@@ -10,12 +12,15 @@ import asyncio
 import contextlib
 import hmac
 import logging
+import secrets
+from pathlib import Path
 from typing import Annotated
 
 import typer
 
 from viaduct import protocol, routing
 from viaduct.relay import splice
+from viaduct.store import DEFAULT_DB_PATH, Store, SubdomainTaken, hash_token, valid_subdomain
 
 log = logging.getLogger("viaduct.server")
 
@@ -54,17 +59,17 @@ class TunnelServer:
     def __init__(
         self,
         *,
+        store: Store,
         bind: str = "127.0.0.1",
         public_port: int = 8080,
         tunnel_port: int = 4443,
         base_domain: str = "localhost",
-        token: str = "dev-token",
     ) -> None:
+        self.store = store
         self.bind = bind
         self.public_port = public_port
         self.tunnel_port = tunnel_port
         self.base_domain = base_domain
-        self.token = token
         self.tunnels: dict[str, Tunnel] = {}
         self._public_server: asyncio.Server | None = None
         self._tunnel_server: asyncio.Server | None = None
@@ -118,7 +123,12 @@ class TunnelServer:
         token = protocol.require_str(frame, "token")
         subdomain = protocol.require_str(frame, "subdomain")
         protocol.require_int(frame, "local_port")
-        if not self._token_ok(token):
+        reservation = self.store.get(subdomain)
+        if reservation is None:
+            log.warning("no reservation subdomain=%s", subdomain)
+            await self._reject(writer, "unknown_subdomain")
+            return
+        if not self._token_matches(token, reservation.token_hash):
             log.warning("bad token subdomain=%s", subdomain)
             await self._reject(writer, "bad_token")
             return
@@ -133,6 +143,7 @@ class TunnelServer:
         try:
             await protocol.write_frame(writer, protocol.ok(hostname))
             log.info("tunnel registered subdomain=%s hostname=%s", subdomain, hostname)
+            self.store.touch(subdomain)
             while True:
                 msg = await protocol.read_frame(reader)
                 if msg["type"] == "ping":
@@ -147,6 +158,7 @@ class TunnelServer:
                 del self.tunnels[subdomain]
             tunnel.close_pool()
             writer.close()
+            self.store.touch(subdomain)
             log.info("tunnel closed subdomain=%s", subdomain)
 
     def _handle_data(
@@ -155,7 +167,12 @@ class TunnelServer:
         token = protocol.require_str(frame, "token")
         subdomain = protocol.require_str(frame, "subdomain")
         tunnel = self.tunnels.get(subdomain)
-        if tunnel is None or not self._token_ok(token):
+        reservation = self.store.get(subdomain)
+        if (
+            tunnel is None
+            or reservation is None
+            or not self._token_matches(token, reservation.token_hash)
+        ):
             writer.close()
             return
         # The handler returns here; the pool keeps the streams alive until a
@@ -174,8 +191,9 @@ class TunnelServer:
             await protocol.write_frame(writer, protocol.error(reason))
         writer.close()
 
-    def _token_ok(self, token: str) -> bool:
-        return hmac.compare_digest(token.encode(), self.token.encode())
+    @staticmethod
+    def _token_matches(token: str, token_hash: str) -> bool:
+        return hmac.compare_digest(hash_token(token), token_hash)
 
     # -- public listener: plaintext HTTP from Caddy (or curl, pre-TLS) ---------
 
@@ -229,34 +247,60 @@ def _cli(
     public_port: Annotated[int, typer.Option(help="Port for public HTTP traffic")] = 8080,
     tunnel_port: Annotated[int, typer.Option(help="Port for client tunnel connections")] = 4443,
     base_domain: Annotated[str, typer.Option(help="Domain that subdomains hang off")] = "localhost",
-    token: Annotated[
-        str,
-        typer.Option(envvar="VIADUCT_TOKEN", help="Shared auth token (M1 placeholder)"),
-    ] = "dev-token",
+    db: Annotated[Path, typer.Option(help="SQLite database path")] = DEFAULT_DB_PATH,
 ) -> None:
-    """Run the tunnel server. M2 replaces the shared token with hashed per-user tokens."""
+    """Run the tunnel server."""
     if ctx.invoked_subcommand is not None:
         return
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
     with contextlib.suppress(KeyboardInterrupt):
-        asyncio.run(_serve(bind, public_port, tunnel_port, base_domain, token))
+        asyncio.run(_serve(bind, public_port, tunnel_port, base_domain, db))
 
 
-async def _serve(
-    bind: str, public_port: int, tunnel_port: int, base_domain: str, token: str
-) -> None:
+async def _serve(bind: str, public_port: int, tunnel_port: int, base_domain: str, db: Path) -> None:
+    store = Store(db)
     server = TunnelServer(
+        store=store,
         bind=bind,
         public_port=public_port,
         tunnel_port=tunnel_port,
         base_domain=base_domain,
-        token=token,
     )
     await server.start()
     try:
         await asyncio.Event().wait()
     finally:
         await server.stop()
+        store.close()
+
+
+token_app = typer.Typer(help="Manage subdomain reservations and their auth tokens.")
+app.add_typer(token_app, name="token")
+
+
+@token_app.command("create")
+def token_create(
+    subdomain: Annotated[str, typer.Option(help="Subdomain to reserve")],
+    db: Annotated[Path, typer.Option(help="SQLite database path")] = DEFAULT_DB_PATH,
+) -> None:
+    """Reserve a subdomain and print its auth token — shown once; only the sha256 is stored."""
+    if not valid_subdomain(subdomain):
+        raise typer.BadParameter("subdomain must be a lowercase DNS label (a-z, 0-9, hyphens)")
+    token = secrets.token_urlsafe(32)
+    store = Store(db)
+    try:
+        store.create_reservation(subdomain, hash_token(token))
+    except SubdomainTaken:
+        typer.echo(f"viaductd: subdomain {subdomain!r} is already reserved", err=True)
+        raise typer.Exit(1) from None
+    finally:
+        store.close()
+    typer.echo(token)
+    typer.echo(
+        f"viaductd: reserved {subdomain!r} — the token above is shown once; "
+        "put it in the client's ~/.config/viaduct/config.toml",
+        err=True,
+    )
 
 
 def main() -> None:

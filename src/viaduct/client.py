@@ -15,7 +15,7 @@ from typing import Annotated, Any
 import typer
 from rich.console import Console
 
-from viaduct import protocol
+from viaduct import config, protocol
 from viaduct.relay import CHUNK, splice
 from viaduct.routing import plain_response
 
@@ -167,17 +167,30 @@ def http(
     port: Annotated[int, typer.Argument(help="Local port to expose")],
     subdomain: Annotated[str, typer.Option(help="Subdomain to claim on the server")],
     server: Annotated[
-        str, typer.Option(help="Server tunnel address as host:port")
-    ] = "127.0.0.1:4443",
+        str | None, typer.Option(help="Server tunnel address as host:port (default: config.toml)")
+    ] = None,
     token: Annotated[
-        str, typer.Option(envvar="VIADUCT_TOKEN", help="Auth token (M1 placeholder)")
-    ] = "dev-token",
+        str | None, typer.Option(envvar="VIADUCT_TOKEN", help="Auth token (default: config.toml)")
+    ] = None,
     pool_size: Annotated[
         int, typer.Option(help="Idle data connections to maintain")
     ] = DEFAULT_POOL_SIZE,
 ) -> None:
     """Open a tunnel exposing local PORT. Blocks until the connection drops."""
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
+    try:
+        cfg = config.load()
+    except config.ConfigError as exc:
+        console.print(f"[bold red]viaduct: {exc}[/]")
+        raise typer.Exit(2) from exc
+    server = server or cfg.get("server") or "127.0.0.1:4443"
+    token = token or cfg.get("token")
+    if not token:
+        console.print(
+            "[bold red]viaduct: no token configured[/] — pass --token, set VIADUCT_TOKEN, "
+            f'or add token = "..." to {config.config_path()}'
+        )
+        raise typer.Exit(2)
     host, _, port_str = server.rpartition(":")
     if not host or not port_str.isdigit():
         raise typer.BadParameter("--server must be host:port")
