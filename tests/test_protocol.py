@@ -60,13 +60,13 @@ def test_trailing_raw_bytes_stay_in_reader() -> None:
 
     async def read_then_rest() -> tuple[protocol.Frame, bytes]:
         reader = asyncio.StreamReader()
-        reader.feed_data(protocol.encode_frame(protocol.ok("pmesh.viaduct.sh")) + raw)
+        reader.feed_data(protocol.encode_frame(protocol.ok(hostname="pmesh.viaduct.sh")) + raw)
         reader.feed_eof()
         frame = await protocol.read_frame(reader)
         return frame, await reader.read()
 
     frame, rest = run(read_then_rest())
-    assert frame == protocol.ok("pmesh.viaduct.sh")
+    assert frame == protocol.ok(hostname="pmesh.viaduct.sh")
     assert rest == raw
 
 

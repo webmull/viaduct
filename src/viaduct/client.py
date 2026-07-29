@@ -160,8 +160,49 @@ class TunnelClient:
             writer.close()
 
 
+async def domain_request(
+    server_host: str,
+    server_port: int,
+    ssl_ctx: ssl.SSLContext | None,
+    frame: protocol.Frame,
+) -> protocol.Frame:
+    """One-shot domain-management exchange: send a frame, return the ok reply."""
+    reader, writer = await asyncio.open_connection(server_host, server_port, ssl=ssl_ctx)
+    try:
+        await protocol.write_frame(writer, frame)
+        reply = await protocol.read_frame(reader)
+    finally:
+        writer.close()
+        with contextlib.suppress(OSError):
+            await writer.wait_closed()
+    if reply["type"] == "error":
+        raise TunnelError(protocol.require_str(reply, "reason"))
+    if reply["type"] != "ok":
+        raise TunnelError(f"unexpected reply type {reply['type']!r}")
+    return reply
+
+
 console = Console()
 app = typer.Typer(help="Viaduct client — expose a local service through a viaduct server.")
+domain_app = typer.Typer(help="Manage custom domains routed to your tunnel.")
+app.add_typer(domain_app, name="domain")
+
+_ServerOpt = Annotated[
+    str | None,
+    typer.Option("--server", help="Server tunnel address as host:port (default: config.toml)"),
+]
+_TokenOpt = Annotated[
+    str | None,
+    typer.Option("--token", envvar="VIADUCT_TOKEN", help="Auth token (default: config.toml)"),
+]
+_TlsOpt = Annotated[
+    bool | None,
+    typer.Option("--tls/--no-tls", help="TLS to the server tunnel port (default: config.toml)"),
+]
+_TlsCaOpt = Annotated[
+    str | None,
+    typer.Option("--tls-ca", help="Extra CA bundle (PEM) to trust, e.g. a self-signed server cert"),
+]
 
 
 @app.callback()
@@ -173,26 +214,106 @@ def _cli() -> None:
 def http(
     port: Annotated[int, typer.Argument(help="Local port to expose")],
     subdomain: Annotated[str, typer.Option(help="Subdomain to claim on the server")],
-    server: Annotated[
-        str | None, typer.Option(help="Server tunnel address as host:port (default: config.toml)")
-    ] = None,
-    token: Annotated[
-        str | None, typer.Option(envvar="VIADUCT_TOKEN", help="Auth token (default: config.toml)")
-    ] = None,
+    server: _ServerOpt = None,
+    token: _TokenOpt = None,
     pool_size: Annotated[
         int, typer.Option(help="Idle data connections to maintain")
     ] = DEFAULT_POOL_SIZE,
-    tls: Annotated[
-        bool | None,
-        typer.Option("--tls/--no-tls", help="TLS to the server tunnel port (default: config.toml)"),
-    ] = None,
-    tls_ca: Annotated[
-        str | None,
-        typer.Option(help="Extra CA bundle (PEM) to trust, e.g. a self-signed server cert"),
-    ] = None,
+    tls: _TlsOpt = None,
+    tls_ca: _TlsCaOpt = None,
 ) -> None:
     """Open a tunnel exposing local PORT. Blocks until the connection drops."""
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
+    host, srv_port, tok, ssl_ctx = _connection_settings(server, token, tls, tls_ca)
+    try:
+        asyncio.run(_run_http(host, srv_port, tok, subdomain, port, pool_size, ssl_ctx))
+    except KeyboardInterrupt:
+        console.print("[yellow]viaduct: interrupted[/]")
+    except TunnelError as exc:
+        console.print(f"[bold red]viaduct: server refused tunnel: {exc}[/]")
+        raise typer.Exit(1) from exc
+    except protocol.ProtocolError as exc:
+        console.print(
+            f"[bold red]viaduct: protocol error talking to server: {exc}[/] "
+            "(is TLS configured the same on both ends?)"
+        )
+        raise typer.Exit(1) from exc
+    except OSError as exc:
+        console.print(f"[bold red]viaduct: cannot reach server: {exc}[/]")
+        raise typer.Exit(1) from exc
+
+
+@domain_app.command("add")
+def domain_add(
+    hostname: Annotated[str, typer.Argument(help="Custom domain, e.g. demo.example.com")],
+    subdomain: Annotated[str, typer.Option(help="Reserved subdomain it should route to")],
+    server: _ServerOpt = None,
+    token: _TokenOpt = None,
+    tls: _TlsOpt = None,
+    tls_ca: _TlsCaOpt = None,
+) -> None:
+    """Register a custom domain and print the DNS record to create."""
+    host, srv_port, tok, ssl_ctx = _connection_settings(server, token, tls, tls_ca)
+    reply = _domain_op(
+        domain_request(host, srv_port, ssl_ctx, protocol.domain_add(tok, subdomain, hostname))
+    )
+    registered = protocol.require_str(reply, "hostname")
+    target = protocol.require_str(reply, "target")
+    console.print(f"[bold green]domain registered[/] {registered} → {subdomain}")
+    console.print(f"\nCreate this DNS record:\n\n    CNAME  {registered}  →  {target}\n")
+    console.print(
+        "[yellow]note:[/] apex domains cannot take a CNAME — "
+        "use your DNS provider's ALIAS/ANAME record type instead."
+    )
+
+
+@domain_app.command("list")
+def domain_list(
+    server: _ServerOpt = None,
+    token: _TokenOpt = None,
+    tls: _TlsOpt = None,
+    tls_ca: _TlsCaOpt = None,
+) -> None:
+    """List custom domains registered for your subdomain."""
+    host, srv_port, tok, ssl_ctx = _connection_settings(server, token, tls, tls_ca)
+    reply = _domain_op(domain_request(host, srv_port, ssl_ctx, protocol.domain_list(tok)))
+    domains = reply.get("domains") or []
+    if not domains:
+        console.print("no custom domains registered")
+        return
+    for entry in domains:
+        console.print(f"{entry.get('hostname')}  →  {entry.get('subdomain')}")
+
+
+@domain_app.command("remove")
+def domain_remove(
+    hostname: Annotated[str, typer.Argument(help="Custom domain to remove")],
+    server: _ServerOpt = None,
+    token: _TokenOpt = None,
+    tls: _TlsOpt = None,
+    tls_ca: _TlsCaOpt = None,
+) -> None:
+    """Remove a custom domain."""
+    host, srv_port, tok, ssl_ctx = _connection_settings(server, token, tls, tls_ca)
+    _domain_op(domain_request(host, srv_port, ssl_ctx, protocol.domain_remove(tok, hostname)))
+    console.print(f"[bold green]domain removed[/] {hostname}")
+
+
+def _domain_op(coro: Coroutine[Any, Any, protocol.Frame]) -> protocol.Frame:
+    try:
+        return asyncio.run(coro)
+    except TunnelError as exc:
+        console.print(f"[bold red]viaduct: server refused request: {exc}[/]")
+        raise typer.Exit(1) from exc
+    except (protocol.ProtocolError, OSError) as exc:
+        console.print(f"[bold red]viaduct: cannot talk to server: {exc}[/]")
+        raise typer.Exit(1) from exc
+
+
+def _connection_settings(
+    server: str | None, token: str | None, tls: bool | None, tls_ca: str | None
+) -> tuple[str, int, str, ssl.SSLContext | None]:
+    """Resolve server/token/TLS from flags, env, and config.toml (in that order)."""
     try:
         cfg = config.load()
     except config.ConfigError as exc:
@@ -212,22 +333,7 @@ def http(
     host, _, port_str = server.rpartition(":")
     if not host or not port_str.isdigit():
         raise typer.BadParameter("--server must be host:port")
-    try:
-        asyncio.run(_run_http(host, int(port_str), token, subdomain, port, pool_size, ssl_ctx))
-    except KeyboardInterrupt:
-        console.print("[yellow]viaduct: interrupted[/]")
-    except TunnelError as exc:
-        console.print(f"[bold red]viaduct: server refused tunnel: {exc}[/]")
-        raise typer.Exit(1) from exc
-    except protocol.ProtocolError as exc:
-        console.print(
-            f"[bold red]viaduct: protocol error talking to server: {exc}[/] "
-            "(is TLS configured the same on both ends?)"
-        )
-        raise typer.Exit(1) from exc
-    except OSError as exc:
-        console.print(f"[bold red]viaduct: cannot reach server: {exc}[/]")
-        raise typer.Exit(1) from exc
+    return host, int(port_str), token, ssl_ctx
 
 
 def _cfg_str(cfg: dict[str, str | bool], key: str) -> str | None:

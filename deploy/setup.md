@@ -1,8 +1,8 @@
-# Droplet setup — M3 (TLS)
+# Droplet setup — M3 (TLS) + M4 (custom domains)
 
 One Ubuntu droplet runs Caddy (public HTTPS) and viaductd. Systemd units,
 ulimit/sysctl tuning and the renewal-restart timer land in M5; this document
-covers DNS, firewall, and TLS.
+covers DNS, firewall, TLS, and custom domains.
 
 ## 1. DNS (DigitalOcean)
 
@@ -89,3 +89,23 @@ Then:
 viaduct http 3000 --subdomain pmesh
 # -> tunnel up pmesh.viaduct.sh — public URL https://pmesh.viaduct.sh
 ```
+
+## 6. Custom domains
+
+Register the domain against your reservation (authenticated by your token):
+
+```sh
+viaduct domain add demo.adamdavis.co.uk --subdomain pmesh
+# prints:  CNAME  demo.adamdavis.co.uk  →  pmesh.viaduct.sh
+```
+
+Create that CNAME at your DNS provider. Apex domains cannot take a CNAME — use
+the provider's ALIAS/ANAME record type instead.
+
+The first HTTPS request for the new hostname makes Caddy fetch a certificate
+on demand. Caddy first asks `viaductd` (`GET /_viaduct/tls-check?domain=…`),
+which answers 200 only for hostnames in the `domains` table — that gate is
+what keeps the service from being an open certificate mill.
+
+`viaduct domain list` shows your domains; `viaduct domain remove <hostname>`
+deletes one (after which tls-check refuses it again).

@@ -86,6 +86,34 @@ def test_subdomain_for_host(host: str, expected: str | None) -> None:
     assert routing.subdomain_for_host(host, "viaduct.sh") == expected
 
 
+def test_extract_path() -> None:
+    assert routing.extract_path(HEAD) == "/hi"
+    head = b"GET /_viaduct/tls-check?domain=x.com HTTP/1.1\r\nHost: localhost\r\n\r\n"
+    assert routing.extract_path(head) == "/_viaduct/tls-check?domain=x.com"
+    assert routing.extract_path(b"garbage\r\n\r\n") is None
+
+
+@pytest.mark.parametrize(
+    ("host", "custom", "expected"),
+    [
+        # precedence 1: exact custom-domain match
+        ("demo.example.com", {"demo.example.com": "pmesh"}, "pmesh"),
+        # a custom domain that shadows a *.base name wins over subdomain parsing
+        ("pmesh.viaduct.sh", {"pmesh.viaduct.sh": "other"}, "other"),
+        # precedence 2: subdomain of the base domain
+        ("pmesh.viaduct.sh", {}, "pmesh"),
+        ("pmesh.viaduct.sh", {"demo.example.com": "x"}, "pmesh"),
+        # precedence 3: nothing
+        ("demo.example.com", {}, None),
+        ("viaduct.sh", {}, None),
+    ],
+)
+def test_resolve_subdomain_precedence(
+    host: str, custom: dict[str, str], expected: str | None
+) -> None:
+    assert routing.resolve_subdomain(host, "viaduct.sh", custom) == expected
+
+
 def test_plain_response_framing() -> None:
     data = routing.plain_response("404 Not Found", "nope\n")
     head, _, body = data.partition(b"\r\n\r\n")

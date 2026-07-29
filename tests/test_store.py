@@ -8,7 +8,15 @@ from pathlib import Path
 
 import pytest
 
-from viaduct.store import Store, SubdomainTaken, hash_token, valid_subdomain
+from viaduct.store import (
+    DomainTaken,
+    Store,
+    SubdomainTaken,
+    UnknownSubdomain,
+    hash_token,
+    valid_hostname,
+    valid_subdomain,
+)
 
 
 def test_hash_token_is_sha256_hex() -> None:
@@ -86,3 +94,54 @@ def test_wal_mode_enabled(tmp_path: Path) -> None:
 )
 def test_valid_subdomain(subdomain: str, ok: bool) -> None:
     assert valid_subdomain(subdomain) is ok
+
+
+@pytest.mark.parametrize(
+    ("hostname", "ok"),
+    [
+        ("demo.example.com", True),
+        ("demo.adamdavis.co.uk", True),
+        ("example.com", True),
+        ("single-label", False),
+        ("", False),
+        ("Bad.Example.com", False),
+        ("-bad.example.com", False),
+        ("dot..dot.com", False),
+        ("x" * 250 + ".com", False),
+    ],
+)
+def test_valid_hostname(hostname: str, ok: bool) -> None:
+    assert valid_hostname(hostname) is ok
+
+
+def test_domain_add_get_remove_and_reload(tmp_path: Path) -> None:
+    db = tmp_path / "v.db"
+    store = Store(db)
+    store.create_reservation("pmesh", "h")
+    created = store.add_domain("demo.example.com", "pmesh")
+    assert created.verified == 0
+    assert store.get_domain("demo.example.com") is not None
+    assert store.domain_routes() == {"demo.example.com": "pmesh"}
+    store.close()
+
+    reopened = Store(db)
+    assert reopened.get_domain("demo.example.com") is not None
+    assert [d.hostname for d in reopened.domains_for("pmesh")] == ["demo.example.com"]
+    assert reopened.remove_domain("demo.example.com") is True
+    assert reopened.remove_domain("demo.example.com") is False
+    reopened.close()
+
+    third = Store(db)
+    assert third.get_domain("demo.example.com") is None
+    third.close()
+
+
+def test_domain_add_rejects_duplicate_and_unknown_subdomain(tmp_path: Path) -> None:
+    store = Store(tmp_path / "v.db")
+    store.create_reservation("pmesh", "h")
+    store.add_domain("demo.example.com", "pmesh")
+    with pytest.raises(DomainTaken):
+        store.add_domain("demo.example.com", "pmesh")
+    with pytest.raises(UnknownSubdomain):
+        store.add_domain("other.example.com", "ghost")
+    store.close()

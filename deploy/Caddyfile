@@ -1,5 +1,6 @@
-# Public HTTPS for *.viaduct.sh — TLS terminates here; viaductd only ever sees
-# plaintext on localhost. Requires Caddy built with the DigitalOcean DNS plugin:
+# Public HTTPS for *.viaduct.sh and custom domains — TLS terminates here;
+# viaductd only ever sees plaintext on localhost. Requires Caddy built with the
+# DigitalOcean DNS plugin:
 #
 #   xcaddy build --with github.com/caddy-dns/digitalocean
 #
@@ -8,11 +9,27 @@
 
 {
 	email mail@adamdavis.co.uk
+
+	# Gate for on-demand certs: viaductd answers 200 only for hostnames in its
+	# domains table. Without this the service is an open certificate mill and
+	# Let's Encrypt will rate-limit it within the hour. Not optional.
+	on_demand_tls {
+		ask http://localhost:8080/_viaduct/tls-check
+	}
 }
 
 *.viaduct.sh {
 	tls {
 		dns digitalocean {env.DO_API_TOKEN}
+	}
+	reverse_proxy 127.0.0.1:8080
+}
+
+# Custom domains: any other hostname whose DNS points here gets a certificate
+# on demand — if and only if the ask endpoint above approves it.
+https:// {
+	tls {
+		on_demand
 	}
 	reverse_proxy 127.0.0.1:8080
 }

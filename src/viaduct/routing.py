@@ -50,12 +50,28 @@ def _strip_port(host: str) -> str:
     return host
 
 
+def extract_path(head: bytes) -> str | None:
+    """Return the request target (path + query) from the request line, or None."""
+    parts = head.split(b"\r\n", 1)[0].split(b" ")
+    if len(parts) < 3:
+        return None
+    return parts[1].decode("latin-1")
+
+
 def subdomain_for_host(host: str, base_domain: str) -> str | None:
     """Return the subdomain part of *host* under *base_domain*, or None."""
     suffix = "." + base_domain
     if host.endswith(suffix):
         return host[: -len(suffix)] or None
     return None
+
+
+def resolve_subdomain(host: str, base_domain: str, custom_domains: dict[str, str]) -> str | None:
+    """Routing precedence: exact custom-domain match, then *.base_domain, else None."""
+    subdomain = custom_domains.get(host)
+    if subdomain is not None:
+        return subdomain
+    return subdomain_for_host(host, base_domain)
 
 
 def plain_response(status: str, body: str) -> bytes:

@@ -16,12 +16,22 @@ import secrets
 import ssl
 from pathlib import Path
 from typing import Annotated
+from urllib.parse import parse_qs, urlsplit
 
 import typer
 
 from viaduct import protocol, routing
 from viaduct.relay import splice
-from viaduct.store import DEFAULT_DB_PATH, Store, SubdomainTaken, hash_token, valid_subdomain
+from viaduct.store import (
+    DEFAULT_DB_PATH,
+    DomainTaken,
+    Reservation,
+    Store,
+    SubdomainTaken,
+    hash_token,
+    valid_hostname,
+    valid_subdomain,
+)
 
 log = logging.getLogger("viaduct.server")
 
@@ -114,6 +124,8 @@ class TunnelServer:
                 await self._handle_control(frame, reader, writer)
             elif frame["type"] == "data_hello":
                 self._handle_data(frame, reader, writer)
+            elif frame["type"] in ("domain_add", "domain_list", "domain_remove"):
+                await self._handle_domain_op(frame, writer)
             else:
                 log.warning("unexpected first frame type=%r", frame["type"])
                 writer.close()
@@ -144,7 +156,7 @@ class TunnelServer:
         hostname = f"{subdomain}.{self.base_domain}"
         ping_task = asyncio.create_task(self._ping_loop(writer))
         try:
-            await protocol.write_frame(writer, protocol.ok(hostname))
+            await protocol.write_frame(writer, protocol.ok(hostname=hostname))
             log.info("tunnel registered subdomain=%s hostname=%s", subdomain, hostname)
             self.store.touch(subdomain)
             while True:
@@ -183,6 +195,72 @@ class TunnelServer:
         tunnel.pool.put_nowait((reader, writer))
         log.debug("data conn pooled subdomain=%s idle=%s", subdomain, tunnel.pool.qsize())
 
+    async def _handle_domain_op(self, frame: protocol.Frame, writer: asyncio.StreamWriter) -> None:
+        """One-shot custom-domain management: reply with ok/error, then close."""
+        token = protocol.require_str(frame, "token")
+        if frame["type"] == "domain_add":
+            subdomain = protocol.require_str(frame, "subdomain")
+            reservation = self.store.get(subdomain)
+            if reservation is None:
+                await self._reject(writer, "unknown_subdomain")
+                return
+            if not self._token_matches(token, reservation.token_hash):
+                await self._reject(writer, "bad_token")
+                return
+            hostname = protocol.require_str(frame, "hostname").lower().rstrip(".")
+            if not valid_hostname(hostname):
+                await self._reject(writer, "invalid_hostname")
+                return
+            if hostname == self.base_domain or hostname.endswith("." + self.base_domain):
+                await self._reject(writer, "hostname_under_base_domain")
+                return
+            try:
+                self.store.add_domain(hostname, subdomain)
+            except DomainTaken:
+                await self._reject(writer, "domain_taken")
+                return
+            log.info("domain added hostname=%s subdomain=%s", hostname, subdomain)
+            await self._ack(
+                writer, protocol.ok(hostname=hostname, target=f"{subdomain}.{self.base_domain}")
+            )
+            return
+
+        # list/remove identify the reservation by token alone
+        reservation = self._reservation_for_token(token)
+        if reservation is None:
+            await self._reject(writer, "bad_token")
+            return
+        if frame["type"] == "domain_list":
+            domains = [
+                {"hostname": d.hostname, "subdomain": d.subdomain, "created_at": d.created_at}
+                for d in self.store.domains_for(reservation.subdomain)
+            ]
+            await self._ack(writer, protocol.ok(domains=domains))
+            return
+        hostname = protocol.require_str(frame, "hostname").lower().rstrip(".")
+        domain = self.store.get_domain(hostname)
+        if domain is None or domain.subdomain != reservation.subdomain:
+            await self._reject(writer, "unknown_domain")
+            return
+        self.store.remove_domain(hostname)
+        log.info("domain removed hostname=%s subdomain=%s", hostname, reservation.subdomain)
+        await self._ack(writer, protocol.ok())
+
+    def _reservation_for_token(self, token: str) -> Reservation | None:
+        return next(
+            (
+                r
+                for r in self.store.reservations.values()
+                if self._token_matches(token, r.token_hash)
+            ),
+            None,
+        )
+
+    async def _ack(self, writer: asyncio.StreamWriter, frame: protocol.Frame) -> None:
+        with contextlib.suppress(ConnectionError):
+            await protocol.write_frame(writer, frame)
+        writer.close()
+
     async def _ping_loop(self, writer: asyncio.StreamWriter) -> None:
         with contextlib.suppress(ConnectionError):
             while True:
@@ -210,9 +288,15 @@ class TunnelServer:
             await self._respond(writer, "400 Bad Request", "viaduct: malformed request\n")
             return
         host = routing.extract_host(head)
-        subdomain = routing.subdomain_for_host(host, self.base_domain) if host else None
+        subdomain = (
+            routing.resolve_subdomain(host, self.base_domain, self.store.domain_routes())
+            if host
+            else None
+        )
         tunnel = self.tunnels.get(subdomain) if subdomain else None
         if tunnel is None:
+            if subdomain is None and await self._maybe_tls_check(head, writer):
+                return
             log.info("no tunnel host=%s", host)
             await self._respond(writer, "404 Not Found", "viaduct: no such tunnel\n")
             return
@@ -232,6 +316,25 @@ class TunnelServer:
             await self._respond(writer, "502 Bad Gateway", "viaduct: tunnel connection died\n")
             return
         await splice(reader, writer, t_reader, t_writer)
+
+    async def _maybe_tls_check(self, head: bytes, writer: asyncio.StreamWriter) -> bool:
+        """Answer Caddy's on-demand-TLS ask endpoint: 200 only for known custom domains.
+
+        Only reachable for hosts that resolve to no tunnel (Caddy asks with
+        Host: localhost), so tunneled apps keep their own /_viaduct/* paths.
+        Without this gate the service would be an open certificate mill.
+        """
+        target = routing.extract_path(head)
+        if target is None or urlsplit(target).path != "/_viaduct/tls-check":
+            return False
+        query = parse_qs(urlsplit(target).query)
+        domain = (query.get("domain") or [""])[0].lower().rstrip(".")
+        if domain and self.store.get_domain(domain) is not None:
+            await self._respond(writer, "200 OK", "ok\n")
+        else:
+            log.info("tls-check refused domain=%s", domain)
+            await self._respond(writer, "404 Not Found", "unknown domain\n")
+        return True
 
     async def _respond(self, writer: asyncio.StreamWriter, status: str, body: str) -> None:
         with contextlib.suppress(ConnectionError):
