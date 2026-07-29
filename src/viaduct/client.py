@@ -9,6 +9,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import logging
+import ssl
 from collections.abc import Coroutine
 from typing import Annotated, Any
 
@@ -39,9 +40,11 @@ class TunnelClient:
         local_port: int,
         local_host: str = "127.0.0.1",
         pool_size: int = DEFAULT_POOL_SIZE,
+        ssl_ctx: ssl.SSLContext | None = None,
     ) -> None:
         self._server_host = server_host
         self._server_port = server_port
+        self._ssl_ctx = ssl_ctx
         self._token = token
         self._subdomain = subdomain
         self._local_host = local_host
@@ -56,7 +59,9 @@ class TunnelClient:
 
     async def start(self) -> str:
         """Authenticate, fill the pool, and return the public hostname."""
-        reader, writer = await asyncio.open_connection(self._server_host, self._server_port)
+        reader, writer = await asyncio.open_connection(
+            self._server_host, self._server_port, ssl=self._ssl_ctx
+        )
         await protocol.write_frame(
             writer, protocol.hello(self._token, self._subdomain, self._local_port)
         )
@@ -120,7 +125,9 @@ class TunnelClient:
     async def _run_data_conn(self) -> None:
         """One pooled connection: idle at the server until assigned, then serve."""
         try:
-            reader, writer = await asyncio.open_connection(self._server_host, self._server_port)
+            reader, writer = await asyncio.open_connection(
+                self._server_host, self._server_port, ssl=self._ssl_ctx
+            )
         except OSError:
             return
         try:
@@ -175,6 +182,14 @@ def http(
     pool_size: Annotated[
         int, typer.Option(help="Idle data connections to maintain")
     ] = DEFAULT_POOL_SIZE,
+    tls: Annotated[
+        bool | None,
+        typer.Option("--tls/--no-tls", help="TLS to the server tunnel port (default: config.toml)"),
+    ] = None,
+    tls_ca: Annotated[
+        str | None,
+        typer.Option(help="Extra CA bundle (PEM) to trust, e.g. a self-signed server cert"),
+    ] = None,
 ) -> None:
     """Open a tunnel exposing local PORT. Blocks until the connection drops."""
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
@@ -183,27 +198,41 @@ def http(
     except config.ConfigError as exc:
         console.print(f"[bold red]viaduct: {exc}[/]")
         raise typer.Exit(2) from exc
-    server = server or cfg.get("server") or "127.0.0.1:4443"
-    token = token or cfg.get("token")
+    server = server or _cfg_str(cfg, "server") or "127.0.0.1:4443"
+    token = token or _cfg_str(cfg, "token")
     if not token:
         console.print(
             "[bold red]viaduct: no token configured[/] — pass --token, set VIADUCT_TOKEN, "
             f'or add token = "..." to {config.config_path()}'
         )
         raise typer.Exit(2)
+    use_tls = tls if tls is not None else cfg.get("tls") is True
+    ca = tls_ca or _cfg_str(cfg, "tls_ca")
+    ssl_ctx = ssl.create_default_context(cafile=ca) if use_tls else None
     host, _, port_str = server.rpartition(":")
     if not host or not port_str.isdigit():
         raise typer.BadParameter("--server must be host:port")
     try:
-        asyncio.run(_run_http(host, int(port_str), token, subdomain, port, pool_size))
+        asyncio.run(_run_http(host, int(port_str), token, subdomain, port, pool_size, ssl_ctx))
     except KeyboardInterrupt:
         console.print("[yellow]viaduct: interrupted[/]")
     except TunnelError as exc:
         console.print(f"[bold red]viaduct: server refused tunnel: {exc}[/]")
         raise typer.Exit(1) from exc
+    except protocol.ProtocolError as exc:
+        console.print(
+            f"[bold red]viaduct: protocol error talking to server: {exc}[/] "
+            "(is TLS configured the same on both ends?)"
+        )
+        raise typer.Exit(1) from exc
     except OSError as exc:
         console.print(f"[bold red]viaduct: cannot reach server: {exc}[/]")
         raise typer.Exit(1) from exc
+
+
+def _cfg_str(cfg: dict[str, str | bool], key: str) -> str | None:
+    value = cfg.get(key)
+    return value if isinstance(value, str) else None
 
 
 async def _run_http(
@@ -213,6 +242,7 @@ async def _run_http(
     subdomain: str,
     local_port: int,
     pool_size: int,
+    ssl_ctx: ssl.SSLContext | None,
 ) -> None:
     client = TunnelClient(
         server_host=server_host,
@@ -221,6 +251,7 @@ async def _run_http(
         subdomain=subdomain,
         local_port=local_port,
         pool_size=pool_size,
+        ssl_ctx=ssl_ctx,
     )
     hostname = await client.start()
     console.print(f"[bold green]tunnel up[/] {hostname} → 127.0.0.1:{local_port}")

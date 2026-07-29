@@ -20,10 +20,10 @@ def test_missing_file_returns_empty(monkeypatch: pytest.MonkeyPatch, tmp_path: P
     assert config.load() == {}
 
 
-def test_loads_string_values_only(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_loads_string_and_bool_values_only(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
-    _write_config(tmp_path, 'server = "1.2.3.4:4443"\ntoken = "sekrit"\nretries = 3\n')
-    assert config.load() == {"server": "1.2.3.4:4443", "token": "sekrit"}
+    _write_config(tmp_path, 'server = "1.2.3.4:4443"\ntoken = "sekrit"\ntls = true\nretries = 3\n')
+    assert config.load() == {"server": "1.2.3.4:4443", "token": "sekrit", "tls": True}
 
 
 def test_invalid_toml_raises(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:

@@ -17,8 +17,8 @@ def config_path() -> Path:
     return root / "viaduct" / "config.toml"
 
 
-def load() -> dict[str, str]:
-    """Return the string keys of the config file, or {} if it doesn't exist."""
+def load() -> dict[str, str | bool]:
+    """Return the string/bool keys of the config file, or {} if it doesn't exist."""
     path = config_path()
     try:
         text = path.read_text()
@@ -30,4 +30,4 @@ def load() -> dict[str, str]:
         data = tomllib.loads(text)
     except tomllib.TOMLDecodeError as exc:
         raise ConfigError(f"invalid TOML in {path}: {exc}") from exc
-    return {key: value for key, value in data.items() if isinstance(value, str)}
+    return {key: value for key, value in data.items() if isinstance(value, str | bool)}

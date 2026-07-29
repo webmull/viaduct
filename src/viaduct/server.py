@@ -13,6 +13,7 @@ import contextlib
 import hmac
 import logging
 import secrets
+import ssl
 from pathlib import Path
 from typing import Annotated
 
@@ -64,12 +65,14 @@ class TunnelServer:
         public_port: int = 8080,
         tunnel_port: int = 4443,
         base_domain: str = "localhost",
+        tls: ssl.SSLContext | None = None,
     ) -> None:
         self.store = store
         self.bind = bind
         self.public_port = public_port
         self.tunnel_port = tunnel_port
         self.base_domain = base_domain
+        self._tls = tls
         self.tunnels: dict[str, Tunnel] = {}
         self._public_server: asyncio.Server | None = None
         self._tunnel_server: asyncio.Server | None = None
@@ -79,7 +82,7 @@ class TunnelServer:
             self._handle_public, self.bind, self.public_port, limit=routing.MAX_HEAD
         )
         self._tunnel_server = await asyncio.start_server(
-            self._handle_tunnel, self.bind, self.tunnel_port
+            self._handle_tunnel, self.bind, self.tunnel_port, ssl=self._tls
         )
         self.public_port = self._public_server.sockets[0].getsockname()[1]
         self.tunnel_port = self._tunnel_server.sockets[0].getsockname()[1]
@@ -248,16 +251,33 @@ def _cli(
     tunnel_port: Annotated[int, typer.Option(help="Port for client tunnel connections")] = 4443,
     base_domain: Annotated[str, typer.Option(help="Domain that subdomains hang off")] = "localhost",
     db: Annotated[Path, typer.Option(help="SQLite database path")] = DEFAULT_DB_PATH,
+    tls_cert: Annotated[
+        Path | None, typer.Option(help="PEM certificate enabling TLS on the tunnel listener")
+    ] = None,
+    tls_key: Annotated[Path | None, typer.Option(help="PEM private key for --tls-cert")] = None,
 ) -> None:
     """Run the tunnel server."""
     if ctx.invoked_subcommand is not None:
         return
+    if (tls_cert is None) != (tls_key is None):
+        raise typer.BadParameter("--tls-cert and --tls-key must be provided together")
+    tls = None
+    if tls_cert is not None and tls_key is not None:
+        tls = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+        tls.load_cert_chain(tls_cert, tls_key)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
     with contextlib.suppress(KeyboardInterrupt):
-        asyncio.run(_serve(bind, public_port, tunnel_port, base_domain, db))
+        asyncio.run(_serve(bind, public_port, tunnel_port, base_domain, db, tls))
 
 
-async def _serve(bind: str, public_port: int, tunnel_port: int, base_domain: str, db: Path) -> None:
+async def _serve(
+    bind: str,
+    public_port: int,
+    tunnel_port: int,
+    base_domain: str,
+    db: Path,
+    tls: ssl.SSLContext | None,
+) -> None:
     store = Store(db)
     server = TunnelServer(
         store=store,
@@ -265,6 +285,7 @@ async def _serve(bind: str, public_port: int, tunnel_port: int, base_domain: str
         public_port=public_port,
         tunnel_port=tunnel_port,
         base_domain=base_domain,
+        tls=tls,
     )
     await server.start()
     try:

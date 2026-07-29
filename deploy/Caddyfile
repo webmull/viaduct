@@ -1,0 +1,18 @@
+# Public HTTPS for *.viaduct.sh — TLS terminates here; viaductd only ever sees
+# plaintext on localhost. Requires Caddy built with the DigitalOcean DNS plugin:
+#
+#   xcaddy build --with github.com/caddy-dns/digitalocean
+#
+# DO_API_TOKEN must be in Caddy's environment (see deploy/setup.md) — never in
+# this file. The wildcard cert is obtained via DNS-01 on first use.
+
+{
+	email mail@adamdavis.co.uk
+}
+
+*.viaduct.sh {
+	tls {
+		dns digitalocean {env.DO_API_TOKEN}
+	}
+	reverse_proxy 127.0.0.1:8080
+}
