@@ -13,6 +13,7 @@ import contextlib
 import hmac
 import logging
 import secrets
+import signal
 import ssl
 from pathlib import Path
 from typing import Annotated
@@ -44,18 +45,27 @@ class Tunnel:
     def __init__(self, subdomain: str) -> None:
         self.subdomain = subdomain
         self.pool: asyncio.Queue[Conn] = asyncio.Queue()
+        #: pooled + in-flight data connections, bounded by --max-conns-per-token
+        self.data_conns = 0
 
-    def pop_idle(self) -> Conn | None:
-        """Pop a live idle connection, discarding any that died while queued."""
-        while True:
-            try:
-                reader, writer = self.pool.get_nowait()
-            except asyncio.QueueEmpty:
-                return None
-            if writer.is_closing() or reader.at_eof():
-                writer.close()
-                continue
-            return reader, writer
+    async def acquire(self, wait: float) -> Conn | None:
+        """Wait up to *wait* seconds for a live idle connection.
+
+        Waiting (rather than failing fast) turns a request burst into slightly
+        slower establishment while the client replenishes the pool, instead of
+        a wall of 503s.
+        """
+        try:
+            async with asyncio.timeout(wait):
+                while True:
+                    reader, writer = await self.pool.get()
+                    if writer.is_closing() or reader.at_eof():
+                        writer.close()
+                        self.data_conns -= 1
+                        continue
+                    return reader, writer
+        except TimeoutError:
+            return None
 
     def close_pool(self) -> None:
         while True:
@@ -64,6 +74,7 @@ class Tunnel:
             except asyncio.QueueEmpty:
                 return
             writer.close()
+            self.data_conns -= 1
 
 
 class TunnelServer:
@@ -76,6 +87,9 @@ class TunnelServer:
         tunnel_port: int = 4443,
         base_domain: str = "localhost",
         tls: ssl.SSLContext | None = None,
+        max_conns_per_token: int = 128,
+        idle_timeout: float | None = 300.0,
+        pool_wait: float = 10.0,
     ) -> None:
         self.store = store
         self.bind = bind
@@ -83,16 +97,22 @@ class TunnelServer:
         self.tunnel_port = tunnel_port
         self.base_domain = base_domain
         self._tls = tls
+        self.max_conns_per_token = max_conns_per_token
+        self.idle_timeout = idle_timeout
+        self.pool_wait = pool_wait
         self.tunnels: dict[str, Tunnel] = {}
+        self._active_splices = 0
+        self._no_active_splices = asyncio.Event()
+        self._no_active_splices.set()
         self._public_server: asyncio.Server | None = None
         self._tunnel_server: asyncio.Server | None = None
 
     async def start(self) -> None:
         self._public_server = await asyncio.start_server(
-            self._handle_public, self.bind, self.public_port, limit=routing.MAX_HEAD
+            self._handle_public, self.bind, self.public_port, limit=routing.MAX_HEAD, backlog=512
         )
         self._tunnel_server = await asyncio.start_server(
-            self._handle_tunnel, self.bind, self.tunnel_port, ssl=self._tls
+            self._handle_tunnel, self.bind, self.tunnel_port, ssl=self._tls, backlog=512
         )
         self.public_port = self._public_server.sockets[0].getsockname()[1]
         self.tunnel_port = self._tunnel_server.sockets[0].getsockname()[1]
@@ -112,6 +132,17 @@ class TunnelServer:
         for tunnel in list(self.tunnels.values()):
             tunnel.close_pool()
         self.tunnels.clear()
+
+    async def drain(self, grace: float = 30.0) -> None:
+        """Graceful shutdown: stop accepting, let active splices finish, then stop."""
+        for server in (self._public_server, self._tunnel_server):
+            if server is not None:
+                server.close()
+        log.info("draining active=%s grace=%.0fs", self._active_splices, grace)
+        with contextlib.suppress(TimeoutError):
+            async with asyncio.timeout(grace):
+                await self._no_active_splices.wait()
+        await self.stop()
 
     # -- tunnel listener: control + data connections from viaduct clients ------
 
@@ -160,9 +191,12 @@ class TunnelServer:
             log.info("tunnel registered subdomain=%s hostname=%s", subdomain, hostname)
             self.store.touch(subdomain)
             while True:
-                msg = await protocol.read_frame(reader)
+                async with asyncio.timeout(protocol.DEAD_PEER_TIMEOUT):
+                    msg = await protocol.read_frame(reader)
                 if msg["type"] == "ping":
                     await protocol.write_frame(writer, protocol.pong())
+        except TimeoutError:
+            log.info("dead peer subdomain=%s", subdomain)
         except (protocol.ProtocolError, ConnectionError):
             pass
         finally:
@@ -190,8 +224,15 @@ class TunnelServer:
         ):
             writer.close()
             return
+        if tunnel.data_conns >= self.max_conns_per_token:
+            log.warning(
+                "connection cap reached subdomain=%s cap=%s", subdomain, self.max_conns_per_token
+            )
+            writer.close()
+            return
         # The handler returns here; the pool keeps the streams alive until a
         # public request claims them.
+        tunnel.data_conns += 1
         tunnel.pool.put_nowait((reader, writer))
         log.debug("data conn pooled subdomain=%s idle=%s", subdomain, tunnel.pool.qsize())
 
@@ -300,9 +341,9 @@ class TunnelServer:
             log.info("no tunnel host=%s", host)
             await self._respond(writer, "404 Not Found", "viaduct: no such tunnel\n")
             return
-        conn = tunnel.pop_idle()
+        conn = await tunnel.acquire(wait=self.pool_wait)
         if conn is None:
-            log.warning("pool empty subdomain=%s", subdomain)
+            log.warning("pool starved subdomain=%s waited=%.0fs", subdomain, self.pool_wait)
             await self._respond(
                 writer, "503 Service Unavailable", "viaduct: no idle tunnel connections\n"
             )
@@ -313,9 +354,18 @@ class TunnelServer:
             await t_writer.drain()
         except ConnectionError:
             t_writer.close()
+            tunnel.data_conns -= 1
             await self._respond(writer, "502 Bad Gateway", "viaduct: tunnel connection died\n")
             return
-        await splice(reader, writer, t_reader, t_writer)
+        self._active_splices += 1
+        self._no_active_splices.clear()
+        try:
+            await splice(reader, writer, t_reader, t_writer, idle_timeout=self.idle_timeout)
+        finally:
+            self._active_splices -= 1
+            if self._active_splices == 0:
+                self._no_active_splices.set()
+            tunnel.data_conns -= 1
 
     async def _maybe_tls_check(self, head: bytes, writer: asyncio.StreamWriter) -> bool:
         """Answer Caddy's on-demand-TLS ask endpoint: 200 only for known custom domains.
@@ -358,6 +408,12 @@ def _cli(
         Path | None, typer.Option(help="PEM certificate enabling TLS on the tunnel listener")
     ] = None,
     tls_key: Annotated[Path | None, typer.Option(help="PEM private key for --tls-cert")] = None,
+    max_conns_per_token: Annotated[
+        int, typer.Option(help="Max pooled + active data connections per token")
+    ] = 128,
+    idle_timeout: Annotated[
+        float, typer.Option(help="Close proxied connections idle this many seconds (0 = never)")
+    ] = 300.0,
 ) -> None:
     """Run the tunnel server."""
     if ctx.invoked_subcommand is not None:
@@ -370,7 +426,18 @@ def _cli(
         tls.load_cert_chain(tls_cert, tls_key)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
     with contextlib.suppress(KeyboardInterrupt):
-        asyncio.run(_serve(bind, public_port, tunnel_port, base_domain, db, tls))
+        asyncio.run(
+            _serve(
+                bind,
+                public_port,
+                tunnel_port,
+                base_domain,
+                db,
+                tls,
+                max_conns_per_token,
+                idle_timeout if idle_timeout > 0 else None,
+            )
+        )
 
 
 async def _serve(
@@ -380,6 +447,8 @@ async def _serve(
     base_domain: str,
     db: Path,
     tls: ssl.SSLContext | None,
+    max_conns_per_token: int,
+    idle_timeout: float | None,
 ) -> None:
     store = Store(db)
     server = TunnelServer(
@@ -389,10 +458,19 @@ async def _serve(
         tunnel_port=tunnel_port,
         base_domain=base_domain,
         tls=tls,
+        max_conns_per_token=max_conns_per_token,
+        idle_timeout=idle_timeout,
     )
     await server.start()
+    stop = asyncio.Event()
+    loop = asyncio.get_running_loop()
+    for sig in (signal.SIGTERM, signal.SIGINT):
+        with contextlib.suppress(NotImplementedError):
+            loop.add_signal_handler(sig, stop.set)
     try:
-        await asyncio.Event().wait()
+        await stop.wait()
+        log.info("shutdown requested — draining")
+        await server.drain(grace=30.0)
     finally:
         await server.stop()
         store.close()

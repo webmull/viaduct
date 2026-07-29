@@ -1,0 +1,16 @@
+# /etc/systemd/system/viaductd-restart.timer
+# viaductd loads the wildcard cert at startup; Let's Encrypt rotates it every
+# ~60 days. A monthly restart guarantees the served cert is never stale.
+# (Restart is graceful: viaductd drains, clients reconnect within seconds.)
+
+[Unit]
+Description=Monthly viaductd restart to pick up renewed TLS certificates
+
+[Timer]
+OnCalendar=monthly
+RandomizedDelaySec=1h
+Persistent=true
+Unit=viaductd-restart.service
+
+[Install]
+WantedBy=timers.target

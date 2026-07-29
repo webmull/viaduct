@@ -67,7 +67,7 @@ async def local_app(reader: asyncio.StreamReader, writer: asyncio.StreamWriter) 
 
 @contextlib.asynccontextmanager
 async def bare_server(
-    *reserved: str, tls: ssl.SSLContext | None = None
+    *reserved: str, tls: ssl.SSLContext | None = None, **server_kwargs: Any
 ) -> AsyncIterator[TunnelServer]:
     """A running TunnelServer whose store has a reservation (token=TOKEN) per subdomain."""
     with tempfile.TemporaryDirectory() as tmp:
@@ -81,6 +81,7 @@ async def bare_server(
             tunnel_port=0,
             base_domain="viaduct.test",
             tls=tls,
+            **server_kwargs,
         )
         await server.start()
         try:
@@ -116,8 +117,9 @@ async def tunnel_stack(
     pool_size: int = 3,
     server_tls: ssl.SSLContext | None = None,
     client_ssl: ssl.SSLContext | None = None,
+    **server_kwargs: Any,
 ) -> AsyncIterator[tuple[TunnelServer, TunnelClient]]:
-    async with bare_server(subdomain, tls=server_tls) as server:
+    async with bare_server(subdomain, tls=server_tls, **server_kwargs) as server:
         local = await asyncio.start_server(local_app, "127.0.0.1", 0)
         local_port = local.sockets[0].getsockname()[1]
         client = make_client(

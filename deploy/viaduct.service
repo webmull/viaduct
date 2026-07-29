@@ -1,0 +1,21 @@
+# /etc/systemd/system/viaduct.service — runs on the LOCAL machine exposing a
+# service. Server address, token, and tls=true live in the running user's
+# ~/.config/viaduct/config.toml; adjust port/subdomain below.
+
+[Unit]
+Description=Viaduct tunnel client
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=viaduct
+ExecStart=/usr/local/bin/viaduct http 3000 --subdomain pmesh
+Restart=always
+RestartSec=5
+# The client also reconnects on its own with 1s→30s backoff; Restart=always
+# only covers crashes.
+KillSignal=SIGTERM
+TimeoutStopSec=40
+
+[Install]
+WantedBy=multi-user.target

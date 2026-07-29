@@ -1,0 +1,8 @@
+# /etc/systemd/system/viaductd-restart.service — one-shot helper for the timer.
+
+[Unit]
+Description=Restart viaductd (TLS certificate refresh)
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/systemctl restart viaductd.service

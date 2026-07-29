@@ -1,8 +1,7 @@
-# Droplet setup — M3 (TLS) + M4 (custom domains)
+# Droplet setup
 
-One Ubuntu droplet runs Caddy (public HTTPS) and viaductd. Systemd units,
-ulimit/sysctl tuning and the renewal-restart timer land in M5; this document
-covers DNS, firewall, TLS, and custom domains.
+One Ubuntu droplet runs Caddy (public HTTPS) and viaductd. This document
+covers DNS, firewall, TLS, custom domains, limits, and the systemd units.
 
 ## 1. DNS (DigitalOcean)
 
@@ -109,3 +108,64 @@ what keeps the service from being an open certificate mill.
 
 `viaduct domain list` shows your domains; `viaduct domain remove <hostname>`
 deletes one (after which tls-check refuses it again).
+
+## 7. Limits and kernel tuning
+
+The failure mode that matters is an audience scanning a QR code at once —
+hundreds of TCP connections arriving in a burst.
+
+```sh
+# File descriptors: the systemd units set LimitNOFILE=65535 for the daemons.
+# For interactive shells too:
+cat >> /etc/security/limits.conf <<'EOF'
+*  soft  nofile  65535
+*  hard  nofile  65535
+EOF
+
+# Listen backlog: the kernel default of 128 drops connections under burst.
+# viaductd asks for a backlog of 512; somaxconn caps it, so raise it.
+cat > /etc/sysctl.d/90-viaduct.conf <<'EOF'
+net.core.somaxconn = 1024
+EOF
+sysctl --system
+```
+
+## 8. Systemd units
+
+```sh
+useradd --system --home-dir /var/lib/viaduct --shell /usr/sbin/nologin viaduct
+usermod -aG caddy viaduct   # read access to Caddy's managed certificates
+
+install -m 644 deploy/caddy.service deploy/viaductd.service \
+    deploy/viaductd-restart.service deploy/viaductd-restart.timer \
+    /etc/systemd/system/
+mkdir -p /etc/viaduct
+cat > /etc/viaduct/viaductd.env <<'EOF'
+DO_API_TOKEN=<token>
+TLS_CERT=/var/lib/caddy/.local/share/caddy/certificates/acme-v02.api.letsencrypt.org-directory/wildcard_.viaduct.sh/wildcard_.viaduct.sh.crt
+TLS_KEY=/var/lib/caddy/.local/share/caddy/certificates/acme-v02.api.letsencrypt.org-directory/wildcard_.viaduct.sh/wildcard_.viaduct.sh.key
+EOF
+chmod 640 /etc/viaduct/viaductd.env && chown root:viaduct /etc/viaduct/viaductd.env
+cp /etc/viaduct/viaductd.env /etc/viaduct/caddy.env && chown root:caddy /etc/viaduct/caddy.env
+
+systemctl daemon-reload
+systemctl enable --now caddy viaductd viaductd-restart.timer
+```
+
+`viaduct.service` is for the *local* machine running the client — install it
+there, edit the port/subdomain in ExecStart, and put server/token/tls in that
+user's `~/.config/viaduct/config.toml`.
+
+viaductd drains gracefully on SIGTERM: it stops accepting, gives in-flight
+transfers 30s to finish, then exits — so `systemctl restart viaductd` (and the
+monthly cert-refresh timer) is safe during live traffic; clients reconnect
+with 1s→30s backoff.
+
+## 9. Load test
+
+From any machine (500 concurrent WebSocket upgrades, time-to-established):
+
+```sh
+python scripts/load_test.py --host <droplet-ip-or-127.0.0.1> --port 8080 \
+    --hostname pmesh.viaduct.sh --connections 500
+```

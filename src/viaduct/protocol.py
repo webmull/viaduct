@@ -40,6 +40,11 @@ MAX_FRAME: Final = 16 * 1024
 #: Ping cadence on the control connection, both directions (seconds).
 HEARTBEAT_INTERVAL: Final = 20.0
 
+#: Consider the peer dead after this much silence on the control connection.
+#: With both sides pinging every HEARTBEAT_INTERVAL, silence this long means
+#: at least two heartbeats were lost.
+DEAD_PEER_TIMEOUT: Final = HEARTBEAT_INTERVAL * 2.5
+
 _HEADER = struct.Struct(">I")
 
 
