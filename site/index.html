@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>viaduct.sh · coming soon</title>
+<meta name="description" content="viaduct.sh is a free, open-source dev tool that exposes your local services to the internet with a single command. Coming soon.">
+<meta name="author" content="viaduct.sh">
+<meta property="og:title" content="viaduct.sh · coming soon">
+<meta property="og:description" content="Open-source tunneling for local development. Coming soon.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="https://viaduct.sh/viaduct-mark.png">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="viaduct.sh · coming soon">
+<meta name="twitter:description" content="Open-source tunneling for local development. Coming soon.">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="mask-icon" href="/favicon.svg" color="#f5b544">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --bg:        oklch(16% .035 250.5);
+    --bg-2:      oklch(20% .04 250.5);
+    --fg:        oklch(96% .01 250.5);
+    --amber:     oklch(72% .17 62);
+    --amber-dim: oklch(65% .18 60);
+    --teal:      oklch(72% .12 190);
+    --muted:     oklch(66% .04 250.5);
+    --line:      oklch(100% 0 0 / .1);
+    --font-display: "Space Grotesk", system-ui, sans-serif;
+    --font-body:    "DM Sans", system-ui, sans-serif;
+    --font-mono:    "JetBrains Mono", ui-monospace, monospace;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { color-scheme: dark; }
+  body {
+    min-height: 100svh;
+    display: grid; place-items: center;
+    padding: 3rem 1.5rem;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--font-body);
+    text-align: center;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  /* ambient atmosphere */
+  .grid, .grain { position: fixed; inset: 0; z-index: -1; pointer-events: none; }
+  .grid {
+    background-image:
+      linear-gradient(var(--line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--line) 1px, transparent 1px);
+    background-size: 64px 64px;
+    -webkit-mask-image: radial-gradient(80% 60% at 50% 40%, #000 30%, transparent 75%);
+            mask-image: radial-gradient(80% 60% at 50% 40%, #000 30%, transparent 75%);
+    opacity: .5;
+  }
+  .grain { opacity: .04; mix-blend-mode: screen;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  main { width: min(780px, 100%); display: flex; flex-direction: column; align-items: center; }
+
+  .mark { height: 4.75rem; width: 4.75rem; margin: 0 0 .4rem;
+    filter: drop-shadow(0 6px 20px oklch(72% .17 62 / .28)); }
+
+  h1 {
+    font-family: var(--font-display);
+    font-size: clamp(3rem, 12vw, 5.75rem);
+    font-weight: 600; letter-spacing: -.03em; line-height: 1;
+    color: #fff;
+  }
+  h1 .dot { color: var(--amber); }
+
+  .tagline {
+    margin-top: 1.1rem; max-width: 34rem;
+    font-size: clamp(1rem, 2.6vw, 1.2rem); line-height: 1.55; color: var(--muted);
+  }
+  .tagline b { color: var(--fg); font-weight: 500; }
+
+  /* the aqueduct */
+  .stage {
+    position: relative; width: min(760px, 96vw); aspect-ratio: 1200 / 300;
+    margin: 2.4rem 0 1.8rem;
+  }
+  .aqueduct { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+  .aqueduct .struct { fill: none; stroke: oklch(70% .04 250.5 / .55); stroke-width: 2.4; stroke-linecap: round; }
+  .aqueduct .deck   { stroke: oklch(78% .06 250.5 / .7); }
+
+  /* flow overlay: packets riding the deck channel */
+  .flow { position: absolute; inset: 0; }
+  .node {
+    position: absolute; top: 18.3%; transform: translate(-50%, -50%);
+    width: .62rem; height: .62rem; border-radius: 50%;
+  }
+  .node.left  { left: 3.5%;  background: var(--teal);  box-shadow: 0 0 12px 2px oklch(72% .12 190 / .8); }
+  .node.right { left: 96.5%; background: var(--amber); box-shadow: 0 0 12px 2px oklch(72% .17 62 / .8); }
+  .packet {
+    position: absolute; top: 18.3%; left: 0;
+    width: 24px; height: 3px; border-radius: 3px; transform: translateY(-50%);
+    background: var(--amber);
+    box-shadow: 0 0 10px 1px var(--amber), 0 0 20px 4px oklch(72% .17 62 / .5);
+    animation: ride 3.6s linear infinite;
+  }
+  .packet::before {
+    content: ""; position: absolute; right: 100%; top: 0; width: 46px; height: 100%;
+    background: linear-gradient(90deg, transparent, oklch(72% .17 62 / .55));
+  }
+  .packet.p2 { animation-delay: 1.2s; }
+  .packet.p3 { animation-delay: 2.4s; }
+  .packet.back {
+    background: var(--teal);
+    box-shadow: 0 0 10px 1px var(--teal), 0 0 20px 4px oklch(72% .12 190 / .45);
+    animation: ride-back 4.8s linear infinite; animation-delay: .6s;
+  }
+  .packet.back::before {
+    right: auto; left: 100%;
+    background: linear-gradient(270deg, transparent, oklch(72% .12 190 / .5));
+  }
+  @keyframes ride {
+    0%   { left: 4%;  opacity: 0; }
+    8%   { opacity: 1; }
+    92%  { opacity: 1; }
+    100% { left: 96%; opacity: 0; }
+  }
+  @keyframes ride-back {
+    0%   { left: 96%; opacity: 0; }
+    10%  { opacity: 1; }
+    90%  { opacity: 1; }
+    100% { left: 4%;  opacity: 0; }
+  }
+
+  .soon {
+    font-family: var(--font-display); font-weight: 500;
+    font-size: clamp(1.05rem, 3vw, 1.35rem); letter-spacing: -.01em;
+  }
+  .soon .flick { color: var(--amber); }
+  .foot { margin-top: 1.5rem; font-size: .8rem; color: oklch(58% .03 250.5); }
+
+  /* orchestrated entrance */
+  .rise { opacity: 0; transform: translateY(14px); animation: rise .8s cubic-bezier(.2,.7,.2,1) forwards; }
+  .d1 { animation-delay: .05s; } .d2 { animation-delay: .18s; } .d3 { animation-delay: .32s; }
+  .d4 { animation-delay: .48s; } .d5 { animation-delay: .78s; } .d6 { animation-delay: .95s; }
+  @keyframes rise { to { opacity: 1; transform: none; } }
+
+  .aqueduct .struct { stroke-dasharray: 1; stroke-dashoffset: 1; animation: draw 1.5s ease forwards .5s; }
+  .aqueduct .a1{animation-delay:.55s} .aqueduct .a2{animation-delay:.65s} .aqueduct .a3{animation-delay:.75s}
+  .aqueduct .a4{animation-delay:.85s} .aqueduct .a5{animation-delay:.95s}
+  @keyframes draw { to { stroke-dashoffset: 0; } }
+
+  @media (max-width: 520px) {
+    body { padding: 2rem 1.25rem; }
+    .mark { height: 3.75rem; width: 3.75rem; }
+    .stage { width: 100%; aspect-ratio: 1000 / 320; margin: 2rem 0 1.4rem; }
+    .grid { background-size: 44px 44px; }
+    .node, .packet { top: 16.5%; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .rise { animation: none; opacity: 1; transform: none; }
+    .aqueduct .struct { animation: none; stroke-dashoffset: 0; }
+    .packet { animation: none; opacity: .9; }
+    .packet.p1 { left: 30%; } .packet.p2 { left: 55%; } .packet.p3 { left: 78%; } .packet.back { left: 45%; }
+  }
+</style>
+</head>
+<body>
+  <div class="grid"></div>
+  <div class="grain"></div>
+
+  <main>
+    <img class="mark rise d2" src="/viaduct-mark.png" alt="viaduct.sh" width="76" height="76">
+    <h1 class="rise d3">viaduct<span class="dot">.sh</span></h1>
+    <p class="tagline rise d4">Expose your <b>localhost</b> to the world with a single command. Self-hosted, open source, no accounts.</p>
+
+    <p class="soon rise d5">Launching <span class="flick">soon</span>.</p>
+    <p class="foot rise d6">Free and open source. MIT licensed.</p>
+  </main>
+</body>
+</html>

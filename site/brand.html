@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>viaduct.sh — free, open-source tunneling for local development</title>
+<meta name="description" content="viaduct.sh is a free, open-source dev tool that exposes your local services to the internet with a single command.">
+<meta name="author" content="viaduct.sh">
+<meta property="og:title" content="viaduct.sh — free, open-source tunneling for local development">
+<meta property="og:description" content="viaduct.sh is a free, open-source dev tool that exposes your local services to the internet with a single command.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="https://viaduct.sh/viaduct-mark.png">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="viaduct.sh — free, open-source tunneling for local development">
+<meta name="twitter:description" content="viaduct.sh is a free, open-source dev tool that exposes your local services to the internet with a single command.">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="mask-icon" href="/favicon.svg" color="#f5b544">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --radius: .625rem;
+    --background: oklch(18.5% .035 250.5);
+    --foreground: oklch(96% .01 250.5);
+    --card: oklch(22.5% .04 250.5);
+    --primary: oklch(65% .18 60);
+    --primary-foreground: oklch(12% .03 60);
+    --secondary: oklch(25% .04 250.5);
+    --muted-foreground: oklch(65% .04 250.5);
+    --accent: oklch(45% .12 180);
+    --destructive: oklch(62% .2 25);
+    --border: oklch(100% 0 0 / .15);
+    --ring: oklch(65% .18 60);
+    --font-display: "Space Grotesk", system-ui, sans-serif;
+    --font-body: "DM Sans", system-ui, sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { color-scheme: dark; }
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-body);
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: inherit; text-decoration: none; }
+
+  header {
+    position: sticky; top: 0; z-index: 50;
+    border-bottom: 1px solid var(--border);
+    background: oklch(18.5% .035 250.5 / .8);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+  .header-inner {
+    max-width: 64rem; margin: 0 auto; height: 4rem; padding: 0 1.5rem;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .brand { display: flex; align-items: center; gap: .625rem; }
+  .brand img { height: 2rem; width: 2rem; }
+  .brand span { font-family: var(--font-display); font-size: 1.125rem; font-weight: 600; }
+  nav { display: flex; align-items: center; gap: 1.5rem; }
+  nav a {
+    font-size: .875rem; font-weight: 500; color: var(--muted-foreground);
+    transition: color .15s;
+  }
+  nav a:hover { color: var(--foreground); }
+
+  .hero {
+    position: relative;
+    min-height: calc(100vh - 4rem);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 3rem 1.5rem;
+  }
+  .hero::before {
+    content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+    background: radial-gradient(ellipse at top, oklch(65% .18 60 / .2), var(--background) 60%);
+  }
+  main { max-width: 42rem; margin: 0 auto; text-align: center; }
+  .mark { height: 7rem; width: 7rem; }
+  h1 {
+    font-family: var(--font-display);
+    font-size: 2.25rem; font-weight: 600; letter-spacing: -.025em;
+  }
+  .tagline {
+    max-width: 36rem; margin: 1.25rem auto 0;
+    font-size: 1.125rem; color: var(--muted-foreground);
+  }
+  .tagline code {
+    background: var(--secondary); color: var(--foreground);
+    border-radius: .25rem; padding: .125rem .375rem;
+    font-family: var(--font-mono); font-size: .875rem; font-weight: 600;
+  }
+
+  .cta-row {
+    margin-top: 2.5rem;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1rem;
+  }
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: .5rem;
+    border-radius: .5rem; padding: .75rem 1.5rem;
+    font-size: .875rem; font-weight: 500; font-family: var(--font-body);
+    cursor: pointer; transition: background-color .15s;
+  }
+  .btn:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+  .btn-primary { background: var(--primary); color: var(--primary-foreground); }
+  .btn-primary:hover { background: oklch(65% .18 60 / .9); }
+  .btn-primary svg { height: 1rem; width: 1rem; }
+  .btn-outline { border: 1px solid var(--border); background: var(--card); color: var(--foreground); }
+  .btn-outline:hover { background: oklch(22.5% .04 250.5 / .8); }
+
+  #notify {
+    margin: 2.5rem auto 0; max-width: 28rem;
+    display: flex; flex-direction: column; gap: .75rem;
+  }
+  #notify input {
+    flex: 1; border-radius: .5rem; border: 1px solid var(--border);
+    background: var(--background); color: var(--foreground);
+    padding: .75rem 1rem; font-size: .875rem; font-family: var(--font-body);
+  }
+  #notify input::placeholder { color: var(--muted-foreground); }
+  #notify input:focus { outline: 2px solid var(--ring); }
+  #notify button { border: 0; background: var(--secondary); color: var(--foreground); padding: .75rem 1.25rem; }
+  #notify button:hover { background: oklch(25% .04 250.5 / .8); }
+  #notify-note { margin-top: .75rem; font-size: .875rem; color: var(--muted-foreground); display: none; }
+
+  .terminal {
+    margin-top: 3rem; overflow: hidden; text-align: left;
+    border: 1px solid var(--border); border-radius: .75rem; background: var(--card);
+    font-family: var(--font-mono); font-size: .875rem;
+  }
+  .terminal-bar {
+    display: flex; align-items: center; gap: .375rem;
+    border-bottom: 1px solid var(--border); padding: .5rem 1rem;
+  }
+  .dot { height: .625rem; width: .625rem; border-radius: 9999px; }
+  .dot-red { background: var(--destructive); }
+  .dot-amber { background: var(--primary); }
+  .dot-teal { background: var(--accent); }
+  .terminal pre { white-space: pre-wrap; padding: 1rem; line-height: 1.625; }
+  .terminal .out { color: var(--muted-foreground); }
+
+  .features {
+    margin-top: 3rem; list-style: none; text-align: left;
+    display: grid; grid-template-columns: 1fr; gap: 1rem;
+  }
+  .features li { border: 1px solid var(--border); border-radius: .75rem; background: var(--card); padding: 1rem; }
+  .features h3 { font-family: var(--font-display); font-size: .875rem; font-weight: 600; }
+  .features p { margin-top: .25rem; font-size: .875rem; color: var(--muted-foreground); }
+
+  .hero footer { margin-top: 4rem; font-size: .875rem; font-weight: 500; color: var(--muted-foreground); }
+
+  @media (min-width: 640px) {
+    .mark { height: 9rem; width: 9rem; }
+    h1 { font-size: 3rem; }
+    .cta-row { flex-direction: row; }
+    #notify { flex-direction: row; gap: .5rem; }
+    .features { grid-template-columns: repeat(3, 1fr); }
+  }
+  @media (min-width: 768px) {
+    h1 { font-size: 3.75rem; }
+    .tagline { font-size: 1.25rem; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="header-inner">
+    <a class="brand" href="/">
+      <img src="/viaduct-mark.png" alt="viaduct.sh">
+      <span>viaduct.sh</span>
+    </a>
+    <nav>
+      <a href="https://github.com/webmull/viaduct" target="_blank" rel="noreferrer">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<div class="hero">
+  <main>
+    <img class="mark" src="/viaduct-mark.png" alt="viaduct.sh">
+    <h1>viaduct.sh</h1>
+    <p class="tagline">Open-source tunneling for local development. Expose <code>localhost</code> to the world with one command.</p>
+
+    <div class="cta-row">
+      <a class="btn btn-primary" href="https://github.com/webmull/viaduct" target="_blank" rel="noreferrer">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.419 2.865 8.17 6.839 9.49.5.092.682-.218.682-.486 0-.236-.009-.866-.014-1.7-2.782.605-3.369-1.343-3.369-1.343-.454-1.156-1.11-1.464-1.11-1.464-.908-.62.069-.608.069-.608 1.004.07 1.532 1.03 1.532 1.03.892 1.529 2.341 1.087 2.91.831.092-.646.35-1.086.636-1.337-2.22-.251-4.555-1.111-4.555-4.943 0-1.091.39-1.984 1.03-2.683-.103-.253-.447-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0 1 12 6.836c.85.004 1.705.115 2.504.337 1.909-1.294 2.747-1.025 2.747-1.025.547 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.167 22 16.418 22 12c0-5.523-4.477-10-10-10z"/></svg>
+        Star on GitHub
+      </a>
+      <a class="btn btn-outline" href="#notify">Get notified</a>
+    </div>
+
+    <form id="notify">
+      <input type="email" required placeholder="you@example.com" aria-label="Email address">
+      <button class="btn" type="submit">Notify me</button>
+    </form>
+    <p id="notify-note">Opens your mail app — we read every note.</p>
+
+    <div class="terminal">
+      <div class="terminal-bar">
+        <span class="dot dot-red"></span><span class="dot dot-amber"></span><span class="dot dot-teal"></span>
+      </div>
+      <pre><code>$ viaduct http 3000</code>
+<code class="out">https://my-app.viaduct.sh → localhost:3000</code></pre>
+    </div>
+
+    <ul class="features">
+      <li>
+        <h3>Free &amp; open source</h3>
+        <p>No quotas, no accounts. Run it locally or self-host.</p>
+      </li>
+      <li>
+        <h3>One command</h3>
+        <p>Get a public HTTPS URL for any local port instantly.</p>
+      </li>
+      <li>
+        <h3>Custom domains</h3>
+        <p>Bring your own domain or use our shared host.</p>
+      </li>
+    </ul>
+  </main>
+  <footer>MIT licensed · Built for developers</footer>
+</div>
+
+<script>
+  document.getElementById("notify").addEventListener("submit", (event) => {
+    event.preventDefault();
+    const email = event.target.querySelector("input").value;
+    const subject = encodeURIComponent("viaduct.sh launch notification");
+    const body = encodeURIComponent("Please notify " + email + " when viaduct.sh launches.");
+    window.location.href = "mailto:hello@viaduct.sh?subject=" + subject + "&body=" + body;
+    document.getElementById("notify-note").style.display = "block";
+  });
+</script>
+</body>
+</html>

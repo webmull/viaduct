@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <title>viaduct.sh</title>
+  <g fill="none" stroke="#e6e8ef" stroke-width="3.5" stroke-linecap="round">
+    <path d="M8 54 V32 a8 8 0 0 1 16 0 V54" />
+    <path d="M24 54 V32 a8 8 0 0 1 16 0 V54" />
+    <path d="M40 54 V32 a8 8 0 0 1 16 0 V54" />
+  </g>
+  <rect x="4" y="17" width="56" height="7" rx="1.5" fill="#f5b544" />
+  <rect x="4" y="17" width="56" height="2" rx="1" fill="#ffffff" opacity="0.35" />
+  <rect x="4" y="55" width="56" height="2" rx="1" fill="#e6e8ef" opacity="0.4" />
+</svg>
