@@ -1,7 +1,7 @@
 """Integration tests: a real TunnelServer and TunnelClient over localhost sockets.
 
-Auth runs against a real SQLite store holding a hashed reservation. Shared
-harness (local echo app, stacks) lives in support.py.
+The server assigns each tunnel a random subdomain; tests read it back from the
+client. Auth runs against a real SQLite token store. Shared harness in support.py.
 """
 
 from __future__ import annotations
@@ -14,6 +14,8 @@ import pytest
 
 import support
 from support import (
+    BASE_DOMAIN,
+    TOKEN,
     WS_GUID,
     WS_KEY,
     bare_server,
@@ -24,25 +26,35 @@ from support import (
 )
 from viaduct import protocol
 from viaduct.client import TunnelError
+from viaduct.store import hash_token
 
 
 def test_http_round_trip() -> None:
     async def scenario() -> None:
-        async with tunnel_stack() as (server, _client):
-            resp = await http_get(server.public_port, "pmesh.viaduct.test", "/hi")
+        async with tunnel_stack() as (server, client):
+            resp = await http_get(server.public_port, client.hostname, "/hi")
             assert resp.startswith(b"HTTP/1.1 200"), resp[:80]
             assert b"echo:/hi" in resp
 
     run(scenario())
 
 
+def test_assigned_hostname_is_a_friendly_name() -> None:
+    async def scenario() -> None:
+        async with tunnel_stack() as (_server, client):
+            assert client.subdomain and "-" in client.subdomain
+            assert client.hostname == f"{client.subdomain}.{BASE_DOMAIN}"
+
+    run(scenario())
+
+
 def test_websocket_upgrade_survives() -> None:
     async def scenario() -> None:
-        async with tunnel_stack() as (server, _client):
+        async with tunnel_stack() as (server, client):
             reader, writer = await asyncio.open_connection("127.0.0.1", server.public_port)
             writer.write(
                 b"GET /ws HTTP/1.1\r\n"
-                b"Host: pmesh.viaduct.test\r\n"
+                b"Host: " + client.hostname.encode() + b"\r\n"
                 b"Upgrade: websocket\r\n"
                 b"Connection: Upgrade\r\n"
                 b"Sec-WebSocket-Key: " + WS_KEY.encode() + b"\r\n"
@@ -76,7 +88,7 @@ def test_unknown_host_gets_404() -> None:
 
 def test_wrong_token_rejected() -> None:
     async def scenario() -> None:
-        async with bare_server("pmesh") as server:
+        async with bare_server() as server:
             client = make_client(server, token="wrong")
             try:
                 with pytest.raises(TunnelError, match="bad_token"):
@@ -87,37 +99,26 @@ def test_wrong_token_rejected() -> None:
     run(scenario())
 
 
-def test_unreserved_subdomain_rejected() -> None:
+def test_two_tunnels_get_distinct_names() -> None:
     async def scenario() -> None:
-        async with bare_server("pmesh") as server:
-            client = make_client(server, subdomain="ghost")
+        async with tunnel_stack() as (server, first):
+            second = make_client(server, local_port=first._local_port, pool_size=1)
             try:
-                with pytest.raises(TunnelError, match="unknown_subdomain"):
-                    await client.start()
+                await second.start()
+                assert first.subdomain != second.subdomain
+                assert first.subdomain in server.tunnels
+                assert second.subdomain in server.tunnels
             finally:
-                await client.stop()
-
-    run(scenario())
-
-
-def test_duplicate_subdomain_rejected() -> None:
-    async def scenario() -> None:
-        async with tunnel_stack() as (server, _client):
-            other = make_client(server)
-            try:
-                with pytest.raises(TunnelError, match="subdomain_taken"):
-                    await other.start()
-            finally:
-                await other.stop()
+                await second.stop()
 
     run(scenario())
 
 
 def test_data_hello_with_bad_token_is_dropped() -> None:
     async def scenario() -> None:
-        async with tunnel_stack() as (server, _client):
+        async with tunnel_stack() as (server, client):
             reader, writer = await asyncio.open_connection("127.0.0.1", server.tunnel_port)
-            await protocol.write_frame(writer, protocol.data_hello("wrong", "pmesh"))
+            await protocol.write_frame(writer, protocol.data_hello("wrong", client.subdomain))
             assert await reader.read() == b""  # server hangs up without pooling
             writer.close()
 
@@ -126,9 +127,9 @@ def test_data_hello_with_bad_token_is_dropped() -> None:
 
 def test_pool_replenishes_across_requests() -> None:
     async def scenario() -> None:
-        async with tunnel_stack(pool_size=2) as (server, _client):
+        async with tunnel_stack(pool_size=2) as (server, client):
             for i in range(6):
-                resp = await http_get(server.public_port, "pmesh.viaduct.test", f"/r{i}")
+                resp = await http_get(server.public_port, client.hostname, f"/r{i}")
                 assert resp.startswith(b"HTTP/1.1 200"), (i, resp[:80])
 
     run(scenario())
@@ -137,10 +138,11 @@ def test_pool_replenishes_across_requests() -> None:
 def test_tunnel_unregisters_when_client_stops() -> None:
     async def scenario() -> None:
         async with tunnel_stack() as (server, client):
-            assert "pmesh" in server.tunnels
+            subdomain = client.subdomain
+            assert subdomain in server.tunnels
             await client.stop()
             for _ in range(500):
-                if "pmesh" not in server.tunnels:
+                if subdomain not in server.tunnels:
                     return
                 await asyncio.sleep(0.01)
             raise AssertionError("tunnel never unregistered")
@@ -151,31 +153,30 @@ def test_tunnel_unregisters_when_client_stops() -> None:
 def test_last_seen_recorded_after_connect() -> None:
     async def scenario() -> None:
         async with tunnel_stack() as (server, _client):
-            res = server.store.get("pmesh")
-            assert res is not None and res.last_seen is not None
+            tok = server.store.get_by_token(TOKEN)
+            assert tok is not None and tok.last_seen is not None
 
     run(scenario())
 
 
-def test_multiple_tunnels_route_independently() -> None:
+def test_multiple_tokens_are_independent() -> None:
     async def scenario() -> None:
-        async with bare_server("alpha", "beta") as server:
+        async with bare_server() as server:
+            server.store.create_token(hash_token("second-token"))
             local = await asyncio.start_server(support.local_app, "127.0.0.1", 0)
             local_port = local.sockets[0].getsockname()[1]
-            alpha = make_client(server, subdomain="alpha", local_port=local_port, pool_size=2)
-            beta = make_client(server, subdomain="beta", local_port=local_port, pool_size=2)
+            a = make_client(server, local_port=local_port, pool_size=2)
+            b = make_client(server, token="second-token", local_port=local_port, pool_size=2)
             try:
-                await alpha.start()
-                await beta.start()
-                await support.wait_for_idle(server, "alpha")
-                await support.wait_for_idle(server, "beta")
-                resp = await http_get(server.public_port, "alpha.viaduct.test", "/a")
-                assert b"echo:/a" in resp
-                resp = await http_get(server.public_port, "beta.viaduct.test", "/b")
-                assert b"echo:/b" in resp
+                await a.start()
+                await b.start()
+                await support.wait_for_idle(server, a.subdomain)
+                await support.wait_for_idle(server, b.subdomain)
+                assert b"echo:/a" in await http_get(server.public_port, a.hostname, "/a")
+                assert b"echo:/b" in await http_get(server.public_port, b.hostname, "/b")
             finally:
-                await alpha.stop()
-                await beta.stop()
+                await a.stop()
+                await b.stop()
                 local.close()
 
     run(scenario())

@@ -59,9 +59,9 @@ def test_round_trip_over_tls(certs: tuple[Path, Path]) -> None:
     async def scenario() -> None:
         async with tunnel_stack(server_tls=_server_ctx(certs), client_ssl=_client_ctx(certs)) as (
             server,
-            _client,
+            client,
         ):
-            resp = await http_get(server.public_port, "pmesh.viaduct.test", "/tls")
+            resp = await http_get(server.public_port, client.hostname, "/tls")
             assert resp.startswith(b"HTTP/1.1 200"), resp[:80]
             assert b"echo:/tls" in resp
 
@@ -70,7 +70,7 @@ def test_round_trip_over_tls(certs: tuple[Path, Path]) -> None:
 
 def test_client_rejects_untrusted_cert(certs: tuple[Path, Path]) -> None:
     async def scenario() -> None:
-        async with bare_server("pmesh", tls=_server_ctx(certs)) as server:
+        async with bare_server(tls=_server_ctx(certs)) as server:
             client = make_client(server, ssl_ctx=ssl.create_default_context())
             try:
                 with pytest.raises(ssl.SSLCertVerificationError):
@@ -83,7 +83,7 @@ def test_client_rejects_untrusted_cert(certs: tuple[Path, Path]) -> None:
 
 def test_plaintext_client_rejected_by_tls_server(certs: tuple[Path, Path]) -> None:
     async def scenario() -> None:
-        async with bare_server("pmesh", tls=_server_ctx(certs)) as server:
+        async with bare_server(tls=_server_ctx(certs)) as server:
             client = make_client(server)  # no ssl_ctx — sends raw frames
             try:
                 with pytest.raises((protocol.ConnectionClosed, ConnectionError)):

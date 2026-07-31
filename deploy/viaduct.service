@@ -9,7 +9,7 @@ Wants=network-online.target
 
 [Service]
 User=viaduct
-ExecStart=/usr/local/bin/viaduct http 3000 --subdomain pmesh
+ExecStart=/usr/local/bin/viaduct http 3000
 Restart=always
 RestartSec=5
 # The client also reconnects on its own with 1s→30s backoff; Restart=always

@@ -11,9 +11,13 @@ buffered in the reader for the raw pipe to pick up.
 
 Control connection::
 
-    -> {"type": "hello", "token": ..., "subdomain": ..., "local_port": ...}
+    -> {"type": "hello", "token": ..., "local_port": ...}
     <- {"type": "ok", "hostname": ...}  |  {"type": "error", "reason": ...}
     <-> {"type": "ping"} / {"type": "pong"}   every HEARTBEAT_INTERVAL seconds
+
+The server assigns a random subdomain and returns it in ``ok.hostname``; the
+client reads the leading label back off that hostname to tag its data
+connections.
 
 Data connection::
 
@@ -94,24 +98,12 @@ async def read_frame(reader: asyncio.StreamReader) -> Frame:
     return msg
 
 
-def hello(token: str, subdomain: str, local_port: int) -> Frame:
-    return {"type": "hello", "token": token, "subdomain": subdomain, "local_port": local_port}
+def hello(token: str, local_port: int) -> Frame:
+    return {"type": "hello", "token": token, "local_port": local_port}
 
 
 def data_hello(token: str, subdomain: str) -> Frame:
     return {"type": "data_hello", "token": token, "subdomain": subdomain}
-
-
-def domain_add(token: str, subdomain: str, hostname: str) -> Frame:
-    return {"type": "domain_add", "token": token, "subdomain": subdomain, "hostname": hostname}
-
-
-def domain_list(token: str) -> Frame:
-    return {"type": "domain_list", "token": token}
-
-
-def domain_remove(token: str, hostname: str) -> Frame:
-    return {"type": "domain_remove", "token": token, "hostname": hostname}
 
 
 def ok(**fields: Any) -> Frame:

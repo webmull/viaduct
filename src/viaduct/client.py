@@ -29,7 +29,7 @@ DEFAULT_POOL_SIZE = 20
 
 
 class TunnelError(Exception):
-    """The server refused the tunnel (bad token, subdomain taken, ...)."""
+    """The server refused the tunnel (e.g. bad token)."""
 
 
 class TunnelClient:
@@ -39,7 +39,6 @@ class TunnelClient:
         server_host: str,
         server_port: int,
         token: str,
-        subdomain: str,
         local_port: int,
         local_host: str = "127.0.0.1",
         pool_size: int = DEFAULT_POOL_SIZE,
@@ -49,11 +48,12 @@ class TunnelClient:
         self._server_port = server_port
         self._ssl_ctx = ssl_ctx
         self._token = token
-        self._subdomain = subdomain
         self._local_host = local_host
         self._local_port = local_port
         self._pool_size = pool_size
         self.hostname: str | None = None
+        #: assigned by the server, learned from the hostname it returns
+        self.subdomain: str | None = None
         self._reader: asyncio.StreamReader | None = None
         self._writer: asyncio.StreamWriter | None = None
         self._tasks: set[asyncio.Task[None]] = set()
@@ -62,13 +62,11 @@ class TunnelClient:
         self._stopping = False
 
     async def start(self) -> str:
-        """Authenticate, fill the pool, and return the public hostname."""
+        """Authenticate, fill the pool, and return the assigned public hostname."""
         reader, writer = await asyncio.open_connection(
             self._server_host, self._server_port, ssl=self._ssl_ctx
         )
-        await protocol.write_frame(
-            writer, protocol.hello(self._token, self._subdomain, self._local_port)
-        )
+        await protocol.write_frame(writer, protocol.hello(self._token, self._local_port))
         resp = await protocol.read_frame(reader)
         if resp["type"] == "error":
             writer.close()
@@ -77,6 +75,8 @@ class TunnelClient:
             writer.close()
             raise TunnelError(f"unexpected reply type {resp['type']!r}")
         self.hostname = protocol.require_str(resp, "hostname")
+        # The server picked our subdomain; it is the leading label of the host.
+        self.subdomain = self.hostname.split(".", 1)[0]
         self._reader, self._writer = reader, writer
         self._spawn(self._control_loop(reader, writer))
         self._spawn(self._heartbeat(writer))
@@ -165,7 +165,7 @@ class TunnelClient:
             backoff = 1.0
             try:
                 await protocol.write_frame(
-                    writer, protocol.data_hello(self._token, self._subdomain)
+                    writer, protocol.data_hello(self._token, self.subdomain or "")
                 )
                 first = await reader.read(CHUNK)
             except (protocol.ProtocolError, OSError):
@@ -206,32 +206,8 @@ class TunnelClient:
         await splice(reader, writer, l_reader, l_writer)
 
 
-async def domain_request(
-    server_host: str,
-    server_port: int,
-    ssl_ctx: ssl.SSLContext | None,
-    frame: protocol.Frame,
-) -> protocol.Frame:
-    """One-shot domain-management exchange: send a frame, return the ok reply."""
-    reader, writer = await asyncio.open_connection(server_host, server_port, ssl=ssl_ctx)
-    try:
-        await protocol.write_frame(writer, frame)
-        reply = await protocol.read_frame(reader)
-    finally:
-        writer.close()
-        with contextlib.suppress(OSError):
-            await writer.wait_closed()
-    if reply["type"] == "error":
-        raise TunnelError(protocol.require_str(reply, "reason"))
-    if reply["type"] != "ok":
-        raise TunnelError(f"unexpected reply type {reply['type']!r}")
-    return reply
-
-
 console = Console()
 app = typer.Typer(help="Viaduct client — expose a local service through a viaduct server.")
-domain_app = typer.Typer(help="Manage custom domains routed to your tunnel.")
-app.add_typer(domain_app, name="domain")
 
 _ServerOpt = Annotated[
     str | None,
@@ -259,7 +235,6 @@ def _cli() -> None:
 @app.command()
 def http(
     port: Annotated[int, typer.Argument(help="Local port to expose")],
-    subdomain: Annotated[str, typer.Option(help="Subdomain to claim on the server")],
     server: _ServerOpt = None,
     token: _TokenOpt = None,
     pool_size: Annotated[
@@ -268,11 +243,15 @@ def http(
     tls: _TlsOpt = None,
     tls_ca: _TlsCaOpt = None,
 ) -> None:
-    """Open a tunnel exposing local PORT. Blocks until the connection drops."""
+    """Open a tunnel exposing local PORT. The server assigns a random public URL.
+
+    Blocks until interrupted, reconnecting on drop (each reconnect gets a fresh
+    URL).
+    """
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
     host, srv_port, tok, ssl_ctx = _connection_settings(server, token, tls, tls_ca)
     try:
-        asyncio.run(_run_http(host, srv_port, tok, subdomain, port, pool_size, ssl_ctx))
+        asyncio.run(_run_http(host, srv_port, tok, port, pool_size, ssl_ctx))
     except KeyboardInterrupt:
         console.print("[yellow]viaduct: interrupted[/]")
     except TunnelError as exc:
@@ -286,73 +265,6 @@ def http(
         raise typer.Exit(1) from exc
     except OSError as exc:
         console.print(f"[bold red]viaduct: cannot reach server: {exc}[/]")
-        raise typer.Exit(1) from exc
-
-
-@domain_app.command("add")
-def domain_add(
-    hostname: Annotated[str, typer.Argument(help="Custom domain, e.g. demo.example.com")],
-    subdomain: Annotated[str, typer.Option(help="Reserved subdomain it should route to")],
-    server: _ServerOpt = None,
-    token: _TokenOpt = None,
-    tls: _TlsOpt = None,
-    tls_ca: _TlsCaOpt = None,
-) -> None:
-    """Register a custom domain and print the DNS record to create."""
-    host, srv_port, tok, ssl_ctx = _connection_settings(server, token, tls, tls_ca)
-    reply = _domain_op(
-        domain_request(host, srv_port, ssl_ctx, protocol.domain_add(tok, subdomain, hostname))
-    )
-    registered = protocol.require_str(reply, "hostname")
-    target = protocol.require_str(reply, "target")
-    console.print(f"[bold green]domain registered[/] {registered} → {subdomain}")
-    console.print(f"\nCreate this DNS record:\n\n    CNAME  {registered}  →  {target}\n")
-    console.print(
-        "[yellow]note:[/] apex domains cannot take a CNAME — "
-        "use your DNS provider's ALIAS/ANAME record type instead."
-    )
-
-
-@domain_app.command("list")
-def domain_list(
-    server: _ServerOpt = None,
-    token: _TokenOpt = None,
-    tls: _TlsOpt = None,
-    tls_ca: _TlsCaOpt = None,
-) -> None:
-    """List custom domains registered for your subdomain."""
-    host, srv_port, tok, ssl_ctx = _connection_settings(server, token, tls, tls_ca)
-    reply = _domain_op(domain_request(host, srv_port, ssl_ctx, protocol.domain_list(tok)))
-    domains = reply.get("domains") or []
-    if not domains:
-        console.print("no custom domains registered")
-        return
-    for entry in domains:
-        console.print(f"{entry.get('hostname')}  →  {entry.get('subdomain')}")
-
-
-@domain_app.command("remove")
-def domain_remove(
-    hostname: Annotated[str, typer.Argument(help="Custom domain to remove")],
-    server: _ServerOpt = None,
-    token: _TokenOpt = None,
-    tls: _TlsOpt = None,
-    tls_ca: _TlsCaOpt = None,
-) -> None:
-    """Remove a custom domain."""
-    host, srv_port, tok, ssl_ctx = _connection_settings(server, token, tls, tls_ca)
-    _domain_op(domain_request(host, srv_port, ssl_ctx, protocol.domain_remove(tok, hostname)))
-    console.print(f"[bold green]domain removed[/] {hostname}")
-
-
-def _domain_op(coro: Coroutine[Any, Any, protocol.Frame]) -> protocol.Frame:
-    try:
-        return asyncio.run(coro)
-    except TunnelError as exc:
-        console.print(f"[bold red]viaduct: server refused request: {exc}[/]")
-        raise typer.Exit(1) from exc
-    except (protocol.ProtocolError, OSError) as exc:
-        console.print(f"[bold red]viaduct: cannot talk to server: {exc}[/]")
         raise typer.Exit(1) from exc
 
 
@@ -387,14 +299,13 @@ def _cfg_str(cfg: dict[str, str | bool], key: str) -> str | None:
     return value if isinstance(value, str) else None
 
 
-FATAL_REASONS = ("bad_token", "unknown_subdomain")
+FATAL_REASONS = ("bad_token",)
 
 
 async def _run_http(
     server_host: str,
     server_port: int,
     token: str,
-    subdomain: str,
     local_port: int,
     pool_size: int,
     ssl_ctx: ssl.SSLContext | None,
@@ -412,7 +323,6 @@ async def _run_http(
             server_host=server_host,
             server_port=server_port,
             token=token,
-            subdomain=subdomain,
             local_port=local_port,
             pool_size=pool_size,
             ssl_ctx=ssl_ctx,

@@ -1,9 +1,10 @@
 """Viaduct server (`viaductd`): public listener, tunnel registry, idle pools.
 
-Auth: each subdomain has a persistent reservation (SQLite) storing the sha256
-of its token; hello/data_hello frames are checked against it. Runtime state
-lives in a `dict[str, Tunnel]` and dies with the process — clients redial on
-restart; a persisted binding to a dead socket would be worse than nothing.
+Auth: `viaductd token create` mints per-user tokens, stored only as sha256
+hashes. A client presents its token; the server assigns a random subdomain for
+the life of that connection and frees it on disconnect. Subdomains are never
+persisted — runtime state lives in a `dict[str, Tunnel]` and dies with the
+process, so clients simply redial (and get a fresh name) on restart.
 """
 
 from __future__ import annotations
@@ -17,22 +18,12 @@ import signal
 import ssl
 from pathlib import Path
 from typing import Annotated
-from urllib.parse import parse_qs, urlsplit
 
 import typer
 
-from viaduct import protocol, routing
+from viaduct import names, protocol, routing
 from viaduct.relay import splice
-from viaduct.store import (
-    DEFAULT_DB_PATH,
-    DomainTaken,
-    Reservation,
-    Store,
-    SubdomainTaken,
-    hash_token,
-    valid_hostname,
-    valid_subdomain,
-)
+from viaduct.store import DEFAULT_DB_PATH, Store, hash_token
 
 log = logging.getLogger("viaduct.server")
 
@@ -40,12 +31,13 @@ Conn = tuple[asyncio.StreamReader, asyncio.StreamWriter]
 
 
 class Tunnel:
-    """One connected client: its subdomain and its pool of idle data connections."""
+    """One connected client: its subdomain, owning token, and idle pool."""
 
-    def __init__(self, subdomain: str) -> None:
+    def __init__(self, subdomain: str, token_hash: str) -> None:
         self.subdomain = subdomain
+        self.token_hash = token_hash
         self.pool: asyncio.Queue[Conn] = asyncio.Queue()
-        #: pooled + in-flight data connections, bounded by --max-conns-per-token
+        #: pooled + in-flight data connections, bounded by --max-conns-per-tunnel
         self.data_conns = 0
 
     async def acquire(self, wait: float) -> Conn | None:
@@ -87,7 +79,7 @@ class TunnelServer:
         tunnel_port: int = 4443,
         base_domain: str = "localhost",
         tls: ssl.SSLContext | None = None,
-        max_conns_per_token: int = 128,
+        max_conns_per_tunnel: int = 128,
         idle_timeout: float | None = 300.0,
         pool_wait: float = 10.0,
     ) -> None:
@@ -97,7 +89,7 @@ class TunnelServer:
         self.tunnel_port = tunnel_port
         self.base_domain = base_domain
         self._tls = tls
-        self.max_conns_per_token = max_conns_per_token
+        self.max_conns_per_tunnel = max_conns_per_tunnel
         self.idle_timeout = idle_timeout
         self.pool_wait = pool_wait
         self.tunnels: dict[str, Tunnel] = {}
@@ -155,8 +147,6 @@ class TunnelServer:
                 await self._handle_control(frame, reader, writer)
             elif frame["type"] == "data_hello":
                 self._handle_data(frame, reader, writer)
-            elif frame["type"] in ("domain_add", "domain_list", "domain_remove"):
-                await self._handle_domain_op(frame, writer)
             else:
                 log.warning("unexpected first frame type=%r", frame["type"])
                 writer.close()
@@ -167,29 +157,22 @@ class TunnelServer:
         self, frame: protocol.Frame, reader: asyncio.StreamReader, writer: asyncio.StreamWriter
     ) -> None:
         token = protocol.require_str(frame, "token")
-        subdomain = protocol.require_str(frame, "subdomain")
         protocol.require_int(frame, "local_port")
-        reservation = self.store.get(subdomain)
-        if reservation is None:
-            log.warning("no reservation subdomain=%s", subdomain)
-            await self._reject(writer, "unknown_subdomain")
-            return
-        if not self._token_matches(token, reservation.token_hash):
-            log.warning("bad token subdomain=%s", subdomain)
+        tok = self.store.get_by_token(token)
+        if tok is None:
+            log.warning("bad token")
             await self._reject(writer, "bad_token")
             return
-        if subdomain in self.tunnels:
-            await self._reject(writer, "subdomain_taken")
-            return
 
-        tunnel = Tunnel(subdomain)
+        subdomain = names.unique_name(self.tunnels)
+        tunnel = Tunnel(subdomain, tok.token_hash)
         self.tunnels[subdomain] = tunnel
         hostname = f"{subdomain}.{self.base_domain}"
         ping_task = asyncio.create_task(self._ping_loop(writer))
         try:
             await protocol.write_frame(writer, protocol.ok(hostname=hostname))
             log.info("tunnel registered subdomain=%s hostname=%s", subdomain, hostname)
-            self.store.touch(subdomain)
+            self.store.touch(tok.token_hash)
             while True:
                 async with asyncio.timeout(protocol.DEAD_PEER_TIMEOUT):
                     msg = await protocol.read_frame(reader)
@@ -207,7 +190,7 @@ class TunnelServer:
                 del self.tunnels[subdomain]
             tunnel.close_pool()
             writer.close()
-            self.store.touch(subdomain)
+            self.store.touch(tok.token_hash)
             log.info("tunnel closed subdomain=%s", subdomain)
 
     def _handle_data(
@@ -216,17 +199,12 @@ class TunnelServer:
         token = protocol.require_str(frame, "token")
         subdomain = protocol.require_str(frame, "subdomain")
         tunnel = self.tunnels.get(subdomain)
-        reservation = self.store.get(subdomain)
-        if (
-            tunnel is None
-            or reservation is None
-            or not self._token_matches(token, reservation.token_hash)
-        ):
+        if tunnel is None or not self._token_matches(token, tunnel.token_hash):
             writer.close()
             return
-        if tunnel.data_conns >= self.max_conns_per_token:
+        if tunnel.data_conns >= self.max_conns_per_tunnel:
             log.warning(
-                "connection cap reached subdomain=%s cap=%s", subdomain, self.max_conns_per_token
+                "connection cap reached subdomain=%s cap=%s", subdomain, self.max_conns_per_tunnel
             )
             writer.close()
             return
@@ -235,72 +213,6 @@ class TunnelServer:
         tunnel.data_conns += 1
         tunnel.pool.put_nowait((reader, writer))
         log.debug("data conn pooled subdomain=%s idle=%s", subdomain, tunnel.pool.qsize())
-
-    async def _handle_domain_op(self, frame: protocol.Frame, writer: asyncio.StreamWriter) -> None:
-        """One-shot custom-domain management: reply with ok/error, then close."""
-        token = protocol.require_str(frame, "token")
-        if frame["type"] == "domain_add":
-            subdomain = protocol.require_str(frame, "subdomain")
-            reservation = self.store.get(subdomain)
-            if reservation is None:
-                await self._reject(writer, "unknown_subdomain")
-                return
-            if not self._token_matches(token, reservation.token_hash):
-                await self._reject(writer, "bad_token")
-                return
-            hostname = protocol.require_str(frame, "hostname").lower().rstrip(".")
-            if not valid_hostname(hostname):
-                await self._reject(writer, "invalid_hostname")
-                return
-            if hostname == self.base_domain or hostname.endswith("." + self.base_domain):
-                await self._reject(writer, "hostname_under_base_domain")
-                return
-            try:
-                self.store.add_domain(hostname, subdomain)
-            except DomainTaken:
-                await self._reject(writer, "domain_taken")
-                return
-            log.info("domain added hostname=%s subdomain=%s", hostname, subdomain)
-            await self._ack(
-                writer, protocol.ok(hostname=hostname, target=f"{subdomain}.{self.base_domain}")
-            )
-            return
-
-        # list/remove identify the reservation by token alone
-        reservation = self._reservation_for_token(token)
-        if reservation is None:
-            await self._reject(writer, "bad_token")
-            return
-        if frame["type"] == "domain_list":
-            domains = [
-                {"hostname": d.hostname, "subdomain": d.subdomain, "created_at": d.created_at}
-                for d in self.store.domains_for(reservation.subdomain)
-            ]
-            await self._ack(writer, protocol.ok(domains=domains))
-            return
-        hostname = protocol.require_str(frame, "hostname").lower().rstrip(".")
-        domain = self.store.get_domain(hostname)
-        if domain is None or domain.subdomain != reservation.subdomain:
-            await self._reject(writer, "unknown_domain")
-            return
-        self.store.remove_domain(hostname)
-        log.info("domain removed hostname=%s subdomain=%s", hostname, reservation.subdomain)
-        await self._ack(writer, protocol.ok())
-
-    def _reservation_for_token(self, token: str) -> Reservation | None:
-        return next(
-            (
-                r
-                for r in self.store.reservations.values()
-                if self._token_matches(token, r.token_hash)
-            ),
-            None,
-        )
-
-    async def _ack(self, writer: asyncio.StreamWriter, frame: protocol.Frame) -> None:
-        with contextlib.suppress(ConnectionError):
-            await protocol.write_frame(writer, frame)
-        writer.close()
 
     async def _ping_loop(self, writer: asyncio.StreamWriter) -> None:
         with contextlib.suppress(ConnectionError):
@@ -329,15 +241,9 @@ class TunnelServer:
             await self._respond(writer, "400 Bad Request", "viaduct: malformed request\n")
             return
         host = routing.extract_host(head)
-        subdomain = (
-            routing.resolve_subdomain(host, self.base_domain, self.store.domain_routes())
-            if host
-            else None
-        )
+        subdomain = routing.subdomain_for_host(host, self.base_domain) if host else None
         tunnel = self.tunnels.get(subdomain) if subdomain else None
         if tunnel is None:
-            if subdomain is None and await self._maybe_tls_check(head, writer):
-                return
             log.info("no tunnel host=%s", host)
             await self._respond(writer, "404 Not Found", "viaduct: no such tunnel\n")
             return
@@ -367,25 +273,6 @@ class TunnelServer:
                 self._no_active_splices.set()
             tunnel.data_conns -= 1
 
-    async def _maybe_tls_check(self, head: bytes, writer: asyncio.StreamWriter) -> bool:
-        """Answer Caddy's on-demand-TLS ask endpoint: 200 only for known custom domains.
-
-        Only reachable for hosts that resolve to no tunnel (Caddy asks with
-        Host: localhost), so tunneled apps keep their own /_viaduct/* paths.
-        Without this gate the service would be an open certificate mill.
-        """
-        target = routing.extract_path(head)
-        if target is None or urlsplit(target).path != "/_viaduct/tls-check":
-            return False
-        query = parse_qs(urlsplit(target).query)
-        domain = (query.get("domain") or [""])[0].lower().rstrip(".")
-        if domain and self.store.get_domain(domain) is not None:
-            await self._respond(writer, "200 OK", "ok\n")
-        else:
-            log.info("tls-check refused domain=%s", domain)
-            await self._respond(writer, "404 Not Found", "unknown domain\n")
-        return True
-
     async def _respond(self, writer: asyncio.StreamWriter, status: str, body: str) -> None:
         with contextlib.suppress(ConnectionError):
             writer.write(routing.plain_response(status, body))
@@ -408,8 +295,8 @@ def _cli(
         Path | None, typer.Option(help="PEM certificate enabling TLS on the tunnel listener")
     ] = None,
     tls_key: Annotated[Path | None, typer.Option(help="PEM private key for --tls-cert")] = None,
-    max_conns_per_token: Annotated[
-        int, typer.Option(help="Max pooled + active data connections per token")
+    max_conns_per_tunnel: Annotated[
+        int, typer.Option(help="Max pooled + active data connections per tunnel")
     ] = 128,
     idle_timeout: Annotated[
         float, typer.Option(help="Close proxied connections idle this many seconds (0 = never)")
@@ -434,7 +321,7 @@ def _cli(
                 base_domain,
                 db,
                 tls,
-                max_conns_per_token,
+                max_conns_per_tunnel,
                 idle_timeout if idle_timeout > 0 else None,
             )
         )
@@ -447,7 +334,7 @@ async def _serve(
     base_domain: str,
     db: Path,
     tls: ssl.SSLContext | None,
-    max_conns_per_token: int,
+    max_conns_per_tunnel: int,
     idle_timeout: float | None,
 ) -> None:
     store = Store(db)
@@ -458,7 +345,7 @@ async def _serve(
         tunnel_port=tunnel_port,
         base_domain=base_domain,
         tls=tls,
-        max_conns_per_token=max_conns_per_token,
+        max_conns_per_tunnel=max_conns_per_tunnel,
         idle_timeout=idle_timeout,
     )
     await server.start()
@@ -476,30 +363,32 @@ async def _serve(
         store.close()
 
 
-token_app = typer.Typer(help="Manage subdomain reservations and their auth tokens.")
+token_app = typer.Typer(help="Manage auth tokens.")
 app.add_typer(token_app, name="token")
 
 
 @token_app.command("create")
 def token_create(
-    subdomain: Annotated[str, typer.Option(help="Subdomain to reserve")],
+    label: Annotated[
+        str | None, typer.Option(help="Optional note to remember who this token is for")
+    ] = None,
     db: Annotated[Path, typer.Option(help="SQLite database path")] = DEFAULT_DB_PATH,
 ) -> None:
-    """Reserve a subdomain and print its auth token — shown once; only the sha256 is stored."""
-    if not valid_subdomain(subdomain):
-        raise typer.BadParameter("subdomain must be a lowercase DNS label (a-z, 0-9, hyphens)")
+    """Mint an auth token and print it — shown once; only its sha256 is stored.
+
+    Each tunnel gets a randomly generated subdomain at connect time, so a token
+    is not tied to any name; one token can open many tunnels.
+    """
     token = secrets.token_urlsafe(32)
     store = Store(db)
     try:
-        store.create_reservation(subdomain, hash_token(token))
-    except SubdomainTaken:
-        typer.echo(f"viaductd: subdomain {subdomain!r} is already reserved", err=True)
-        raise typer.Exit(1) from None
+        store.create_token(hash_token(token), label)
     finally:
         store.close()
     typer.echo(token)
+    note = f" for {label!r}" if label else ""
     typer.echo(
-        f"viaductd: reserved {subdomain!r} — the token above is shown once; "
+        f"viaductd: created token{note} — shown once; "
         "put it in the client's ~/.config/viaduct/config.toml",
         err=True,
     )

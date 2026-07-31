@@ -9,8 +9,8 @@ The server terminates public HTTPS at Caddy and pipes traffic back down the
 tunnel to your `localhost`.
 
 - HTTP and WebSocket tunneling
-- Per-subdomain auth tokens (stored only as sha256 hashes)
-- Wildcard `*.viaduct.sh` plus bring-your-own custom domains with on-demand TLS
+- Auth tokens, stored only as sha256 hashes (one token can open many tunnels)
+- A random friendly subdomain (e.g. `funny-otter.viaduct.sh`) assigned per tunnel
 - Self-hosted, designed for one DigitalOcean droplet and a handful of trusted users
 
 Full design is in [`SPEC.md`](SPEC.md); the complete droplet runbook is in
@@ -30,18 +30,20 @@ Everything runs on one machine for development: no TLS, base domain `localhost`.
 python3 -m venv .venv && . .venv/bin/activate
 pip install .
 
-# 2. Reserve a subdomain and mint its token (the token is printed once)
-viaductd token create --subdomain demo --db ./viaduct.db
+# 2. Mint an auth token (printed once; not tied to any subdomain)
+viaductd token create --db ./viaduct.db
 
 # 3. Start the server: public traffic on :8080, tunnel connections on :4443
 viaductd --db ./viaduct.db --base-domain localhost
 
-# 4. In another shell, start something to expose and open the tunnel
+# 4. In another shell, start something to expose and open the tunnel.
+#    The server assigns a random name and the client prints the URL, e.g.
+#    "tunnel up funny-otter.localhost -> 127.0.0.1:3000"
 python3 -m http.server 3000
-viaduct http 3000 --subdomain demo --token <token-from-step-2>
+viaduct http 3000 --token <token-from-step-2>
 
-# 5. Reach it through the tunnel
-curl -H 'Host: demo.localhost' http://127.0.0.1:8080/
+# 5. Reach it through the tunnel (use the name the client printed)
+curl -H 'Host: funny-otter.localhost' http://127.0.0.1:8080/
 ```
 
 Instead of passing flags, the client reads `~/.config/viaduct/config.toml`:
@@ -132,23 +134,23 @@ systemctl enable --now caddy viaductd viaductd-restart.timer
 
 ### 3. Issue tokens and connect
 
-On the droplet, reserve a subdomain for each user:
+On the droplet, mint a token per user (the `--label` is just a reminder note):
 
 ```sh
-viaductd token create --subdomain pmesh --db /var/lib/viaduct/viaduct.db
+viaductd token create --label alice --db /var/lib/viaduct/viaduct.db
 ```
 
 On the local machine, put the server, token, and `tls = true` in
 `~/.config/viaduct/config.toml`, then:
 
 ```sh
-viaduct http 3000 --subdomain pmesh
-# tunnel up: https://pmesh.viaduct.sh -> localhost:3000
+viaduct http 3000
+# tunnel up: https://funny-otter.viaduct.sh -> localhost:3000
 ```
 
-Custom domains: `viaduct domain add demo.example.com --subdomain pmesh` prints
-the CNAME to create; Caddy fetches a certificate on demand once DNS points at
-the droplet.
+The server assigns a fresh random name for each tunnel and frees it when the
+tunnel drops, so reconnecting gives a new URL. Names never collide between
+concurrent tunnels.
 
 `viaductd` drains active connections gracefully on restart, so
 `systemctl restart viaductd` and the monthly cert-refresh timer are safe during

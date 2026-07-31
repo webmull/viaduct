@@ -1,7 +1,7 @@
 # Droplet setup
 
 One Ubuntu droplet runs Caddy (public HTTPS) and viaductd. This document
-covers DNS, firewall, TLS, custom domains, limits, and the systemd units.
+covers DNS, firewall, TLS, limits, and the systemd units.
 
 ## 1. DNS (DigitalOcean)
 
@@ -78,38 +78,22 @@ A stale cert shows up client-side as a certificate-expired error.
 
 ```toml
 server = "viaduct.sh:4443"
-token = "<from: viaductd token create --subdomain pmesh>"
+token = "<from: viaductd token create>"
 tls = true
 ```
 
 Then:
 
 ```sh
-viaduct http 3000 --subdomain pmesh
-# -> tunnel up pmesh.viaduct.sh — public URL https://pmesh.viaduct.sh
+viaduct http 3000
+# -> tunnel up funny-otter.viaduct.sh — public URL https://funny-otter.viaduct.sh
 ```
 
-## 6. Custom domains
+The server picks a fresh random name for each tunnel and frees it on
+disconnect, so reconnecting yields a new URL. Names never collide between
+concurrent tunnels.
 
-Register the domain against your reservation (authenticated by your token):
-
-```sh
-viaduct domain add demo.adamdavis.co.uk --subdomain pmesh
-# prints:  CNAME  demo.adamdavis.co.uk  →  pmesh.viaduct.sh
-```
-
-Create that CNAME at your DNS provider. Apex domains cannot take a CNAME — use
-the provider's ALIAS/ANAME record type instead.
-
-The first HTTPS request for the new hostname makes Caddy fetch a certificate
-on demand. Caddy first asks `viaductd` (`GET /_viaduct/tls-check?domain=…`),
-which answers 200 only for hostnames in the `domains` table — that gate is
-what keeps the service from being an open certificate mill.
-
-`viaduct domain list` shows your domains; `viaduct domain remove <hostname>`
-deletes one (after which tls-check refuses it again).
-
-## 7. Limits and kernel tuning
+## 6. Limits and kernel tuning
 
 The failure mode that matters is an audience scanning a QR code at once —
 hundreds of TCP connections arriving in a burst.
@@ -130,7 +114,7 @@ EOF
 sysctl --system
 ```
 
-## 8. Systemd units
+## 7. Systemd units
 
 ```sh
 useradd --system --home-dir /var/lib/viaduct --shell /usr/sbin/nologin viaduct
@@ -153,15 +137,15 @@ systemctl enable --now caddy viaductd viaductd-restart.timer
 ```
 
 `viaduct.service` is for the *local* machine running the client — install it
-there, edit the port/subdomain in ExecStart, and put server/token/tls in that
-user's `~/.config/viaduct/config.toml`.
+there, edit the port in ExecStart, and put server/token/tls in that user's
+`~/.config/viaduct/config.toml`.
 
 viaductd drains gracefully on SIGTERM: it stops accepting, gives in-flight
-transfers 30s to finish, then exits — so `systemctl restart viaductd` (and the
+transfers 30s to finish, then exits, so `systemctl restart viaductd` (and the
 monthly cert-refresh timer) is safe during live traffic; clients reconnect
-with 1s→30s backoff.
+with 1s to 30s backoff.
 
-## 9. Landing page
+## 8. Landing page
 
 The coming-soon page in `site/` is served by Caddy at `https://viaduct.sh`
 (`www` redirects to the apex):
@@ -171,11 +155,12 @@ mkdir -p /var/www/viaduct-site
 cp site/* /var/www/viaduct-site/
 ```
 
-## 10. Load test
+## 9. Load test
 
-From any machine (500 concurrent WebSocket upgrades, time-to-established):
+From any machine (500 concurrent WebSocket upgrades, time-to-established). Use
+whatever name `viaduct http` printed as the Host header:
 
 ```sh
 python scripts/load_test.py --host <droplet-ip-or-127.0.0.1> --port 8080 \
-    --hostname pmesh.viaduct.sh --connections 500
+    --hostname funny-otter.viaduct.sh --connections 500
 ```

@@ -1,7 +1,9 @@
 """Shared integration-test helpers: local echo app, server/client stacks.
 
 The local app answers plain HTTP with an echo of the request path, and answers
-WebSocket upgrades with a real 101 handshake followed by a raw byte echo.
+WebSocket upgrades with a real 101 handshake followed by a raw byte echo. The
+server assigns each tunnel a random subdomain, so tests read it back from the
+client (``client.hostname`` / ``client.subdomain``) rather than choosing it.
 """
 
 from __future__ import annotations
@@ -21,6 +23,7 @@ from viaduct.server import TunnelServer
 from viaduct.store import Store, hash_token
 
 TOKEN = "test-token"
+BASE_DOMAIN = "viaduct.test"
 WS_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 WS_KEY = "dGhlIHNhbXBsZSBub25jZQ=="  # RFC 6455 example key
 
@@ -67,19 +70,18 @@ async def local_app(reader: asyncio.StreamReader, writer: asyncio.StreamWriter) 
 
 @contextlib.asynccontextmanager
 async def bare_server(
-    *reserved: str, tls: ssl.SSLContext | None = None, **server_kwargs: Any
+    *, tls: ssl.SSLContext | None = None, token: str = TOKEN, **server_kwargs: Any
 ) -> AsyncIterator[TunnelServer]:
-    """A running TunnelServer whose store has a reservation (token=TOKEN) per subdomain."""
+    """A running TunnelServer whose store already holds one auth token."""
     with tempfile.TemporaryDirectory() as tmp:
         store = Store(Path(tmp) / "viaduct.db")
-        for subdomain in reserved:
-            store.create_reservation(subdomain, hash_token(TOKEN))
+        store.create_token(hash_token(token))
         server = TunnelServer(
             store=store,
             bind="127.0.0.1",
             public_port=0,
             tunnel_port=0,
-            base_domain="viaduct.test",
+            base_domain=BASE_DOMAIN,
             tls=tls,
             **server_kwargs,
         )
@@ -95,7 +97,6 @@ def make_client(
     server: TunnelServer,
     *,
     token: str = TOKEN,
-    subdomain: str = "pmesh",
     local_port: int = 1,
     pool_size: int = 1,
     ssl_ctx: ssl.SSLContext | None = None,
@@ -104,7 +105,6 @@ def make_client(
         server_host="127.0.0.1",
         server_port=server.tunnel_port,
         token=token,
-        subdomain=subdomain,
         local_port=local_port,
         pool_size=pool_size,
         ssl_ctx=ssl_ctx,
@@ -113,25 +113,20 @@ def make_client(
 
 @contextlib.asynccontextmanager
 async def tunnel_stack(
-    subdomain: str = "pmesh",
     pool_size: int = 3,
     server_tls: ssl.SSLContext | None = None,
     client_ssl: ssl.SSLContext | None = None,
     **server_kwargs: Any,
 ) -> AsyncIterator[tuple[TunnelServer, TunnelClient]]:
-    async with bare_server(subdomain, tls=server_tls, **server_kwargs) as server:
+    async with bare_server(tls=server_tls, **server_kwargs) as server:
         local = await asyncio.start_server(local_app, "127.0.0.1", 0)
         local_port = local.sockets[0].getsockname()[1]
-        client = make_client(
-            server,
-            subdomain=subdomain,
-            local_port=local_port,
-            pool_size=pool_size,
-            ssl_ctx=client_ssl,
-        )
+        client = make_client(server, local_port=local_port, pool_size=pool_size, ssl_ctx=client_ssl)
         try:
-            assert await client.start() == f"{subdomain}.viaduct.test"
-            await wait_for_idle(server, subdomain)
+            hostname = await client.start()
+            assert hostname.endswith("." + BASE_DOMAIN)
+            assert client.subdomain and client.subdomain in server.tunnels
+            await wait_for_idle(server, client.subdomain)
             yield server, client
         finally:
             await client.stop()
