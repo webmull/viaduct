@@ -18,6 +18,22 @@
 	}
 }
 
+# Landing page (repo /site, installed to /var/www/viaduct-site).
+viaduct.sh {
+	tls {
+		dns digitalocean {env.DO_API_TOKEN}
+	}
+	root * /var/www/viaduct-site
+	file_server
+}
+
+www.viaduct.sh {
+	tls {
+		dns digitalocean {env.DO_API_TOKEN}
+	}
+	redir https://viaduct.sh{uri} permanent
+}
+
 *.viaduct.sh {
 	tls {
 		dns digitalocean {env.DO_API_TOKEN}

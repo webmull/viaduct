@@ -23,6 +23,14 @@ beyond the milestones.
 - Type hints throughout; `ruff` must pass clean.
 - No secrets in the repo or in logs (tokens are redacted before logging).
 
+## Design & copy
+
+- **Never use status pills / badges on designs** (e.g. a "Coming soon", "Beta",
+  or "New" pill, especially with a pulsing dot). Convey status through headline
+  copy, layout, or plain text instead.
+- **No em dashes (—) in any copy or written content.** Use commas, parentheses,
+  or separate sentences instead.
+
 ## Commands
 
 - Tests: `.venv/bin/python -m pytest`

@@ -83,58 +83,6 @@
   }
   .tagline b { color: var(--fg); font-weight: 500; }
 
-  /* the aqueduct */
-  .stage {
-    position: relative; width: min(760px, 96vw); aspect-ratio: 1200 / 300;
-    margin: 2.4rem 0 1.8rem;
-  }
-  .aqueduct { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
-  .aqueduct .struct { fill: none; stroke: oklch(70% .04 250.5 / .55); stroke-width: 2.4; stroke-linecap: round; }
-  .aqueduct .deck   { stroke: oklch(78% .06 250.5 / .7); }
-
-  /* flow overlay: packets riding the deck channel */
-  .flow { position: absolute; inset: 0; }
-  .node {
-    position: absolute; top: 18.3%; transform: translate(-50%, -50%);
-    width: .62rem; height: .62rem; border-radius: 50%;
-  }
-  .node.left  { left: 3.5%;  background: var(--teal);  box-shadow: 0 0 12px 2px oklch(72% .12 190 / .8); }
-  .node.right { left: 96.5%; background: var(--amber); box-shadow: 0 0 12px 2px oklch(72% .17 62 / .8); }
-  .packet {
-    position: absolute; top: 18.3%; left: 0;
-    width: 24px; height: 3px; border-radius: 3px; transform: translateY(-50%);
-    background: var(--amber);
-    box-shadow: 0 0 10px 1px var(--amber), 0 0 20px 4px oklch(72% .17 62 / .5);
-    animation: ride 3.6s linear infinite;
-  }
-  .packet::before {
-    content: ""; position: absolute; right: 100%; top: 0; width: 46px; height: 100%;
-    background: linear-gradient(90deg, transparent, oklch(72% .17 62 / .55));
-  }
-  .packet.p2 { animation-delay: 1.2s; }
-  .packet.p3 { animation-delay: 2.4s; }
-  .packet.back {
-    background: var(--teal);
-    box-shadow: 0 0 10px 1px var(--teal), 0 0 20px 4px oklch(72% .12 190 / .45);
-    animation: ride-back 4.8s linear infinite; animation-delay: .6s;
-  }
-  .packet.back::before {
-    right: auto; left: 100%;
-    background: linear-gradient(270deg, transparent, oklch(72% .12 190 / .5));
-  }
-  @keyframes ride {
-    0%   { left: 4%;  opacity: 0; }
-    8%   { opacity: 1; }
-    92%  { opacity: 1; }
-    100% { left: 96%; opacity: 0; }
-  }
-  @keyframes ride-back {
-    0%   { left: 96%; opacity: 0; }
-    10%  { opacity: 1; }
-    90%  { opacity: 1; }
-    100% { left: 4%;  opacity: 0; }
-  }
-
   .soon {
     font-family: var(--font-display); font-weight: 500;
     font-size: clamp(1.05rem, 3vw, 1.35rem); letter-spacing: -.01em;
@@ -148,24 +96,14 @@
   .d4 { animation-delay: .48s; } .d5 { animation-delay: .78s; } .d6 { animation-delay: .95s; }
   @keyframes rise { to { opacity: 1; transform: none; } }
 
-  .aqueduct .struct { stroke-dasharray: 1; stroke-dashoffset: 1; animation: draw 1.5s ease forwards .5s; }
-  .aqueduct .a1{animation-delay:.55s} .aqueduct .a2{animation-delay:.65s} .aqueduct .a3{animation-delay:.75s}
-  .aqueduct .a4{animation-delay:.85s} .aqueduct .a5{animation-delay:.95s}
-  @keyframes draw { to { stroke-dashoffset: 0; } }
-
   @media (max-width: 520px) {
     body { padding: 2rem 1.25rem; }
     .mark { height: 3.75rem; width: 3.75rem; }
-    .stage { width: 100%; aspect-ratio: 1000 / 320; margin: 2rem 0 1.4rem; }
     .grid { background-size: 44px 44px; }
-    .node, .packet { top: 16.5%; }
   }
 
   @media (prefers-reduced-motion: reduce) {
     .rise { animation: none; opacity: 1; transform: none; }
-    .aqueduct .struct { animation: none; stroke-dashoffset: 0; }
-    .packet { animation: none; opacity: .9; }
-    .packet.p1 { left: 30%; } .packet.p2 { left: 55%; } .packet.p3 { left: 78%; } .packet.back { left: 45%; }
   }
 </style>
 </head>
@@ -178,7 +116,7 @@
     <h1 class="rise d3">viaduct<span class="dot">.sh</span></h1>
     <p class="tagline rise d4">Expose your <b>localhost</b> to the world with a single command. Self-hosted, open source, no accounts.</p>
 
-    <p class="soon rise d5">Launching <span class="flick">soon</span>.</p>
+    <p class="soon rise d5"><br> <br>Launching <span class="flick">soon</span>.</p>
     <p class="foot rise d6">Free and open source. MIT licensed.</p>
   </main>
 </body>

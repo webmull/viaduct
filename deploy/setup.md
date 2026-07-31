@@ -161,7 +161,17 @@ transfers 30s to finish, then exits — so `systemctl restart viaductd` (and the
 monthly cert-refresh timer) is safe during live traffic; clients reconnect
 with 1s→30s backoff.
 
-## 9. Load test
+## 9. Landing page
+
+The coming-soon page in `site/` is served by Caddy at `https://viaduct.sh`
+(`www` redirects to the apex):
+
+```sh
+mkdir -p /var/www/viaduct-site
+cp site/* /var/www/viaduct-site/
+```
+
+## 10. Load test
 
 From any machine (500 concurrent WebSocket upgrades, time-to-established):
 
