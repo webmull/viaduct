@@ -4,24 +4,26 @@ Paste this into Claude Code (or similar) at the root of an empty repo.
 
 ---
 
-## Amendment (2026-07-31): ephemeral subdomains, no custom domains
+## Amendment (2026-07-31): ephemeral subdomains, no custom domains, no auth
 
-This supersedes the reservation and custom-domain parts of the original spec
-below. Adam simplified the model:
+This supersedes the reservation, custom-domain, and auth parts of the original
+spec below. Adam simplified the model in steps:
 
 - **No user-chosen subdomains.** The server assigns a random friendly name
   (`adjective-animal`, e.g. `funny-otter`) to each tunnel at connect time and
   frees it on disconnect. Names are ephemeral (a reconnect gets a new one) and
   never persisted. They never collide between concurrent tunnels.
-- **Tokens are decoupled from subdomains.** `viaductd token create` mints an
-  auth token (optional `--label`); `viaduct http <port>` needs only the token.
-  One token can open many tunnels.
-- **Custom domains (M4) are removed** — the `domains` table, `viaduct domain`
-  commands, and the `/_viaduct/tls-check` on-demand-TLS endpoint are all gone.
-  Caddy serves the wildcard `*.viaduct.sh` (DNS-01) and the apex landing page.
+- **No custom domains** — the `domains` table, `viaduct domain` commands, and
+  the `/_viaduct/tls-check` on-demand-TLS endpoint are gone. Caddy serves the
+  wildcard `*.viaduct.sh` (DNS-01) and the apex landing page.
+- **No auth at all.** This overrides the original "auth token is always
+  required" non-goal. There are no tokens and no `token create`; any client
+  that reaches the tunnel port gets a tunnel. Restrict that port at the
+  firewall (source IPs) since it is otherwise an open relay.
 
-Persistent state is now just the `tokens` table. Everything else about the
-architecture (connection-pool data path, TLS on 4443, hardening, deploy) stands.
+There is **no persistent state and no database** — the store is gone entirely.
+Everything else about the architecture (connection-pool data path, TLS on 4443
+to encrypt tunneled traffic in transit, hardening, deploy) stands.
 
 ---
 

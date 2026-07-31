@@ -11,7 +11,7 @@ buffered in the reader for the raw pipe to pick up.
 
 Control connection::
 
-    -> {"type": "hello", "token": ..., "local_port": ...}
+    -> {"type": "hello", "local_port": ...}
     <- {"type": "ok", "hostname": ...}  |  {"type": "error", "reason": ...}
     <-> {"type": "ping"} / {"type": "pong"}   every HEARTBEAT_INTERVAL seconds
 
@@ -21,11 +21,10 @@ connections.
 
 Data connection::
 
-    -> {"type": "data_hello", "token": ..., "subdomain": ...}
+    -> {"type": "data_hello", "subdomain": ...}
     (server holds it idle; on assignment, raw bytes follow immediately)
 
 Read timeouts are the caller's concern (wrap calls in ``asyncio.timeout``).
-Frames may contain tokens — never log one raw; log ``redacted(frame)``.
 """
 
 from __future__ import annotations
@@ -37,8 +36,8 @@ from typing import Any, Final
 
 Frame = dict[str, Any]
 
-#: Handshake frames are tiny (a token, a subdomain, a port); anything larger
-#: is a protocol violation, not a big message.
+#: Handshake frames are tiny (a subdomain, a port); anything larger is a
+#: protocol violation, not a big message.
 MAX_FRAME: Final = 16 * 1024
 
 #: Ping cadence on the control connection, both directions (seconds).
@@ -98,12 +97,12 @@ async def read_frame(reader: asyncio.StreamReader) -> Frame:
     return msg
 
 
-def hello(token: str, local_port: int) -> Frame:
-    return {"type": "hello", "token": token, "local_port": local_port}
+def hello(local_port: int) -> Frame:
+    return {"type": "hello", "local_port": local_port}
 
 
-def data_hello(token: str, subdomain: str) -> Frame:
-    return {"type": "data_hello", "token": token, "subdomain": subdomain}
+def data_hello(subdomain: str) -> Frame:
+    return {"type": "data_hello", "subdomain": subdomain}
 
 
 def ok(**fields: Any) -> Frame:
@@ -134,10 +133,3 @@ def require_int(frame: Frame, key: str) -> int:
     if not isinstance(value, int) or isinstance(value, bool):
         raise ProtocolError(f"missing or invalid {key!r}")
     return value
-
-
-def redacted(frame: Frame) -> Frame:
-    """Copy of *frame* safe for logging; the original is left untouched."""
-    if "token" in frame:
-        return {**frame, "token": "[redacted]"}
-    return frame

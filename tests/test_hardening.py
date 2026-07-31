@@ -8,7 +8,7 @@ import contextlib
 
 import pytest
 
-from support import TOKEN, WS_KEY, bare_server, http_get, make_client, run, tunnel_stack
+from support import WS_KEY, bare_server, http_get, make_client, run, tunnel_stack
 from viaduct import protocol
 from viaduct.client import TunnelClient
 
@@ -19,7 +19,7 @@ def test_server_unregisters_silent_peer(monkeypatch: pytest.MonkeyPatch) -> None
     async def scenario() -> None:
         async with bare_server() as server:
             reader, writer = await asyncio.open_connection("127.0.0.1", server.tunnel_port)
-            await protocol.write_frame(writer, protocol.hello(TOKEN, 3000))
+            await protocol.write_frame(writer, protocol.hello(3000))
             ok = await protocol.read_frame(reader)
             subdomain = ok["hostname"].split(".", 1)[0]
             assert subdomain in server.tunnels
@@ -48,7 +48,6 @@ def test_client_detects_silent_server(monkeypatch: pytest.MonkeyPatch) -> None:
         client = TunnelClient(
             server_host="127.0.0.1",
             server_port=port,
-            token="t",
             local_port=1,
             pool_size=0,
         )
@@ -72,7 +71,7 @@ def test_per_tunnel_connection_cap() -> None:
             try:
                 for _ in range(2):
                     reader, writer = await asyncio.open_connection("127.0.0.1", server.tunnel_port)
-                    await protocol.write_frame(writer, protocol.data_hello(TOKEN, subdomain))
+                    await protocol.write_frame(writer, protocol.data_hello(subdomain))
                     conns.append((reader, writer))
                 for _ in range(500):
                     if server.tunnels[subdomain].pool.qsize() >= 2:
@@ -81,7 +80,7 @@ def test_per_tunnel_connection_cap() -> None:
                 assert server.tunnels[subdomain].data_conns == 2
 
                 reader, writer = await asyncio.open_connection("127.0.0.1", server.tunnel_port)
-                await protocol.write_frame(writer, protocol.data_hello(TOKEN, subdomain))
+                await protocol.write_frame(writer, protocol.data_hello(subdomain))
                 assert await reader.read() == b""  # over cap: dropped
                 assert server.tunnels[subdomain].data_conns == 2
                 writer.close()

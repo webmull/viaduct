@@ -34,7 +34,7 @@ class FakeWriter:
 
 
 def test_round_trip() -> None:
-    frame = protocol.hello("tok-123", 3000)
+    frame = protocol.hello(3000)
     assert run(read_from(protocol.encode_frame(frame))) == frame
 
 
@@ -95,7 +95,7 @@ def test_clean_eof_raises_connection_closed() -> None:
 
 
 def test_truncated_frame_raises_connection_closed() -> None:
-    data = protocol.encode_frame(protocol.hello("tok", 3000))
+    data = protocol.encode_frame(protocol.hello(3000))
     with pytest.raises(protocol.ConnectionClosed):
         run(read_from(data[: len(data) // 2]))
 
@@ -119,7 +119,7 @@ def test_missing_type_rejected() -> None:
 
 
 def test_require_str() -> None:
-    frame = protocol.data_hello("tok", "pmesh")
+    frame = protocol.data_hello("pmesh")
     assert protocol.require_str(frame, "subdomain") == "pmesh"
     for bad in (
         {"type": "data_hello"},
@@ -131,7 +131,7 @@ def test_require_str() -> None:
 
 
 def test_require_int() -> None:
-    frame = protocol.hello("tok", 3000)
+    frame = protocol.hello(3000)
     assert protocol.require_int(frame, "local_port") == 3000
     for bad in (
         {"type": "hello"},
@@ -140,11 +140,3 @@ def test_require_int() -> None:
     ):
         with pytest.raises(protocol.ProtocolError):
             protocol.require_int(bad, "local_port")
-
-
-def test_redacted_masks_token_and_preserves_original() -> None:
-    frame = protocol.hello("secret", 3000)
-    safe = protocol.redacted(frame)
-    assert safe["token"] == "[redacted]"
-    assert frame["token"] == "secret"
-    assert protocol.redacted(protocol.ping()) == protocol.ping()

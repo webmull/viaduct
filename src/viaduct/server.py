@@ -1,19 +1,17 @@
 """Viaduct server (`viaductd`): public listener, tunnel registry, idle pools.
 
-Auth: `viaductd token create` mints per-user tokens, stored only as sha256
-hashes. A client presents its token; the server assigns a random subdomain for
-the life of that connection and frees it on disconnect. Subdomains are never
-persisted — runtime state lives in a `dict[str, Tunnel]` and dies with the
-process, so clients simply redial (and get a fresh name) on restart.
+No auth: any client that reaches the tunnel port gets a tunnel and a random
+subdomain for the life of that connection, freed on disconnect. Restrict who
+can reach the tunnel port at the firewall if that matters. Nothing is
+persisted — there is no database. Runtime state lives in a `dict[str, Tunnel]`
+and dies with the process, so clients simply redial (fresh name) on restart.
 """
 
 from __future__ import annotations
 
 import asyncio
 import contextlib
-import hmac
 import logging
-import secrets
 import signal
 import ssl
 from pathlib import Path
@@ -23,7 +21,6 @@ import typer
 
 from viaduct import names, protocol, routing
 from viaduct.relay import splice
-from viaduct.store import DEFAULT_DB_PATH, Store, hash_token
 
 log = logging.getLogger("viaduct.server")
 
@@ -31,11 +28,10 @@ Conn = tuple[asyncio.StreamReader, asyncio.StreamWriter]
 
 
 class Tunnel:
-    """One connected client: its subdomain, owning token, and idle pool."""
+    """One connected client: its subdomain and idle pool of data connections."""
 
-    def __init__(self, subdomain: str, token_hash: str) -> None:
+    def __init__(self, subdomain: str) -> None:
         self.subdomain = subdomain
-        self.token_hash = token_hash
         self.pool: asyncio.Queue[Conn] = asyncio.Queue()
         #: pooled + in-flight data connections, bounded by --max-conns-per-tunnel
         self.data_conns = 0
@@ -73,7 +69,6 @@ class TunnelServer:
     def __init__(
         self,
         *,
-        store: Store,
         bind: str = "127.0.0.1",
         public_port: int = 8080,
         tunnel_port: int = 4443,
@@ -83,7 +78,6 @@ class TunnelServer:
         idle_timeout: float | None = 300.0,
         pool_wait: float = 10.0,
     ) -> None:
-        self.store = store
         self.bind = bind
         self.public_port = public_port
         self.tunnel_port = tunnel_port
@@ -156,23 +150,15 @@ class TunnelServer:
     async def _handle_control(
         self, frame: protocol.Frame, reader: asyncio.StreamReader, writer: asyncio.StreamWriter
     ) -> None:
-        token = protocol.require_str(frame, "token")
         protocol.require_int(frame, "local_port")
-        tok = self.store.get_by_token(token)
-        if tok is None:
-            log.warning("bad token")
-            await self._reject(writer, "bad_token")
-            return
-
         subdomain = names.unique_name(self.tunnels)
-        tunnel = Tunnel(subdomain, tok.token_hash)
+        tunnel = Tunnel(subdomain)
         self.tunnels[subdomain] = tunnel
         hostname = f"{subdomain}.{self.base_domain}"
         ping_task = asyncio.create_task(self._ping_loop(writer))
         try:
             await protocol.write_frame(writer, protocol.ok(hostname=hostname))
             log.info("tunnel registered subdomain=%s hostname=%s", subdomain, hostname)
-            self.store.touch(tok.token_hash)
             while True:
                 async with asyncio.timeout(protocol.DEAD_PEER_TIMEOUT):
                     msg = await protocol.read_frame(reader)
@@ -190,16 +176,14 @@ class TunnelServer:
                 del self.tunnels[subdomain]
             tunnel.close_pool()
             writer.close()
-            self.store.touch(tok.token_hash)
             log.info("tunnel closed subdomain=%s", subdomain)
 
     def _handle_data(
         self, frame: protocol.Frame, reader: asyncio.StreamReader, writer: asyncio.StreamWriter
     ) -> None:
-        token = protocol.require_str(frame, "token")
         subdomain = protocol.require_str(frame, "subdomain")
         tunnel = self.tunnels.get(subdomain)
-        if tunnel is None or not self._token_matches(token, tunnel.token_hash):
+        if tunnel is None:
             writer.close()
             return
         if tunnel.data_conns >= self.max_conns_per_tunnel:
@@ -224,10 +208,6 @@ class TunnelServer:
         with contextlib.suppress(ConnectionError):
             await protocol.write_frame(writer, protocol.error(reason))
         writer.close()
-
-    @staticmethod
-    def _token_matches(token: str, token_hash: str) -> bool:
-        return hmac.compare_digest(hash_token(token), token_hash)
 
     # -- public listener: plaintext HTTP from Caddy (or curl, pre-TLS) ---------
 
@@ -290,7 +270,6 @@ def _cli(
     public_port: Annotated[int, typer.Option(help="Port for public HTTP traffic")] = 8080,
     tunnel_port: Annotated[int, typer.Option(help="Port for client tunnel connections")] = 4443,
     base_domain: Annotated[str, typer.Option(help="Domain that subdomains hang off")] = "localhost",
-    db: Annotated[Path, typer.Option(help="SQLite database path")] = DEFAULT_DB_PATH,
     tls_cert: Annotated[
         Path | None, typer.Option(help="PEM certificate enabling TLS on the tunnel listener")
     ] = None,
@@ -319,7 +298,6 @@ def _cli(
                 public_port,
                 tunnel_port,
                 base_domain,
-                db,
                 tls,
                 max_conns_per_tunnel,
                 idle_timeout if idle_timeout > 0 else None,
@@ -332,14 +310,11 @@ async def _serve(
     public_port: int,
     tunnel_port: int,
     base_domain: str,
-    db: Path,
     tls: ssl.SSLContext | None,
     max_conns_per_tunnel: int,
     idle_timeout: float | None,
 ) -> None:
-    store = Store(db)
     server = TunnelServer(
-        store=store,
         bind=bind,
         public_port=public_port,
         tunnel_port=tunnel_port,
@@ -360,38 +335,6 @@ async def _serve(
         await server.drain(grace=30.0)
     finally:
         await server.stop()
-        store.close()
-
-
-token_app = typer.Typer(help="Manage auth tokens.")
-app.add_typer(token_app, name="token")
-
-
-@token_app.command("create")
-def token_create(
-    label: Annotated[
-        str | None, typer.Option(help="Optional note to remember who this token is for")
-    ] = None,
-    db: Annotated[Path, typer.Option(help="SQLite database path")] = DEFAULT_DB_PATH,
-) -> None:
-    """Mint an auth token and print it — shown once; only its sha256 is stored.
-
-    Each tunnel gets a randomly generated subdomain at connect time, so a token
-    is not tied to any name; one token can open many tunnels.
-    """
-    token = secrets.token_urlsafe(32)
-    store = Store(db)
-    try:
-        store.create_token(hash_token(token), label)
-    finally:
-        store.close()
-    typer.echo(token)
-    note = f" for {label!r}" if label else ""
-    typer.echo(
-        f"viaductd: created token{note} — shown once; "
-        "put it in the client's ~/.config/viaduct/config.toml",
-        err=True,
-    )
 
 
 def main() -> None:

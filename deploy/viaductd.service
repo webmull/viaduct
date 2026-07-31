@@ -1,6 +1,8 @@
 # /etc/systemd/system/viaductd.service
-# Env file (root:viaduct, 640) provides DO_API_TOKEN plus TLS_CERT/TLS_KEY
-# paths pointing at Caddy's managed wildcard certificate (see setup.md).
+# Env file (root:viaduct, 640) provides TLS_CERT/TLS_KEY paths pointing at
+# Caddy's managed wildcard certificate (see setup.md). viaductd has no auth and
+# no database, so nothing else is needed. Anyone who can reach the tunnel port
+# can open a tunnel — restrict it at the firewall if that matters.
 
 [Unit]
 Description=Viaduct tunnel server
@@ -15,12 +17,10 @@ EnvironmentFile=/etc/viaduct/viaductd.env
 ExecStart=/usr/local/bin/viaductd \
     --bind 0.0.0.0 \
     --base-domain viaduct.sh \
-    --db /var/lib/viaduct/viaduct.db \
     --tls-cert ${TLS_CERT} \
     --tls-key ${TLS_KEY}
 Restart=always
 RestartSec=5
-StateDirectory=viaduct
 LimitNOFILE=65535
 # viaductd drains active connections on SIGTERM (30s), then exits.
 KillSignal=SIGTERM

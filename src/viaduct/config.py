@@ -1,4 +1,4 @@
-"""Client configuration: ~/.config/viaduct/config.toml (server address, token)."""
+"""Client configuration: ~/.config/viaduct/config.toml (server address, TLS)."""
 
 from __future__ import annotations
 

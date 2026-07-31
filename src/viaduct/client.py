@@ -29,7 +29,7 @@ DEFAULT_POOL_SIZE = 20
 
 
 class TunnelError(Exception):
-    """The server refused the tunnel (e.g. bad token)."""
+    """The server refused the tunnel."""
 
 
 class TunnelClient:
@@ -38,7 +38,6 @@ class TunnelClient:
         *,
         server_host: str,
         server_port: int,
-        token: str,
         local_port: int,
         local_host: str = "127.0.0.1",
         pool_size: int = DEFAULT_POOL_SIZE,
@@ -47,7 +46,6 @@ class TunnelClient:
         self._server_host = server_host
         self._server_port = server_port
         self._ssl_ctx = ssl_ctx
-        self._token = token
         self._local_host = local_host
         self._local_port = local_port
         self._pool_size = pool_size
@@ -62,11 +60,11 @@ class TunnelClient:
         self._stopping = False
 
     async def start(self) -> str:
-        """Authenticate, fill the pool, and return the assigned public hostname."""
+        """Open the control connection, fill the pool, return the assigned hostname."""
         reader, writer = await asyncio.open_connection(
             self._server_host, self._server_port, ssl=self._ssl_ctx
         )
-        await protocol.write_frame(writer, protocol.hello(self._token, self._local_port))
+        await protocol.write_frame(writer, protocol.hello(self._local_port))
         resp = await protocol.read_frame(reader)
         if resp["type"] == "error":
             writer.close()
@@ -164,9 +162,7 @@ class TunnelClient:
                 continue
             backoff = 1.0
             try:
-                await protocol.write_frame(
-                    writer, protocol.data_hello(self._token, self.subdomain or "")
-                )
+                await protocol.write_frame(writer, protocol.data_hello(self.subdomain or ""))
                 first = await reader.read(CHUNK)
             except (protocol.ProtocolError, OSError):
                 first = b""
@@ -213,10 +209,6 @@ _ServerOpt = Annotated[
     str | None,
     typer.Option("--server", help="Server tunnel address as host:port (default: config.toml)"),
 ]
-_TokenOpt = Annotated[
-    str | None,
-    typer.Option("--token", envvar="VIADUCT_TOKEN", help="Auth token (default: config.toml)"),
-]
 _TlsOpt = Annotated[
     bool | None,
     typer.Option("--tls/--no-tls", help="TLS to the server tunnel port (default: config.toml)"),
@@ -236,7 +228,6 @@ def _cli() -> None:
 def http(
     port: Annotated[int, typer.Argument(help="Local port to expose")],
     server: _ServerOpt = None,
-    token: _TokenOpt = None,
     pool_size: Annotated[
         int, typer.Option(help="Idle data connections to maintain")
     ] = DEFAULT_POOL_SIZE,
@@ -249,9 +240,9 @@ def http(
     URL).
     """
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
-    host, srv_port, tok, ssl_ctx = _connection_settings(server, token, tls, tls_ca)
+    host, srv_port, ssl_ctx = _connection_settings(server, tls, tls_ca)
     try:
-        asyncio.run(_run_http(host, srv_port, tok, port, pool_size, ssl_ctx))
+        asyncio.run(_run_http(host, srv_port, port, pool_size, ssl_ctx))
     except KeyboardInterrupt:
         console.print("[yellow]viaduct: interrupted[/]")
     except TunnelError as exc:
@@ -269,29 +260,22 @@ def http(
 
 
 def _connection_settings(
-    server: str | None, token: str | None, tls: bool | None, tls_ca: str | None
-) -> tuple[str, int, str, ssl.SSLContext | None]:
-    """Resolve server/token/TLS from flags, env, and config.toml (in that order)."""
+    server: str | None, tls: bool | None, tls_ca: str | None
+) -> tuple[str, int, ssl.SSLContext | None]:
+    """Resolve server/TLS from flags, env, and config.toml (in that order)."""
     try:
         cfg = config.load()
     except config.ConfigError as exc:
         console.print(f"[bold red]viaduct: {exc}[/]")
         raise typer.Exit(2) from exc
     server = server or _cfg_str(cfg, "server") or "127.0.0.1:4443"
-    token = token or _cfg_str(cfg, "token")
-    if not token:
-        console.print(
-            "[bold red]viaduct: no token configured[/] — pass --token, set VIADUCT_TOKEN, "
-            f'or add token = "..." to {config.config_path()}'
-        )
-        raise typer.Exit(2)
     use_tls = tls if tls is not None else cfg.get("tls") is True
     ca = tls_ca or _cfg_str(cfg, "tls_ca")
     ssl_ctx = ssl.create_default_context(cafile=ca) if use_tls else None
     host, _, port_str = server.rpartition(":")
     if not host or not port_str.isdigit():
         raise typer.BadParameter("--server must be host:port")
-    return host, int(port_str), token, ssl_ctx
+    return host, int(port_str), ssl_ctx
 
 
 def _cfg_str(cfg: dict[str, str | bool], key: str) -> str | None:
@@ -299,13 +283,9 @@ def _cfg_str(cfg: dict[str, str | bool], key: str) -> str | None:
     return value if isinstance(value, str) else None
 
 
-FATAL_REASONS = ("bad_token",)
-
-
 async def _run_http(
     server_host: str,
     server_port: int,
-    token: str,
     local_port: int,
     pool_size: int,
     ssl_ctx: ssl.SSLContext | None,
@@ -322,7 +302,6 @@ async def _run_http(
         client = TunnelClient(
             server_host=server_host,
             server_port=server_port,
-            token=token,
             local_port=local_port,
             pool_size=pool_size,
             ssl_ctx=ssl_ctx,
@@ -331,8 +310,6 @@ async def _run_http(
             hostname = await client.start()
         except TunnelError as exc:
             await client.stop()
-            if str(exc) in FATAL_REASONS:
-                raise
             console.print(f"[yellow]viaduct: {exc}; retrying in {delay:.0f}s[/]")
             if await _wait_or_stop(stop, delay):
                 return

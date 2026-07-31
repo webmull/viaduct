@@ -1,7 +1,7 @@
 """Integration tests: a real TunnelServer and TunnelClient over localhost sockets.
 
 The server assigns each tunnel a random subdomain; tests read it back from the
-client. Auth runs against a real SQLite token store. Shared harness in support.py.
+client. No auth and no persistence. Shared harness in support.py.
 """
 
 from __future__ import annotations
@@ -10,12 +10,9 @@ import asyncio
 import base64
 import hashlib
 
-import pytest
-
 import support
 from support import (
     BASE_DOMAIN,
-    TOKEN,
     WS_GUID,
     WS_KEY,
     bare_server,
@@ -25,8 +22,6 @@ from support import (
     tunnel_stack,
 )
 from viaduct import protocol
-from viaduct.client import TunnelError
-from viaduct.store import hash_token
 
 
 def test_http_round_trip() -> None:
@@ -86,19 +81,6 @@ def test_unknown_host_gets_404() -> None:
     run(scenario())
 
 
-def test_wrong_token_rejected() -> None:
-    async def scenario() -> None:
-        async with bare_server() as server:
-            client = make_client(server, token="wrong")
-            try:
-                with pytest.raises(TunnelError, match="bad_token"):
-                    await client.start()
-            finally:
-                await client.stop()
-
-    run(scenario())
-
-
 def test_two_tunnels_get_distinct_names() -> None:
     async def scenario() -> None:
         async with tunnel_stack() as (server, first):
@@ -114,11 +96,11 @@ def test_two_tunnels_get_distinct_names() -> None:
     run(scenario())
 
 
-def test_data_hello_with_bad_token_is_dropped() -> None:
+def test_data_hello_for_unknown_subdomain_is_dropped() -> None:
     async def scenario() -> None:
-        async with tunnel_stack() as (server, client):
+        async with tunnel_stack() as (server, _client):
             reader, writer = await asyncio.open_connection("127.0.0.1", server.tunnel_port)
-            await protocol.write_frame(writer, protocol.data_hello("wrong", client.subdomain))
+            await protocol.write_frame(writer, protocol.data_hello("no-such-name"))
             assert await reader.read() == b""  # server hangs up without pooling
             writer.close()
 
@@ -150,23 +132,13 @@ def test_tunnel_unregisters_when_client_stops() -> None:
     run(scenario())
 
 
-def test_last_seen_recorded_after_connect() -> None:
-    async def scenario() -> None:
-        async with tunnel_stack() as (server, _client):
-            tok = server.store.get_by_token(TOKEN)
-            assert tok is not None and tok.last_seen is not None
-
-    run(scenario())
-
-
-def test_multiple_tokens_are_independent() -> None:
+def test_two_tunnels_route_independently() -> None:
     async def scenario() -> None:
         async with bare_server() as server:
-            server.store.create_token(hash_token("second-token"))
             local = await asyncio.start_server(support.local_app, "127.0.0.1", 0)
             local_port = local.sockets[0].getsockname()[1]
             a = make_client(server, local_port=local_port, pool_size=2)
-            b = make_client(server, token="second-token", local_port=local_port, pool_size=2)
+            b = make_client(server, local_port=local_port, pool_size=2)
             try:
                 await a.start()
                 await b.start()

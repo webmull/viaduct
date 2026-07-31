@@ -9,8 +9,9 @@ The server terminates public HTTPS at Caddy and pipes traffic back down the
 tunnel to your `localhost`.
 
 - HTTP and WebSocket tunneling
-- Auth tokens, stored only as sha256 hashes (one token can open many tunnels)
 - A random friendly subdomain (e.g. `funny-otter.viaduct.sh`) assigned per tunnel
+- No auth and no database — dead simple. Anyone who can reach the tunnel port
+  gets a tunnel, so restrict that port at the firewall (see below)
 - Self-hosted, designed for one DigitalOcean droplet and a handful of trusted users
 
 Full design is in [`SPEC.md`](SPEC.md); the complete droplet runbook is in
@@ -30,19 +31,16 @@ Everything runs on one machine for development: no TLS, base domain `localhost`.
 python3 -m venv .venv && . .venv/bin/activate
 pip install .
 
-# 2. Mint an auth token (printed once; not tied to any subdomain)
-viaductd token create --db ./viaduct.db
+# 2. Start the server: public traffic on :8080, tunnel connections on :4443
+viaductd --base-domain localhost
 
-# 3. Start the server: public traffic on :8080, tunnel connections on :4443
-viaductd --db ./viaduct.db --base-domain localhost
-
-# 4. In another shell, start something to expose and open the tunnel.
+# 3. In another shell, start something to expose and open the tunnel.
 #    The server assigns a random name and the client prints the URL, e.g.
 #    "tunnel up funny-otter.localhost -> 127.0.0.1:3000"
 python3 -m http.server 3000
-viaduct http 3000 --token <token-from-step-2>
+viaduct http 3000
 
-# 5. Reach it through the tunnel (use the name the client printed)
+# 4. Reach it through the tunnel (use the name the client printed)
 curl -H 'Host: funny-otter.localhost' http://127.0.0.1:8080/
 ```
 
@@ -50,8 +48,7 @@ Instead of passing flags, the client reads `~/.config/viaduct/config.toml`:
 
 ```toml
 server = "127.0.0.1:4443"
-token  = "<token>"
-# tls   = true            # enable when talking to a real server over 4443
+# tls  = true            # enable when talking to a real server over 4443
 ```
 
 ## Provision on DigitalOcean
@@ -87,12 +84,15 @@ python3 -m venv .venv
 ln -sf /opt/viaduct/.venv/bin/viaductd /usr/local/bin/viaductd
 ln -sf /opt/viaduct/.venv/bin/viaduct  /usr/local/bin/viaduct
 
-# firewall: default deny, SSH source-restricted, plus 80/443 and the tunnel port
+# firewall: default deny, SSH source-restricted, plus 80/443 and the tunnel port.
+# The tunnel port has NO auth: anyone who can reach it can open a tunnel. Restrict
+# it to your users' IPs if you can (repeat the line per source); otherwise it is
+# open to the internet.
 ufw default deny incoming
 ufw allow from <your-ip> to any port 22 proto tcp
 ufw allow 80/tcp
 ufw allow 443/tcp
-ufw allow 4443/tcp
+ufw allow from <trusted-ip> to any port 4443 proto tcp   # or: ufw allow 4443/tcp
 ufw --force enable
 
 # open-file limit and listen backlog (survives a burst of connections)
@@ -110,17 +110,16 @@ cp deploy/Caddyfile /etc/caddy/Caddyfile
 # service account for viaductd, with read access to Caddy's managed certs
 useradd --system --home-dir /var/lib/viaduct --shell /usr/sbin/nologin viaduct
 usermod -aG caddy viaduct
-install -d -o viaduct -g viaduct /var/lib/viaduct
 
-# secrets and cert paths (see deploy/setup.md for the exact wildcard cert paths)
+# cert paths for viaductd (no auth, no DB); DO API token for Caddy's DNS-01
 mkdir -p /etc/viaduct
 cat > /etc/viaduct/viaductd.env <<'EOF'
-DO_API_TOKEN=<do-api-token>
 TLS_CERT=/var/lib/caddy/.local/share/caddy/certificates/acme-v02.api.letsencrypt.org-directory/wildcard_.viaduct.sh/wildcard_.viaduct.sh.crt
 TLS_KEY=/var/lib/caddy/.local/share/caddy/certificates/acme-v02.api.letsencrypt.org-directory/wildcard_.viaduct.sh/wildcard_.viaduct.sh.key
 EOF
 chmod 640 /etc/viaduct/viaductd.env && chown root:viaduct /etc/viaduct/viaductd.env
-cp /etc/viaduct/viaductd.env /etc/viaduct/caddy.env && chown root:caddy /etc/viaduct/caddy.env
+echo 'DO_API_TOKEN=<do-api-token>' > /etc/viaduct/caddy.env
+chmod 640 /etc/viaduct/caddy.env && chown root:caddy /etc/viaduct/caddy.env
 
 # landing page (served by Caddy at https://viaduct.sh)
 mkdir -p /var/www/viaduct-site && cp site/* /var/www/viaduct-site/
@@ -132,16 +131,10 @@ systemctl daemon-reload
 systemctl enable --now caddy viaductd viaductd-restart.timer
 ```
 
-### 3. Issue tokens and connect
+### 3. Connect
 
-On the droplet, mint a token per user (the `--label` is just a reminder note):
-
-```sh
-viaductd token create --label alice --db /var/lib/viaduct/viaduct.db
-```
-
-On the local machine, put the server, token, and `tls = true` in
-`~/.config/viaduct/config.toml`, then:
+There are no tokens to issue. On the local machine, put the server and
+`tls = true` in `~/.config/viaduct/config.toml`, then:
 
 ```sh
 viaduct http 3000

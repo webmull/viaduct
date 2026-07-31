@@ -20,14 +20,16 @@ ufw default deny incoming
 ufw allow from <your-ip> to any port 22 proto tcp   # SSH, source-restricted
 ufw allow 80/tcp     # ACME HTTP fallback + redirect
 ufw allow 443/tcp    # public HTTPS (Caddy)
-ufw allow 4443/tcp   # viaduct tunnel listener (TLS, terminated by viaductd)
+ufw allow from <trusted-ip> to any port 4443 proto tcp   # tunnel port (see note)
 ufw enable
 ```
 
 Port 4443 is the one departure from the original 22/80/443 plan: client tunnel
-connections are not HTTP, so they cannot ride through Caddy. viaductd
-terminates TLS on this port itself (stdlib `ssl`) so tokens never cross the
-internet in plaintext.
+connections are not HTTP, so they cannot ride through Caddy. viaductd terminates
+TLS on this port itself (stdlib `ssl`) so tunneled traffic is encrypted in
+transit. There is **no auth** on the tunnel: anyone who can reach 4443 can open
+a tunnel, so restrict it to your users' source IPs where you can. Use plain
+`ufw allow 4443/tcp` only if you accept an internet-open tunnel port.
 
 ## 3. Caddy with the DigitalOcean DNS plugin
 
@@ -78,7 +80,6 @@ A stale cert shows up client-side as a certificate-expired error.
 
 ```toml
 server = "viaduct.sh:4443"
-token = "<from: viaductd token create>"
 tls = true
 ```
 
@@ -124,20 +125,24 @@ install -m 644 deploy/caddy.service deploy/viaductd.service \
     deploy/viaductd-restart.service deploy/viaductd-restart.timer \
     /etc/systemd/system/
 mkdir -p /etc/viaduct
+
+# viaductd only needs the cert paths (no auth, no DB)
 cat > /etc/viaduct/viaductd.env <<'EOF'
-DO_API_TOKEN=<token>
 TLS_CERT=/var/lib/caddy/.local/share/caddy/certificates/acme-v02.api.letsencrypt.org-directory/wildcard_.viaduct.sh/wildcard_.viaduct.sh.crt
 TLS_KEY=/var/lib/caddy/.local/share/caddy/certificates/acme-v02.api.letsencrypt.org-directory/wildcard_.viaduct.sh/wildcard_.viaduct.sh.key
 EOF
 chmod 640 /etc/viaduct/viaductd.env && chown root:viaduct /etc/viaduct/viaductd.env
-cp /etc/viaduct/viaductd.env /etc/viaduct/caddy.env && chown root:caddy /etc/viaduct/caddy.env
+
+# Caddy needs the DigitalOcean API token for DNS-01
+echo 'DO_API_TOKEN=<token>' > /etc/viaduct/caddy.env
+chmod 640 /etc/viaduct/caddy.env && chown root:caddy /etc/viaduct/caddy.env
 
 systemctl daemon-reload
 systemctl enable --now caddy viaductd viaductd-restart.timer
 ```
 
 `viaduct.service` is for the *local* machine running the client — install it
-there, edit the port in ExecStart, and put server/token/tls in that user's
+there, edit the port in ExecStart, and put server/tls in that user's
 `~/.config/viaduct/config.toml`.
 
 viaductd drains gracefully on SIGTERM: it stops accepting, gives in-flight

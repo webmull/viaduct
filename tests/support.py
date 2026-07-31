@@ -13,16 +13,12 @@ import base64
 import contextlib
 import hashlib
 import ssl
-import tempfile
 from collections.abc import AsyncIterator
-from pathlib import Path
 from typing import Any
 
 from viaduct.client import TunnelClient
 from viaduct.server import TunnelServer
-from viaduct.store import Store, hash_token
 
-TOKEN = "test-token"
 BASE_DOMAIN = "viaduct.test"
 WS_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 WS_KEY = "dGhlIHNhbXBsZSBub25jZQ=="  # RFC 6455 example key
@@ -70,33 +66,27 @@ async def local_app(reader: asyncio.StreamReader, writer: asyncio.StreamWriter) 
 
 @contextlib.asynccontextmanager
 async def bare_server(
-    *, tls: ssl.SSLContext | None = None, token: str = TOKEN, **server_kwargs: Any
+    *, tls: ssl.SSLContext | None = None, **server_kwargs: Any
 ) -> AsyncIterator[TunnelServer]:
-    """A running TunnelServer whose store already holds one auth token."""
-    with tempfile.TemporaryDirectory() as tmp:
-        store = Store(Path(tmp) / "viaduct.db")
-        store.create_token(hash_token(token))
-        server = TunnelServer(
-            store=store,
-            bind="127.0.0.1",
-            public_port=0,
-            tunnel_port=0,
-            base_domain=BASE_DOMAIN,
-            tls=tls,
-            **server_kwargs,
-        )
-        await server.start()
-        try:
-            yield server
-        finally:
-            await server.stop()
-            store.close()
+    """A running TunnelServer (no auth, no persistence)."""
+    server = TunnelServer(
+        bind="127.0.0.1",
+        public_port=0,
+        tunnel_port=0,
+        base_domain=BASE_DOMAIN,
+        tls=tls,
+        **server_kwargs,
+    )
+    await server.start()
+    try:
+        yield server
+    finally:
+        await server.stop()
 
 
 def make_client(
     server: TunnelServer,
     *,
-    token: str = TOKEN,
     local_port: int = 1,
     pool_size: int = 1,
     ssl_ctx: ssl.SSLContext | None = None,
@@ -104,7 +94,6 @@ def make_client(
     return TunnelClient(
         server_host="127.0.0.1",
         server_port=server.tunnel_port,
-        token=token,
         local_port=local_port,
         pool_size=pool_size,
         ssl_ctx=ssl_ctx,
