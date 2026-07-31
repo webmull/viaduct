@@ -72,6 +72,10 @@ including the Caddy build and certificate paths.
 
 SSH in as root (or `sudo -i`), then run the steps below top to bottom.
 
+The repo is public, so the clone needs no auth. (If you ever make it private,
+clone with a read-only deploy key over SSH or a fine-grained token over HTTPS —
+GitHub no longer accepts your account password.)
+
 ```sh
 # packages
 apt update && apt install -y git python3-venv python3-pip ufw curl golang-go
