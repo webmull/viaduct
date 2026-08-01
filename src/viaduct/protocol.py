@@ -43,12 +43,10 @@ MAX_FRAME: Final = 16 * 1024
 #: Ping cadence on the control connection, both directions (seconds).
 HEARTBEAT_INTERVAL: Final = 20.0
 
-#: Consider the peer dead after this much silence on the control connection.
-#: Both sides ping every HEARTBEAT_INTERVAL, so this is many heartbeats of grace
-#: — long enough to ride out a phone sleeping or a brief network drop without
-#: tearing the tunnel down (which would reassign a new subdomain on reconnect).
-#: A cleanly closed connection is still detected immediately; this only bounds
-#: how long a silently-vanished peer lingers when it stops sending entirely.
+#: Hard ceiling on control-connection silence before the read times out. In
+#: practice the acknowledged-heartbeat check (below) fires first at ~60s, so this
+#: mainly bounds a half-open link where the read would otherwise block forever.
+#: A cleanly closed connection is still detected immediately.
 DEAD_PEER_TIMEOUT: Final = 300.0  # 5 minutes
 
 #: Acknowledged heartbeats: each side counts its own pings that have not been

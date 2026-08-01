@@ -115,6 +115,12 @@ ${BASE_DOMAIN} {
 	root * /var/www/viaduct-site
 	header Cache-Control "no-cache"
 	file_server
+	handle_errors {
+		rewrite * /404.html
+		file_server {
+			status 404
+		}
+	}
 }
 www.${BASE_DOMAIN} {
 	tls {
@@ -139,6 +145,12 @@ ${BASE_DOMAIN} {
 	root * /var/www/viaduct-site
 	header Cache-Control "no-cache"
 	file_server
+	handle_errors {
+		rewrite * /404.html
+		file_server {
+			status 404
+		}
+	}
 }
 *.${BASE_DOMAIN} {
 	tls internal
