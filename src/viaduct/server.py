@@ -235,20 +235,32 @@ class TunnelServer:
             async with asyncio.timeout(30):
                 head = await routing.read_head(reader)
         except (routing.BadRequest, TimeoutError, ConnectionError):
-            await self._respond(writer, "400 Bad Request", "viaduct: malformed request\n")
+            await self._respond(
+                writer, "400 Bad Request", "Bad request", "That request could not be understood."
+            )
             return
         host = routing.extract_host(head)
         subdomain = routing.subdomain_for_host(host, self.base_domain) if host else None
         tunnel = self.tunnels.get(subdomain) if subdomain else None
         if tunnel is None:
-            log.info("no tunnel host=%s", host)
-            await self._respond(writer, "404 Not Found", "viaduct: no such tunnel\n")
+            log.info("no tunnel host=%r", host)  # %r escapes any control chars in the header
+            await self._respond(
+                writer,
+                "404 Not Found",
+                "Tunnel not found",
+                "No tunnel is registered for this address. "
+                "It may have closed, or the link is out of date.",
+            )
             return
         conn = await tunnel.acquire(wait=self.pool_wait)
         if conn is None:
             log.warning("pool starved subdomain=%s waited=%.0fs", subdomain, self.pool_wait)
             await self._respond(
-                writer, "503 Service Unavailable", "viaduct: no idle tunnel connections\n"
+                writer,
+                "503 Service Unavailable",
+                "Tunnel busy",
+                "This tunnel is out of free connections right now. It will retry on its own.",
+                retry_after=10,
             )
             return
         t_reader, t_writer = conn
@@ -258,7 +270,12 @@ class TunnelServer:
         except ConnectionError:
             t_writer.close()
             tunnel.data_conns -= 1
-            await self._respond(writer, "502 Bad Gateway", "viaduct: tunnel connection died\n")
+            await self._respond(
+                writer,
+                "502 Bad Gateway",
+                "Tunnel connection dropped",
+                "The tunnel connection closed mid-request. Refresh to try again.",
+            )
             return
         self._active_splices += 1
         self._no_active_splices.clear()
@@ -270,9 +287,16 @@ class TunnelServer:
                 self._no_active_splices.set()
             tunnel.data_conns -= 1
 
-    async def _respond(self, writer: asyncio.StreamWriter, status: str, body: str) -> None:
+    async def _respond(
+        self,
+        writer: asyncio.StreamWriter,
+        status: str,
+        title: str,
+        detail: str,
+        retry_after: int | None = None,
+    ) -> None:
         with contextlib.suppress(ConnectionError):
-            writer.write(routing.plain_response(status, body))
+            writer.write(routing.error_response(status, title, detail, retry_after))
             await writer.drain()
         writer.close()
 

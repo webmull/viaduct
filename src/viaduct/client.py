@@ -13,15 +13,18 @@ import contextlib
 import logging
 import signal
 import ssl
-from collections.abc import Coroutine
+import sys
+import time
+from collections.abc import Callable, Coroutine, Iterator
 from typing import Annotated, Any
 
 import typer
 from rich.console import Console
+from rich.markup import escape
 
 from viaduct import config, protocol, update
 from viaduct.relay import CHUNK, splice
-from viaduct.routing import plain_response
+from viaduct.routing import error_response
 
 log = logging.getLogger("viaduct.client")
 
@@ -54,6 +57,7 @@ class TunnelClient:
         local_host: str = "127.0.0.1",
         pool_size: int = DEFAULT_POOL_SIZE,
         ssl_ctx: ssl.SSLContext | None = None,
+        inspect: bool = False,
     ) -> None:
         self._server_host = server_host
         self._server_port = server_port
@@ -61,6 +65,7 @@ class TunnelClient:
         self._local_host = local_host
         self._local_port = local_port
         self._pool_size = pool_size
+        self._inspect = inspect
         #: adaptive pool: the baseline is pool_size idle connections; under a
         #: burst it grows toward _max_pool with short-lived surge connections
         #: that drain away on their own once demand falls.
@@ -242,8 +247,18 @@ class TunnelClient:
             l_reader, l_writer = await asyncio.open_connection(self._local_host, self._local_port)
         except OSError:
             log.warning("local app refused connection port=%s", self._local_port)
+            if self._inspect:
+                method, path = _req_line(first)
+                _log_request(method, path, "502", 0.0)
             with contextlib.suppress(OSError):
-                writer.write(plain_response("502 Bad Gateway", "viaduct: local app is down\n"))
+                writer.write(
+                    error_response(
+                        "502 Bad Gateway",
+                        "Nothing is running here",
+                        "The tunnel is connected, but nothing is listening on the local port "
+                        "it forwards to. Start your app and refresh.",
+                    )
+                )
                 await writer.drain()
             return
         try:
@@ -252,7 +267,16 @@ class TunnelClient:
         except ConnectionError:
             l_writer.close()
             return
-        await splice(reader, writer, l_reader, l_writer)
+        on_b_first: Callable[[bytes], None] | None = None
+        if self._inspect:
+            method, path = _req_line(first)
+            t0 = asyncio.get_running_loop().time()
+
+            def on_b_first(head: bytes) -> None:
+                elapsed_ms = (asyncio.get_running_loop().time() - t0) * 1000
+                _log_request(method, path, _status_code(head), elapsed_ms)
+
+        await splice(reader, writer, l_reader, l_writer, on_b_first=on_b_first)
 
 
 console = Console()
@@ -323,6 +347,9 @@ def http(
     pool_size: Annotated[
         int, typer.Option(help="Idle data connections to maintain")
     ] = DEFAULT_POOL_SIZE,
+    inspect: Annotated[
+        bool, typer.Option("--inspect", help="Log each request: method, path, status, time")
+    ] = False,
     tls: _TlsOpt = None,
     tls_ca: _TlsCaOpt = None,
 ) -> None:
@@ -342,7 +369,7 @@ def http(
         )
     host, srv_port, ssl_ctx = _connection_settings(server, tls, tls_ca)
     try:
-        asyncio.run(_run_http(host, srv_port, port, pool_size, ssl_ctx))
+        asyncio.run(_run_http(host, srv_port, port, pool_size, ssl_ctx, inspect))
     except KeyboardInterrupt:
         console.print("[yellow]viaduct: interrupted[/]")
     except TunnelError as exc:
@@ -384,7 +411,13 @@ def _connection_settings(
     else:
         use_tls = host not in _LOCAL_HOSTS
     ca = tls_ca or _cfg_str(cfg, "tls_ca")
-    ssl_ctx = ssl.create_default_context(cafile=ca) if use_tls else None
+    ssl_ctx = None
+    if use_tls:
+        # start from the system trust store, then ADD any extra CA (a bundle
+        # passed via cafile would otherwise *replace* the public CAs).
+        ssl_ctx = ssl.create_default_context()
+        if ca:
+            ssl_ctx.load_verify_locations(cafile=ca)
     return host, int(port_str), ssl_ctx
 
 
@@ -397,12 +430,51 @@ def _cfg_str(cfg: dict[str, str | bool], key: str) -> str | None:
 FATAL_REASONS = ("ip_tunnel_limit",)
 
 
-def _print_tunnel_up(hostname: str, local_port: int) -> None:
+def _print_tunnel_up(hostname: str, local_port: int, quit_hint: bool = False) -> None:
     console.print("[green]✓[/] tunnel live", highlight=False)
     console.print()
     console.print(f"  [bold green]https://{hostname}[/]", highlight=False)
     console.print(f"  [dim]→ http://localhost:{local_port}[/]", highlight=False)
+    if quit_hint:
+        console.print("  [dim]press q to stop[/]", highlight=False)
     console.print()
+
+
+def _req_line(first: bytes) -> tuple[str, str]:
+    """Best-effort (method, path) from the start of an HTTP request."""
+    parts = first.split(b"\n", 1)[0].rstrip(b"\r")[:2048].split(b" ")
+    if len(parts) >= 2:
+        return parts[0].decode("latin-1", "replace"), parts[1].decode("latin-1", "replace")
+    return "?", "?"
+
+
+def _status_code(head: bytes) -> str:
+    """Best-effort status code from the start of an HTTP response."""
+    parts = head.split(b"\n", 1)[0].rstrip(b"\r")[:2048].split(b" ")
+    if len(parts) >= 2 and parts[1].isdigit():
+        return parts[1].decode()
+    return "?"
+
+
+def _clean(s: str) -> str:
+    """Drop control chars (incl. ESC) and cap length, for safe console logging.
+
+    Request lines are attacker-controlled, so this prevents terminal-escape and
+    Rich-markup injection into the operator's --inspect output.
+    """
+    return "".join(ch for ch in s if ch >= " " and ch != "\x7f")[:256]
+
+
+def _log_request(method: str, path: str, status: str, elapsed_ms: float) -> None:
+    color = {"2": "green", "3": "cyan", "4": "yellow", "5": "red"}.get(status[:1], "white")
+    method = escape(_clean(method))
+    path = escape(_clean(path))
+    status = escape(_clean(status))
+    console.print(
+        f"[dim]{time.strftime('%H:%M:%S')}[/] [bold]{method:<6}[/] {path}  "
+        f"[{color}]{status}[/] [dim]{elapsed_ms:.0f}ms[/]",
+        highlight=False,
+    )
 
 
 async def _probe_local(host: str, port: int) -> bool:
@@ -418,12 +490,55 @@ async def _probe_local(host: str, port: int) -> bool:
     return True
 
 
+@contextlib.contextmanager
+def _quit_on_q(
+    loop: asyncio.AbstractEventLoop, stop: asyncio.Event, enabled: bool
+) -> Iterator[bool]:
+    """On an interactive terminal, make 'q' (or Ctrl+C/D) stop the tunnel.
+
+    Yields whether the key handler is active, and always restores the terminal
+    mode on exit. On non-Unix or a non-tty it is a no-op (Ctrl+C still works via
+    the signal handler).
+    """
+    if not (enabled and sys.stdin.isatty()):
+        yield False
+        return
+    try:
+        import termios
+        import tty
+    except ImportError:
+        yield False
+        return
+    fd = sys.stdin.fileno()
+    try:
+        old_attrs = termios.tcgetattr(fd)
+    except termios.error:
+        yield False
+        return
+
+    def _on_key() -> None:
+        with contextlib.suppress(OSError, ValueError):
+            if sys.stdin.read(1) in ("q", "Q", "\x03", "\x04"):
+                stop.set()
+
+    tty.setcbreak(fd)
+    loop.add_reader(fd, _on_key)
+    try:
+        yield True
+    finally:
+        with contextlib.suppress(Exception):
+            loop.remove_reader(fd)
+        with contextlib.suppress(Exception):
+            termios.tcsetattr(fd, termios.TCSADRAIN, old_attrs)
+
+
 async def _run_http(
     server_host: str,
     server_port: int,
     local_port: int,
     pool_size: int,
     ssl_ctx: ssl.SSLContext | None,
+    inspect: bool = False,
 ) -> None:
     """Keep the tunnel up: reconnect on drop with 1s→30s exponential backoff."""
     stop = asyncio.Event()
@@ -450,67 +565,69 @@ async def _run_http(
             f"requests will return 502 until you start it[/]"
         )
 
-    delay = 1.0
-    first = True
-    while not stop.is_set():
-        client = TunnelClient(
-            server_host=server_host,
-            server_port=server_port,
-            local_port=local_port,
-            pool_size=pool_size,
-            ssl_ctx=ssl_ctx,
-        )
-        connecting = (
-            console.status("[bold]establishing tunnel…", spinner="dots")
-            if fancy and first
-            else contextlib.nullcontext()
-        )
-        try:
-            with connecting:
-                hostname = await client.start()
-        except TunnelError as exc:
-            first = False
-            await client.stop()
-            if str(exc) in FATAL_REASONS:
-                raise  # don't retry — let http() report it and exit
-            console.print(f"[yellow]viaduct: {exc}; retrying in {delay:.0f}s[/]")
-            if await _wait_or_stop(stop, delay):
-                return
-            delay = min(delay * 2, 30.0)
-            continue
-        except (protocol.ProtocolError, OSError) as exc:
-            first = False
-            await client.stop()
-            console.print(
-                f"[yellow]viaduct: cannot reach server ({exc}); retrying in {delay:.0f}s[/]"
-            )
-            if await _wait_or_stop(stop, delay):
-                return
-            delay = min(delay * 2, 30.0)
-            continue
-
-        first = False
+    with _quit_on_q(loop, stop, fancy) as q_active:
         delay = 1.0
-        if fancy:
-            _print_tunnel_up(hostname, local_port)
-        else:
-            console.print(f"[bold green]tunnel up[/] {hostname} → 127.0.0.1:{local_port}")
-        closed = asyncio.ensure_future(client.wait_closed())
-        stopped = asyncio.ensure_future(stop.wait())
-        await asyncio.wait({closed, stopped}, return_when=asyncio.FIRST_COMPLETED)
-        for pending in (closed, stopped):
-            pending.cancel()
-            with contextlib.suppress(asyncio.CancelledError):
-                await pending
-        if stop.is_set():
-            console.print("[yellow]viaduct: shutting down — draining[/]")
-            await client.drain()
-            return
-        await client.stop()
-        console.print(f"[yellow]viaduct: connection lost; reconnecting in {delay:.0f}s[/]")
-        if await _wait_or_stop(stop, delay):
-            return
-        delay = min(delay * 2, 30.0)
+        first = True
+        while not stop.is_set():
+            client = TunnelClient(
+                server_host=server_host,
+                server_port=server_port,
+                local_port=local_port,
+                pool_size=pool_size,
+                ssl_ctx=ssl_ctx,
+                inspect=inspect,
+            )
+            connecting = (
+                console.status("[bold]establishing tunnel…", spinner="dots")
+                if fancy and first
+                else contextlib.nullcontext()
+            )
+            try:
+                with connecting:
+                    hostname = await client.start()
+            except TunnelError as exc:
+                first = False
+                await client.stop()
+                if str(exc) in FATAL_REASONS:
+                    raise  # don't retry — let http() report it and exit
+                console.print(f"[yellow]viaduct: {exc}; retrying in {delay:.0f}s[/]")
+                if await _wait_or_stop(stop, delay):
+                    return
+                delay = min(delay * 2, 30.0)
+                continue
+            except (protocol.ProtocolError, OSError) as exc:
+                first = False
+                await client.stop()
+                console.print(
+                    f"[yellow]viaduct: cannot reach server ({exc}); retrying in {delay:.0f}s[/]"
+                )
+                if await _wait_or_stop(stop, delay):
+                    return
+                delay = min(delay * 2, 30.0)
+                continue
+
+            first = False
+            delay = 1.0
+            if fancy:
+                _print_tunnel_up(hostname, local_port, q_active)
+            else:
+                console.print(f"[bold green]tunnel up[/] {hostname} → 127.0.0.1:{local_port}")
+            closed = asyncio.ensure_future(client.wait_closed())
+            stopped = asyncio.ensure_future(stop.wait())
+            await asyncio.wait({closed, stopped}, return_when=asyncio.FIRST_COMPLETED)
+            for pending in (closed, stopped):
+                pending.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await pending
+            if stop.is_set():
+                console.print("[yellow]viaduct: shutting down, draining[/]")
+                await client.drain()
+                return
+            await client.stop()
+            console.print(f"[yellow]viaduct: connection lost; reconnecting in {delay:.0f}s[/]")
+            if await _wait_or_stop(stop, delay):
+                return
+            delay = min(delay * 2, 30.0)
 
 
 async def _wait_or_stop(stop: asyncio.Event, delay: float) -> bool:

@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <title>Error pages — viaduct.sh</title>
+  <meta name="description" content="The pages a visitor sees when a viaduct tunnel is missing, down, or busy." />
+  <style>
+    /* --- error-page look (self-contained; mirrors what viaductd serves) --- */
+    .errpage {
+      background:
+        radial-gradient(60% 50% at 50% 0%, color-mix(in oklab, #f5b544 14%, transparent), transparent 70%),
+        #14171f;
+      color: #e8e8ea; min-height: 22rem;
+      display: grid; place-items: center; text-align: center; padding: 3rem 1.5rem;
+      font-family: var(--font-sans);
+    }
+    .errpage .ep-mark { font-family: var(--font-display); font-weight: 600; font-size: 0.95rem; letter-spacing: -0.01em; color: #cfd3da; }
+    .errpage .ep-mark b { color: #f5b544; font-weight: 600; }
+    .errpage .ep-code { font-family: var(--font-display); font-weight: 700; font-size: 3.5rem; line-height: 1; color: #f5b544; margin-top: 1.75rem; font-variant-numeric: tabular-nums; }
+    .errpage h2 { font-family: var(--font-display); font-size: 1.35rem; font-weight: 600; margin: 0.6rem 0 0; color: #e8e8ea; }
+    .errpage p { color: #8b929e; margin: 0.6rem auto 0; max-width: 26rem; line-height: 1.6; font-size: 0.95rem; }
+    .errpage .ep-link { display: inline-block; margin-top: 1.75rem; color: #8b929e; text-decoration: none; font-size: 0.85rem; border: 1px solid rgba(255,255,255,0.14); padding: 0.5rem 1rem; border-radius: 0.55rem; }
+    .errpage .ep-actions { margin-top: 1.6rem; display: flex; gap: 0.75rem; justify-content: center; align-items: center; flex-wrap: wrap; }
+    .errpage .ep-actions .ep-link { margin-top: 0; }
+    .errpage .ep-count { color: #8b929e; font-size: 0.85rem; }
+    .errpage .ep-count b { color: #e8e8ea; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+    /* --- showcase framing --- */
+    .cases { display: grid; gap: 2.25rem; max-width: 52rem; margin: 0 auto; }
+    .case-label { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.6rem; margin: 0 0 0.7rem; }
+    .case-label .when { color: var(--muted-foreground); font-size: 0.9rem; }
+    .case-label code { font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; background: var(--secondary); color: var(--foreground); padding: 0.1rem 0.4rem; border-radius: 0.3rem; }
+    .browser { border: 1px solid var(--border-strong); border-radius: 0.85rem; overflow: hidden; background: var(--card); box-shadow: 0 20px 45px -25px rgba(0,0,0,0.6); }
+    .browser-bar { display: flex; align-items: center; gap: 0.45rem; padding: 0.6rem 0.85rem; border-bottom: 1px solid var(--border); }
+    .browser-bar .dot { height: 0.7rem; width: 0.7rem; border-radius: 999px; }
+    .browser-bar .url { margin-left: 0.6rem; flex: 1; font-family: var(--font-mono); font-size: 0.76rem; color: var(--muted-foreground); background: var(--background); border: 1px solid var(--border); border-radius: 999px; padding: 0.28rem 0.8rem; }
+    .browser-bar .url b { color: var(--foreground); font-weight: 500; }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap header-inner">
+      <a class="brand" href="/">
+        <img src="viaduct-mark.png" alt="" />
+        <span>viaduct<span class="tld">.sh</span></span>
+      </a>
+      <nav class="site-nav">
+        <a class="nav-desktop" href="/">Home</a>
+        <a class="gh-pill" href="https://github.com/webmull/viaduct" target="_blank" rel="noreferrer">GitHub</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero" style="padding-bottom:1.5rem">
+      <div class="wrap">
+        <p class="eyebrow">Reference</p>
+        <h1 style="font-size:clamp(1.9rem,5vw,2.8rem)">Error pages</h1>
+        <p class="lede">What a visitor sees when a tunnel is missing, down, or busy. Served by viaductd, self-contained, and in keeping with the brand.</p>
+      </div>
+    </section>
+
+    <section style="padding-top:1rem">
+      <div class="wrap">
+        <div class="cases">
+
+          <div class="case">
+            <div class="case-label"><code>404</code> <span class="when">The tunnel closed, or the link is wrong.</span></div>
+            <div class="browser">
+              <div class="browser-bar">
+                <span class="dot dot-red"></span><span class="dot dot-amber"></span><span class="dot dot-teal"></span>
+                <span class="url">https://<b>gone-otter</b>.viaduct.sh</span>
+              </div>
+              <div class="errpage">
+                <div>
+                  <div class="ep-mark">viaduct<b>.sh</b></div>
+                  <div class="ep-code">404</div>
+                  <h2>Tunnel not found</h2>
+                  <p>No tunnel is registered for this address. It may have closed, or the link is out of date.</p>
+                  <a class="ep-link" href="https://viaduct.sh">What is viaduct?</a>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="case">
+            <div class="case-label"><code>502</code> <span class="when">Tunnel is up, but nothing is listening locally.</span></div>
+            <div class="browser">
+              <div class="browser-bar">
+                <span class="dot dot-red"></span><span class="dot dot-amber"></span><span class="dot dot-teal"></span>
+                <span class="url">https://<b>funny-otter</b>.viaduct.sh</span>
+              </div>
+              <div class="errpage">
+                <div>
+                  <div class="ep-mark">viaduct<b>.sh</b></div>
+                  <div class="ep-code">502</div>
+                  <h2>Nothing is running here</h2>
+                  <p>The tunnel is connected, but nothing is listening on the local port it forwards to. Start your app and refresh.</p>
+                  <a class="ep-link" href="https://viaduct.sh">What is viaduct?</a>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="case">
+            <div class="case-label"><code>503</code> <span class="when">Tunnel ran out of free connections for a moment. Auto-refreshes (Retry-After: 10).</span></div>
+            <div class="browser">
+              <div class="browser-bar">
+                <span class="dot dot-red"></span><span class="dot dot-amber"></span><span class="dot dot-teal"></span>
+                <span class="url">https://<b>funny-otter</b>.viaduct.sh</span>
+              </div>
+              <div class="errpage">
+                <div>
+                  <div class="ep-mark">viaduct<b>.sh</b></div>
+                  <div class="ep-code">503</div>
+                  <h2>Tunnel busy</h2>
+                  <p>This tunnel is out of free connections right now. It will retry on its own.</p>
+                  <div class="ep-actions">
+                    <a class="ep-link" href="#">Retry now</a>
+                    <span class="ep-count">retrying in <b>10s</b></span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap footer-inner">
+      <span>Error pages served by viaductd</span>
+      <div class="footer-links">
+        <a href="/">Home</a>
+        <a href="https://github.com/webmull/viaduct" target="_blank" rel="noreferrer">GitHub</a>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>

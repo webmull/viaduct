@@ -98,13 +98,18 @@ def _write_cache(checked: float, latest: str) -> None:
         pass  # a missing cache just means we check again next time
 
 
+def _env_true(name: str) -> bool:
+    """True only for explicit truthy values, so e.g. ``NAME=0`` reads as off."""
+    return os.environ.get(name, "").strip().lower() in {"1", "true", "yes", "on"}
+
+
 def check_for_update(force: bool = False) -> str | None:
     """Return the stable version if it's newer than installed, else None.
 
     Rate-limited to once a day via a small cache unless *force*. Disabled by
-    ``VIADUCT_NO_UPDATE_CHECK``. Never raises.
+    ``VIADUCT_NO_UPDATE_CHECK=1``. Never raises.
     """
-    if os.environ.get("VIADUCT_NO_UPDATE_CHECK"):
+    if _env_true("VIADUCT_NO_UPDATE_CHECK"):
         return None
     now = time.time()
     cache = _read_cache()
@@ -124,7 +129,7 @@ def check_for_update(force: bool = False) -> str | None:
 def auto_enabled() -> bool:
     if os.environ.get(_UPGRADED_SENTINEL):
         return False  # we just re-exec'd; don't check again
-    if os.environ.get("VIADUCT_AUTO_UPGRADE"):
+    if _env_true("VIADUCT_AUTO_UPGRADE"):
         return True
     try:
         return config.load().get("auto_upgrade") is True

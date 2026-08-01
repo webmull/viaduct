@@ -84,6 +84,7 @@ tunnel, and serves `502` until your app comes up.
 | `--tls` / `--no-tls` | on, off for localhost | TLS to the tunnel port |
 | `--tls-ca PATH` | none | Extra CA bundle to trust (for a self-signed server) |
 | `--pool-size N` | 40 | Idle data connections kept ready for incoming requests |
+| `--inspect` | off | Log each request: method, path, status, and time |
 
 Flags can live in `~/.config/viaduct/config.toml` instead:
 

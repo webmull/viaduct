@@ -39,11 +39,11 @@
     <section class="hero">
       <div class="wrap">
         <img class="hero-mark" src="viaduct-logo.svg" alt="viaduct.sh logo" />
+        <p class="eyebrow" style="margin-bottom:1rem">Open source · Self-hosted</p>
         <h1>Your localhost, at a public&nbsp;URL</h1>
         <p class="lede">
-          viaduct is a small, self-hosted reverse tunnel in Python. Expose any
-          local port at <code>https://name.viaduct.sh</code> with one command.
-          No inbound ports, no NAT config, no accounts.
+          A small, self-hosted reverse tunnel. One command gives any local port
+          a public HTTPS URL.
         </p>
         <div class="actions">
           <a class="btn btn-primary" href="https://github.com/webmull/viaduct" target="_blank" rel="noreferrer">
@@ -139,6 +139,37 @@
             <p>The client and server are plain asyncio and the standard library. If it surprises you, read why.</p>
           </li>
         </ul>
+      </div>
+    </section>
+
+    <section id="open-source">
+      <div class="wrap">
+        <div class="section-head">
+          <p class="eyebrow">Open source</p>
+          <h2>Built in the open, small enough to read</h2>
+          <p>No black box and no accounts. The whole client and server are around 1,600 lines of Python with two dependencies. Read it, fork it, send a patch.</p>
+        </div>
+        <div class="os-grid">
+          <a class="os-card" href="https://github.com/webmull/viaduct" target="_blank" rel="noreferrer">
+            <div class="os-num">~1,600</div><div class="os-lbl">lines of Python</div>
+          </a>
+          <a class="os-card" href="https://github.com/webmull/viaduct/blob/main/pyproject.toml" target="_blank" rel="noreferrer">
+            <div class="os-num">2</div><div class="os-lbl">runtime dependencies</div>
+          </a>
+          <a class="os-card" href="https://github.com/webmull/viaduct/blob/main/LICENSE" target="_blank" rel="noreferrer">
+            <div class="os-num">MIT</div><div class="os-lbl">licensed, forever</div>
+          </a>
+        </div>
+        <div class="os-actions">
+          <div class="code-block" style="max-width:34rem;width:100%">
+            <pre><span class="c-prompt">$ </span><span class="cmd">git clone https://github.com/webmull/viaduct</span></pre>
+            <button class="copy-btn" type="button" data-copy="git clone https://github.com/webmull/viaduct">Copy</button>
+          </div>
+          <div class="actions" style="margin-top:0">
+            <a class="btn btn-outline" href="https://github.com/webmull/viaduct" target="_blank" rel="noreferrer">Browse the source</a>
+            <a class="btn btn-outline" href="https://github.com/webmull/viaduct/issues" target="_blank" rel="noreferrer">Open an issue</a>
+          </div>
+        </div>
       </div>
     </section>
 

@@ -202,6 +202,20 @@ section { padding: clamp(2.25rem, 4.5vw, 3.5rem) 0; }
 .features h3 { font-size: 1.02rem; font-weight: 600; margin: 0; }
 .features p { margin: 0.4rem 0 0; font-size: 0.92rem; color: var(--muted-foreground); }
 
+/* ---------- Open source ---------- */
+.os-grid { display: grid; grid-template-columns: 1fr; gap: 1rem; max-width: 44rem; margin: 0 auto; }
+.os-card {
+  display: flex; flex-direction: column; align-items: center; gap: 0.2rem;
+  text-decoration: none; color: inherit;
+  border: 1px solid var(--border); border-radius: 0.8rem; background: var(--card); padding: 1.4rem 1rem;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+.os-card:hover { border-color: var(--primary); transform: translateY(-2px); }
+.os-num { font-family: var(--font-display); font-size: 1.85rem; font-weight: 700; color: var(--primary); font-variant-numeric: tabular-nums; }
+.os-lbl { color: var(--muted-foreground); font-size: 0.9rem; }
+.os-actions { display: flex; flex-direction: column; align-items: center; gap: 1.1rem; margin-top: 2rem; }
+@media (min-width: 640px) { .os-grid { grid-template-columns: repeat(3, 1fr); } }
+
 /* ---------- Deploy band (DigitalOcean) ---------- */
 .deploy-band {
   display: grid; grid-template-columns: 1fr; gap: 1.75rem; align-items: center;
