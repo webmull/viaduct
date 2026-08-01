@@ -1,7 +1,13 @@
 # Droplet setup
 
-One Ubuntu droplet runs Caddy (public HTTPS) and viaductd. This document
-covers DNS, firewall, TLS, limits, and the systemd units.
+One Ubuntu droplet runs Caddy (public HTTPS) and viaductd.
+
+**The automated path is [`deploy/provision.sh`](provision.sh)** — after creating
+the droplet and DNS (step 1 below), `git clone` the repo and run it; it does
+everything the rest of this document describes and prompts for your DO token.
+Rehearse it locally first with [`deploy/local/`](local/). The sections below are
+the annotated breakdown of what `provision.sh` does, if you want to run or
+understand the steps by hand.
 
 ## 1. DNS (DigitalOcean)
 
@@ -17,9 +23,10 @@ challenges). It lives only on the droplet — never in this repo.
 
 ```sh
 ufw default deny incoming
-ufw allow from <your-ip> to any port 22 proto tcp   # SSH, source-restricted
+ufw allow 22/tcp     # SSH — key auth only; do NOT pin to one IP or a changed IP locks you out
 ufw allow 80/tcp     # ACME HTTP fallback + redirect
 ufw allow 443/tcp    # public HTTPS (Caddy)
+ufw allow 443/udp    # HTTP/3 (QUIC) — without this browsers hit ERR_QUIC_PROTOCOL_ERROR
 ufw allow from <trusted-ip> to any port 4443 proto tcp   # tunnel port (see note)
 ufw enable
 ```

@@ -1,22 +1,25 @@
 # /etc/systemd/system/viaductd.service
-# Env file (root:viaduct, 640) provides TLS_CERT/TLS_KEY paths pointing at
-# Caddy's managed wildcard certificate (see setup.md). viaductd has no auth and
-# no database, so nothing else is needed. Anyone who can reach the tunnel port
-# can open a tunnel — restrict it at the firewall if that matters.
+# Installed by deploy/provision.sh. Config comes from /etc/viaduct/viaductd.env
+# (BASE_DOMAIN + TLS_CERT/TLS_KEY paths). No auth and no database, so nothing
+# else is needed. Anyone who can reach the tunnel port can open a tunnel —
+# restrict it at the firewall if that matters.
 
 [Unit]
 Description=Viaduct tunnel server
-After=network-online.target
+After=network-online.target caddy.service
 Wants=network-online.target
 
 [Service]
 User=viaduct
 Group=viaduct
-SupplementaryGroups=caddy
 EnvironmentFile=/etc/viaduct/viaductd.env
+# Copy Caddy's managed apex cert into a viaduct-readable spot before start.
+# The '+' runs this as root so it can read Caddy's 0600 private key; without it
+# viaductd (user viaduct) can't read the key and crash-loops (Caddy 502s).
+ExecStartPre=+/usr/local/sbin/viaductd-sync-cert
 ExecStart=/usr/local/bin/viaductd \
     --bind 0.0.0.0 \
-    --base-domain viaduct.sh \
+    --base-domain ${BASE_DOMAIN} \
     --tls-cert ${TLS_CERT} \
     --tls-key ${TLS_KEY}
 Restart=always

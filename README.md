@@ -70,70 +70,33 @@ including the Caddy build and certificate paths.
 
 ### 2. Provision the droplet (run as root)
 
-SSH in as root (or `sudo -i`), then run the steps below top to bottom.
-
-The repo is public, so the clone needs no auth. (If you ever make it private,
-clone with a read-only deploy key over SSH or a fine-grained token over HTTPS —
-GitHub no longer accepts your account password.)
+SSH in as root (or `sudo -i`) and run the same script the local rehearsal uses:
 
 ```sh
-# packages
-apt update && apt install -y git python3-venv python3-pip ufw curl golang-go
-
-# code + CLIs
+apt update && apt install -y git
 git clone https://github.com/webmull/viaduct /opt/viaduct
-cd /opt/viaduct
-python3 -m venv .venv
-.venv/bin/pip install .
-ln -sf /opt/viaduct/.venv/bin/viaductd /usr/local/bin/viaductd
-ln -sf /opt/viaduct/.venv/bin/viaduct  /usr/local/bin/viaduct
-
-# firewall: default deny, SSH source-restricted, plus 80/443 and the tunnel port.
-# The tunnel port has NO auth: anyone who can reach it can open a tunnel. Restrict
-# it to your users' IPs if you can (repeat the line per source); otherwise it is
-# open to the internet.
-ufw default deny incoming
-ufw allow from <your-ip> to any port 22 proto tcp
-ufw allow 80/tcp
-ufw allow 443/tcp
-ufw allow from <trusted-ip> to any port 4443 proto tcp   # or: ufw allow 4443/tcp
-ufw --force enable
-
-# open-file limit and listen backlog (survives a burst of connections)
-printf '*  soft  nofile  65535\n*  hard  nofile  65535\n' >> /etc/security/limits.conf
-echo 'net.core.somaxconn = 1024' > /etc/sysctl.d/90-viaduct.conf
-sysctl --system
-
-# build Caddy with the DigitalOcean DNS plugin
-go install github.com/caddyserver/xcaddy/cmd/xcaddy@latest
-~/go/bin/xcaddy build --with github.com/caddy-dns/digitalocean --output /usr/local/bin/caddy
-useradd --system --create-home --home-dir /var/lib/caddy --shell /usr/sbin/nologin caddy
-install -d -o caddy -g caddy /etc/caddy
-cp deploy/Caddyfile /etc/caddy/Caddyfile
-
-# service account for viaductd, with read access to Caddy's managed certs
-useradd --system --home-dir /var/lib/viaduct --shell /usr/sbin/nologin viaduct
-usermod -aG caddy viaduct
-
-# cert paths for viaductd (no auth, no DB); DO API token for Caddy's DNS-01
-mkdir -p /etc/viaduct
-cat > /etc/viaduct/viaductd.env <<'EOF'
-TLS_CERT=/var/lib/caddy/.local/share/caddy/certificates/acme-v02.api.letsencrypt.org-directory/wildcard_.viaduct.sh/wildcard_.viaduct.sh.crt
-TLS_KEY=/var/lib/caddy/.local/share/caddy/certificates/acme-v02.api.letsencrypt.org-directory/wildcard_.viaduct.sh/wildcard_.viaduct.sh.key
-EOF
-chmod 640 /etc/viaduct/viaductd.env && chown root:viaduct /etc/viaduct/viaductd.env
-echo 'DO_API_TOKEN=<do-api-token>' > /etc/viaduct/caddy.env
-chmod 640 /etc/viaduct/caddy.env && chown root:caddy /etc/viaduct/caddy.env
-
-# landing page (served by Caddy at https://viaduct.sh)
-mkdir -p /var/www/viaduct-site && cp site/* /var/www/viaduct-site/
-
-# systemd units + monthly cert-refresh restart timer
-cp deploy/caddy.service deploy/viaductd.service \
-   deploy/viaductd-restart.service deploy/viaductd-restart.timer /etc/systemd/system/
-systemctl daemon-reload
-systemctl enable --now caddy viaductd viaductd-restart.timer
+/opt/viaduct/deploy/provision.sh          # prompts for your DO API token
 ```
+
+It prompts for your DigitalOcean API token (input hidden) and **validates it
+against the DO API before continuing**, so a bad or truncated paste fails right
+there instead of turning into a Caddy certificate loop. (You can also pass it
+non-interactively: `DO_API_TOKEN=... /opt/viaduct/deploy/provision.sh`.)
+
+That single script installs the CLIs, downloads Caddy prebuilt with the
+DigitalOcean DNS plugin (no Go build, so no OOM on a 1 GB box), creates the
+`caddy`/`viaduct` users, writes the Caddyfile and env files, installs the systemd
+units, tunes limits, opens the firewall, and starts everything. viaductd comes up
+once Caddy has obtained the wildcard cert (a minute or two on first boot; it
+retries automatically).
+
+Rehearse the exact same script locally first — see
+[`deploy/local/`](deploy/local/). [`deploy/setup.md`](deploy/setup.md) annotates
+what each step does.
+
+The firewall it sets up opens the tunnel port (4443) to the internet. Since there
+is no auth, restrict it to your users' IPs by hand afterward if that matters
+(`ufw delete allow 4443/tcp` then `ufw allow from <ip> to any port 4443 proto tcp`).
 
 ### 3. Connect
 

@@ -1,0 +1,29 @@
+#!/bin/sh
+# Copy Caddy's managed apex certificate (BASE_DOMAIN) into a viaduct-readable
+# location so viaductd can serve TLS on the tunnel port.
+#
+# Runs as root (viaductd.service uses ExecStartPre=+) so it can read Caddy's
+# private key, which Caddy writes mode 0600 owned by the caddy user — group
+# membership alone can't read a 0600 file, which is what caused viaductd to
+# crash-loop (and Caddy to answer 502) before this existed.
+#
+# Globs whatever cert Caddy currently holds for BASE_DOMAIN, so it works for
+# both the ACME (Let's Encrypt) and internal issuers. Clients connect to
+# BASE_DOMAIN:4443, so the apex cert (not the wildcard) is the one to serve.
+set -eu
+
+: "${BASE_DOMAIN:?BASE_DOMAIN not set}"
+DST=/etc/viaduct/certs
+STORE=/var/lib/caddy/.local/share/caddy/certificates
+
+CRT=$(find "$STORE" -type f -path "*/${BASE_DOMAIN}/${BASE_DOMAIN}.crt" 2>/dev/null | head -1)
+if [ -z "$CRT" ]; then
+    echo "viaductd-sync-cert: no cert for ${BASE_DOMAIN} yet (Caddy still obtaining it?)" >&2
+    exit 1
+fi
+KEY="${CRT%.crt}.key"
+
+install -d -o viaduct -g viaduct -m 750 "$DST"
+install -o viaduct -g viaduct -m 644 "$CRT" "$DST/tls.crt"
+install -o viaduct -g viaduct -m 600 "$KEY" "$DST/tls.key"
+echo "viaductd-sync-cert: synced ${BASE_DOMAIN} cert into $DST"
