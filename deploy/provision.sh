@@ -100,7 +100,7 @@ do_users() {
   install -d -o viaduct -g viaduct /etc/viaduct/certs
 }
 
-do_site() { cp "$REPO_DIR"/site/* /var/www/viaduct-site/ 2>/dev/null || true; }
+do_site() { cp -r "$REPO_DIR"/site/* /var/www/viaduct-site/ 2>/dev/null || true; }
 
 do_caddyfile() {
   if [ "$TLS_MODE" = letsencrypt ]; then
