@@ -146,8 +146,12 @@ h1, h2, h3 { font-family: var(--font-display); letter-spacing: -0.02em; }
 .terminal-body { padding: 1.05rem 1.1rem 1.2rem; overflow-x: auto; }
 #screen, #inspect-screen {
   font-family: var(--font-mono); font-size: clamp(0.72rem, 2.6vw, 0.88rem); line-height: 1.7;
-  color: var(--foreground); white-space: pre; margin: 0; min-height: 12.5em;
+  color: var(--foreground); white-space: pre; margin: 0; overflow: hidden;
 }
+/* fixed heights: the animation types inside a stable panel, so it never resizes
+   or shoves the page around as lines appear and the loop resets */
+#screen { height: 16em; }
+#inspect-screen { height: 22.5em; }
 .ln { white-space: pre; }
 .c-prompt { color: var(--primary); }
 .c-dim { color: var(--muted-foreground); }
@@ -234,8 +238,9 @@ section { padding: clamp(2.25rem, 4.5vw, 3.5rem) 0; }
 }
 .code-block + .code-block { margin-top: 0.9rem; }
 .code-block pre {
-  margin: 0; padding: 1rem 3.2rem 1rem 1.1rem; overflow-x: auto;
+  margin: 0; padding: 1rem 3.2rem 1rem 1.1rem;
   font-family: var(--font-mono); font-size: 0.88rem; line-height: 1.6; color: var(--foreground);
+  white-space: pre-wrap; word-break: break-word;   /* long commands wrap instead of hiding under Copy */
 }
 .code-block .c-prompt { color: var(--primary); user-select: none; }
 .copy-btn {
