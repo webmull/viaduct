@@ -79,24 +79,26 @@
         <ol class="steps">
           <li>
             <span class="step-n">1</span>
-            <h3>You dial out</h3>
-            <p>Your machine opens one outbound connection to a server you run. No inbound ports, no NAT config.</p>
+            <div>
+              <h3>You dial out</h3>
+              <p>Your machine opens one outbound connection. No inbound ports.</p>
+            </div>
           </li>
           <li>
             <span class="step-n">2</span>
-            <h3>You get a URL</h3>
-            <p>The server assigns a public HTTPS address and terminates TLS at the edge.</p>
+            <div>
+              <h3>You get a URL</h3>
+              <p>The server hands back a public HTTPS address.</p>
+            </div>
           </li>
           <li>
             <span class="step-n">3</span>
-            <h3>Traffic flows back</h3>
-            <p>Visitors hit the URL and their requests ride the tunnel down to your localhost.</p>
+            <div>
+              <h3>Traffic flows back</h3>
+              <p>Visitors hit it and requests ride the tunnel to your localhost.</p>
+            </div>
           </li>
         </ol>
-        <p class="flow-note">
-          No HTTP parsing or multiplexing on the tunnel, so it stays small enough to
-          read and the path stays fast. HTTP and WebSocket both just work.
-        </p>
       </div>
     </section>
 
