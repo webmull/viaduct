@@ -131,6 +131,51 @@ def test_idle_timeout_closes_quiet_connection() -> None:
     run(scenario())
 
 
+def _ws_upgrade(host: str) -> bytes:
+    return (
+        b"GET /ws HTTP/1.1\r\nHost: " + host.encode() + b"\r\n"
+        b"Upgrade: websocket\r\nConnection: Upgrade\r\n"
+        b"Sec-WebSocket-Key: " + WS_KEY.encode() + b"\r\n"
+        b"Sec-WebSocket-Version: 13\r\n\r\n"
+    )
+
+
+def test_adaptive_pool_grows_then_shrinks(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("viaduct.client.SURGE_IDLE_TIMEOUT", 0.3)
+
+    async def scenario() -> None:
+        async with tunnel_stack(pool_size=4) as (server, client):
+            conns = []
+            try:
+                # hold several concurrent WebSockets open to drain the idle pool
+                for _ in range(8):
+                    reader, writer = await asyncio.open_connection("127.0.0.1", server.public_port)
+                    writer.write(_ws_upgrade(client.hostname))
+                    await writer.drain()
+                    await reader.readuntil(b"\r\n\r\n")
+                    conns.append((reader, writer))
+                # the pool must grow past its baseline to serve the surge
+                for _ in range(500):
+                    if client._live > client._pool_size:
+                        break
+                    await asyncio.sleep(0.01)
+                peak = client._live
+                assert peak > client._pool_size, f"pool did not grow: live={peak}"
+            finally:
+                for _, w in conns:
+                    w.close()
+            # once the surge is gone, it drains back toward the baseline
+            for _ in range(500):
+                if client._live <= client._pool_size + 2:
+                    break
+                await asyncio.sleep(0.02)
+            assert client._live <= client._pool_size + 2, (
+                f"pool did not shrink: live={client._live} peak={peak}"
+            )
+
+    run(scenario())
+
+
 def test_drain_finishes_active_transfers_then_stops() -> None:
     async def scenario() -> None:
         async with tunnel_stack() as (server, client):

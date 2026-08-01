@@ -27,6 +27,10 @@ log = logging.getLogger("viaduct.client")
 
 DEFAULT_POOL_SIZE = 40
 
+#: A surge (temporary) pool connection retires if it sits idle this long unused,
+#: so the pool drains back to the baseline after a burst subsides.
+SURGE_IDLE_TIMEOUT = 20.0
+
 
 class TunnelError(Exception):
     """The server refused the tunnel."""
@@ -49,6 +53,12 @@ class TunnelClient:
         self._local_host = local_host
         self._local_port = local_port
         self._pool_size = pool_size
+        #: adaptive pool: the baseline is pool_size idle connections; under a
+        #: burst it grows toward _max_pool with short-lived surge connections
+        #: that drain away on their own once demand falls.
+        self._max_pool = max(pool_size, pool_size * 3)
+        self._idle = 0  # connections currently waiting idle at the server
+        self._live = 0  # total data-connection workers alive (idle + serving)
         self.hostname: str | None = None
         #: assigned by the server, learned from the hostname it returns
         self.subdomain: str | None = None
@@ -79,7 +89,7 @@ class TunnelClient:
         self._spawn(self._control_loop(reader, writer))
         self._spawn(self._heartbeat(writer))
         for _ in range(self._pool_size):
-            self._spawn(self._run_data_conn())
+            self._spawn_data_conn(permanent=True)
         return self.hostname
 
     async def wait_closed(self) -> None:
@@ -141,14 +151,29 @@ class TunnelClient:
                 await asyncio.sleep(protocol.HEARTBEAT_INTERVAL)
                 await protocol.write_frame(writer, protocol.ping())
 
-    async def _run_data_conn(self) -> None:
-        """One pool worker: keep an idle connection at the server until assigned.
+    def _spawn_data_conn(self, permanent: bool) -> None:
+        """Launch one pooled data-connection worker, tracking the live count."""
+        if self._stopping:
+            return
+        self._live += 1
 
-        Connect failures back off exponentially so a restarting server isn't
-        hammered; a dropped idle connection is replaced after a short pause.
-        On assignment, a replacement worker is spawned immediately so the idle
-        pool stays at target size (architecture step 5), then this worker
-        serves its one request and exits.
+        async def worker() -> None:
+            try:
+                await self._run_data_conn(permanent)
+            finally:
+                self._live -= 1
+
+        self._spawn(worker())
+
+    async def _run_data_conn(self, permanent: bool) -> None:
+        """One pooled worker: keep an idle connection at the server until assigned.
+
+        There are ``pool_size`` *permanent* workers; each replaces itself on
+        assignment, holding the baseline idle pool steady. When the idle pool
+        runs low under a burst, *temporary* surge workers are spawned (up to
+        ``_max_pool`` total) — they serve one request and exit, so the pool
+        shrinks back to the baseline on its own once demand falls. Connect
+        failures back off exponentially; a temporary worker gives up instead.
         """
         backoff = 1.0
         while not self._stopping and not self._closed.is_set():
@@ -157,20 +182,40 @@ class TunnelClient:
                     self._server_host, self._server_port, ssl=self._ssl_ctx
                 )
             except OSError:
+                if not permanent:
+                    return
                 await asyncio.sleep(backoff)
                 backoff = min(backoff * 2, 30.0)
                 continue
             backoff = 1.0
             try:
                 await protocol.write_frame(writer, protocol.data_hello(self.subdomain or ""))
-                first = await reader.read(CHUNK)
+                self._idle += 1
+                try:
+                    if permanent:
+                        first = await reader.read(CHUNK)
+                    else:
+                        # retire a surge worker that sits unused (TimeoutError is
+                        # an OSError, so it lands in the handler below as no data)
+                        async with asyncio.timeout(SURGE_IDLE_TIMEOUT):
+                            first = await reader.read(CHUNK)
+                finally:
+                    self._idle -= 1
             except (protocol.ProtocolError, OSError):
                 first = b""
             if not first:  # server dropped the idle connection
                 writer.close()
+                if not permanent:
+                    return
                 await asyncio.sleep(1.0)
                 continue
-            self._spawn(self._run_data_conn())
+            # Assigned. Keep the baseline full, and add surge capacity if the
+            # idle pool is running low (a burst is draining it).
+            if permanent:
+                self._spawn_data_conn(permanent=True)
+            if self._idle <= self._pool_size // 4 and self._live < self._max_pool:
+                for _ in range(min(self._pool_size, self._max_pool - self._live)):
+                    self._spawn_data_conn(permanent=False)
             task = asyncio.current_task()
             if task is not None:
                 self._busy.add(task)
