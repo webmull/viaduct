@@ -433,18 +433,22 @@ async def _run_http(
             loop.add_signal_handler(sig, stop.set)
 
     fancy = console.is_terminal
+    if fancy:  # version banner + a prominent (once-a-day) update nudge
+        current = update.installed_version()
+        newer = await asyncio.to_thread(update.check_for_update)
+        if newer:
+            console.print(
+                f"[dim]viaduct {current}[/]  [bold green]↑ {newer} available[/]"
+                f"  [green]run 'viaduct upgrade'[/]",
+                highlight=False,
+            )
+        else:
+            console.print(f"[dim]viaduct {current}[/]", highlight=False)
     if not await _probe_local("127.0.0.1", local_port):
         console.print(
             f"[yellow]viaduct: nothing is listening on 127.0.0.1:{local_port} yet; "
             f"requests will return 502 until you start it[/]"
         )
-    if fancy:  # a quiet, once-a-day "new version" nudge (never on piped output)
-        newer = await asyncio.to_thread(update.check_for_update)
-        if newer:
-            console.print(
-                f"[yellow]viaduct: {newer} available (you have "
-                f"{update.installed_version()}); run 'viaduct upgrade'[/]"
-            )
 
     delay = 1.0
     first = True
