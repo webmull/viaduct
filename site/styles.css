@@ -309,3 +309,84 @@ main > section:nth-child(even) { background: var(--surface); }
   html { scroll-behavior: auto; }
   .cursor { animation: none; }
 }
+
+/* ---------- Docs page ---------- */
+.docs-hero { text-align: center; padding: clamp(2rem, 4vw, 3rem) 0 0.5rem; }
+.docs-hero h1 { font-size: clamp(2rem, 5vw, 2.9rem); font-weight: 600; margin: 0.35rem 0 0; text-wrap: balance; }
+.docs-hero p { color: var(--muted-foreground); max-width: 40rem; margin: 0.9rem auto 0; text-wrap: balance; }
+
+.docs-layout { display: grid; grid-template-columns: 1fr; gap: 1.75rem; padding: 1.25rem 0 3rem; }
+.docs-main { min-width: 0; max-width: 47rem; }
+
+/* Sidebar table of contents */
+.docs-nav { font-size: 0.9rem; }
+.docs-nav .toc-label {
+  text-transform: uppercase; letter-spacing: 0.16em; font-size: 0.7rem;
+  color: var(--muted-foreground); font-weight: 600; margin: 0 0 0.7rem;
+}
+.docs-nav ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 0.4rem 1.1rem; }
+.docs-nav a { text-decoration: none; color: var(--muted-foreground); display: block; transition: color 0.15s ease; }
+.docs-nav a:hover { color: var(--foreground); }
+
+@media (min-width: 900px) {
+  .docs-layout { grid-template-columns: 14rem 1fr; gap: 3rem; align-items: start; }
+  .docs-nav { position: sticky; top: 5rem; }
+  .docs-nav ul { flex-direction: column; gap: 0; border-left: 1px solid var(--border); }
+  .docs-nav a { padding: 0.32rem 0 0.32rem 0.95rem; margin-left: -1px; border-left: 2px solid transparent; }
+  .docs-nav a:hover { border-left-color: var(--primary); }
+}
+
+.doc-section { scroll-margin-top: 5rem; padding: 1.75rem 0; }
+.doc-section + .doc-section { border-top: 1px solid var(--border); }
+.doc-section:first-child { padding-top: 0.5rem; }
+.doc-section h2 { font-size: clamp(1.45rem, 3.2vw, 1.9rem); margin: 0 0 0.3rem; }
+.doc-section h3 { font-family: var(--font-display); font-size: 1.05rem; font-weight: 600; margin: 1.5rem 0 0.4rem; }
+.doc-section p { color: var(--muted-foreground); margin: 0.7rem 0; }
+.doc-section p strong, .doc-section li strong { color: var(--foreground); font-weight: 600; }
+.doc-section a:not(.btn) { color: var(--primary); text-decoration: none; }
+.doc-section a:not(.btn):hover { text-decoration: underline; }
+.doc-section :is(p, li, td) code {
+  font-family: var(--font-mono); font-size: 0.86em; font-weight: 500;
+  background: var(--secondary); color: var(--foreground);
+  padding: 0.1rem 0.35rem; border-radius: 0.3rem;
+}
+.doc-section .code-block { margin: 1rem 0; }
+
+/* numbered getting-started steps */
+.doc-steps { counter-reset: step; list-style: none; margin: 1rem 0; padding: 0; display: grid; gap: 0.8rem; }
+.doc-steps li { position: relative; padding-left: 2.5rem; color: var(--muted-foreground); }
+.doc-steps li::before {
+  counter-increment: step; content: counter(step);
+  position: absolute; left: 0; top: -0.1rem; width: 1.7rem; height: 1.7rem;
+  border-radius: 999px; background: color-mix(in oklab, var(--primary) 16%, transparent);
+  color: var(--primary); font-family: var(--font-display); font-weight: 700; font-size: 0.82rem;
+  display: grid; place-items: center;
+}
+
+/* static terminal output sample */
+.doc-term { margin: 1rem 0; }
+.doc-screen {
+  font-family: var(--font-mono); font-size: clamp(0.74rem, 2.6vw, 0.86rem); line-height: 1.7;
+  color: var(--foreground); white-space: pre; margin: 0; overflow-x: auto;
+}
+
+/* callout */
+.doc-note {
+  border-left: 3px solid var(--primary);
+  background: color-mix(in oklab, var(--primary) 7%, transparent);
+  border-radius: 0 0.5rem 0.5rem 0; padding: 0.85rem 1rem; margin: 1.15rem 0;
+  font-size: 0.92rem; color: var(--muted-foreground);
+}
+.doc-note strong { color: var(--foreground); }
+
+/* options table */
+.table-scroll { overflow-x: auto; margin: 1rem 0; }
+.opt-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; min-width: 34rem; }
+.opt-table th, .opt-table td { text-align: left; padding: 0.6rem 0.75rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+.opt-table th { color: var(--muted-foreground); font-weight: 600; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; }
+.opt-table tr:last-child td { border-bottom: 0; }
+.opt-table td:first-child code { white-space: nowrap; }
+
+.hero-docs-link { margin-top: 0.9rem; font-size: 0.9rem; }
+.hero-docs-link a { color: var(--primary); text-decoration: none; font-weight: 500; }
+.hero-docs-link a:hover { text-decoration: underline; }
