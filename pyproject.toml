@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "viaduct"
-version = "0.1.0"
+version = "0.2.0"
 description = "Self-hosted reverse tunnel: expose a local service at a public HTTPS hostname"
 readme = "README.md"
 requires-python = ">=3.11"
