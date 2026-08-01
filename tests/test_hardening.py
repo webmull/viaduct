@@ -10,7 +10,7 @@ import pytest
 
 from support import WS_KEY, bare_server, http_get, make_client, run, tunnel_stack
 from viaduct import protocol
-from viaduct.client import TunnelClient
+from viaduct.client import TunnelClient, TunnelError
 
 
 def test_server_unregisters_silent_peer(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -127,6 +127,38 @@ def test_idle_timeout_closes_quiet_connection() -> None:
             # then silence — the shared watchdog must kill the splice
             assert await asyncio.wait_for(reader.read(), timeout=5) == b""
             writer.close()
+
+    run(scenario())
+
+
+def test_ip_tunnel_limit() -> None:
+    async def scenario() -> None:
+        async with bare_server(max_tunnels_per_ip=3) as server:
+            clients = []
+            try:
+                for _ in range(3):  # all from 127.0.0.1
+                    c = make_client(server, pool_size=0)
+                    await c.start()
+                    clients.append(c)
+                # one more from the same IP must be refused
+                extra = make_client(server, pool_size=0)
+                try:
+                    with pytest.raises(TunnelError, match="ip_tunnel_limit"):
+                        await extra.start()
+                finally:
+                    await extra.stop()
+                # freeing one slot lets a new tunnel in again
+                await clients.pop().stop()
+                for _ in range(300):
+                    if len(server.tunnels) < 3:
+                        break
+                    await asyncio.sleep(0.01)
+                again = make_client(server, pool_size=0)
+                await again.start()
+                clients.append(again)
+            finally:
+                for c in clients:
+                    await c.stop()
 
     run(scenario())
 

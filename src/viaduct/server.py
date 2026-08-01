@@ -77,6 +77,7 @@ class TunnelServer:
         max_conns_per_tunnel: int = 128,
         idle_timeout: float | None = 300.0,
         pool_wait: float = 10.0,
+        max_tunnels_per_ip: int = 4,
     ) -> None:
         self.bind = bind
         self.public_port = public_port
@@ -86,6 +87,11 @@ class TunnelServer:
         self.max_conns_per_tunnel = max_conns_per_tunnel
         self.idle_timeout = idle_timeout
         self.pool_wait = pool_wait
+        #: abuse safeguard for a no-auth server: cap concurrent tunnels per
+        #: source IP. Data connections don't count — only tunnels (control
+        #: connections). ``_ip_tunnels`` maps source IP -> live tunnel count.
+        self.max_tunnels_per_ip = max_tunnels_per_ip
+        self._ip_tunnels: dict[str, int] = {}
         self.tunnels: dict[str, Tunnel] = {}
         self._active_splices = 0
         self._no_active_splices = asyncio.Event()
@@ -151,9 +157,17 @@ class TunnelServer:
         self, frame: protocol.Frame, reader: asyncio.StreamReader, writer: asyncio.StreamWriter
     ) -> None:
         protocol.require_int(frame, "local_port")
+        peer = writer.get_extra_info("peername")
+        ip = peer[0] if peer else "unknown"
+        if self._ip_tunnels.get(ip, 0) >= self.max_tunnels_per_ip:
+            log.warning("ip tunnel limit reached ip=%s limit=%s", ip, self.max_tunnels_per_ip)
+            await self._reject(writer, "ip_tunnel_limit")
+            return
+
         subdomain = names.unique_name(self.tunnels)
         tunnel = Tunnel(subdomain)
         self.tunnels[subdomain] = tunnel
+        self._ip_tunnels[ip] = self._ip_tunnels.get(ip, 0) + 1
         hostname = f"{subdomain}.{self.base_domain}"
         ping_task = asyncio.create_task(self._ping_loop(writer))
         try:
@@ -174,6 +188,9 @@ class TunnelServer:
                 await ping_task
             if self.tunnels.get(subdomain) is tunnel:
                 del self.tunnels[subdomain]
+            self._ip_tunnels[ip] = self._ip_tunnels.get(ip, 1) - 1
+            if self._ip_tunnels[ip] <= 0:
+                del self._ip_tunnels[ip]
             tunnel.close_pool()
             writer.close()
             log.info("tunnel closed subdomain=%s", subdomain)
@@ -280,6 +297,9 @@ def _cli(
     idle_timeout: Annotated[
         float, typer.Option(help="Close proxied connections idle this many seconds (0 = never)")
     ] = 300.0,
+    max_tunnels_per_ip: Annotated[
+        int, typer.Option(help="Max concurrent tunnels allowed from one source IP")
+    ] = 4,
 ) -> None:
     """Run the tunnel server."""
     if ctx.invoked_subcommand is not None:
@@ -301,6 +321,7 @@ def _cli(
                 tls,
                 max_conns_per_tunnel,
                 idle_timeout if idle_timeout > 0 else None,
+                max_tunnels_per_ip,
             )
         )
 
@@ -313,6 +334,7 @@ async def _serve(
     tls: ssl.SSLContext | None,
     max_conns_per_tunnel: int,
     idle_timeout: float | None,
+    max_tunnels_per_ip: int,
 ) -> None:
     server = TunnelServer(
         bind=bind,
@@ -322,6 +344,7 @@ async def _serve(
         tls=tls,
         max_conns_per_tunnel=max_conns_per_tunnel,
         idle_timeout=idle_timeout,
+        max_tunnels_per_ip=max_tunnels_per_ip,
     )
     await server.start()
     stop = asyncio.Event()

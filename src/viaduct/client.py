@@ -18,14 +18,24 @@ from typing import Annotated, Any
 
 import typer
 from rich.console import Console
+from rich.panel import Panel
+from rich.text import Text
 
-from viaduct import config, protocol
+from viaduct import config, protocol, update
 from viaduct.relay import CHUNK, splice
 from viaduct.routing import plain_response
 
 log = logging.getLogger("viaduct.client")
 
 DEFAULT_POOL_SIZE = 40
+
+#: Built-in server used when neither --server nor config.toml names one, so
+#: ``viaduct http 4000`` works out of the box against the hosted instance.
+DEFAULT_SERVER = "viaduct.sh:4443"
+
+#: Hosts assumed to be a local dev server with no certificate, so TLS defaults
+#: off for them (it stays on for every other host).
+_LOCAL_HOSTS = frozenset({"localhost", "127.0.0.1", "::1"})
 
 #: A surge (temporary) pool connection retires if it sits idle this long unused,
 #: so the pool drains back to the baseline after a burst subsides.
@@ -252,11 +262,11 @@ app = typer.Typer(help="Viaduct client — expose a local service through a viad
 
 _ServerOpt = Annotated[
     str | None,
-    typer.Option("--server", help="Server tunnel address as host:port (default: config.toml)"),
+    typer.Option("--server", help="Server tunnel address as host:port (default: viaduct.sh:4443)"),
 ]
 _TlsOpt = Annotated[
     bool | None,
-    typer.Option("--tls/--no-tls", help="TLS to the server tunnel port (default: config.toml)"),
+    typer.Option("--tls/--no-tls", help="TLS to the tunnel port (on except localhost)"),
 ]
 _TlsCaOpt = Annotated[
     str | None,
@@ -264,9 +274,48 @@ _TlsCaOpt = Annotated[
 ]
 
 
+def _version_cb(value: bool) -> None:
+    if value:
+        console.print(f"viaduct {update.installed_version()}")
+        raise typer.Exit()
+
+
 @app.callback()
-def _cli() -> None:
+def _cli(
+    version: Annotated[
+        bool,
+        typer.Option(
+            "--version", callback=_version_cb, is_eager=True, help="Show version and exit"
+        ),
+    ] = False,
+) -> None:
     """Viaduct client."""
+
+
+@app.command()
+def upgrade() -> None:
+    """Upgrade viaduct to the latest stable release (via pipx)."""
+    current = update.installed_version()
+    latest = update.fetch_stable_version()
+    if latest is None:
+        console.print(
+            "[bold red]viaduct: could not reach the stable channel[/] "
+            "(check your connection, or upgrade by hand: "
+            f"pipx install --force {update.GIT_TARGET})"
+        )
+        raise typer.Exit(1)
+    if not update.is_newer(latest, current):
+        console.print(f"[green]already up to date[/] (viaduct {current})")
+        return
+    console.print(f"upgrading viaduct {current} [dim]→[/] {latest}…")
+    if update.run_upgrade():
+        console.print("[bold green]done[/]. Restart any running tunnels to pick it up")
+    else:
+        console.print(
+            "[bold red]viaduct: upgrade failed[/]. Is pipx installed? Then run: "
+            f"pipx install --force {update.GIT_TARGET}"
+        )
+        raise typer.Exit(1)
 
 
 @app.command()
@@ -284,14 +333,26 @@ def http(
     Blocks until interrupted, reconnecting on drop (each reconnect gets a fresh
     URL).
     """
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
+    logging.basicConfig(
+        level=logging.WARNING, format="%(asctime)s %(levelname)s %(name)s %(message)s"
+    )
+    stalled_at = update.maybe_auto_upgrade()  # opt-in; re-execs on success
+    if stalled_at:
+        console.print(
+            f"[yellow]viaduct: could not auto-upgrade to {stalled_at}; "
+            f"continuing on {update.installed_version()}[/]"
+        )
     host, srv_port, ssl_ctx = _connection_settings(server, tls, tls_ca)
     try:
         asyncio.run(_run_http(host, srv_port, port, pool_size, ssl_ctx))
     except KeyboardInterrupt:
         console.print("[yellow]viaduct: interrupted[/]")
     except TunnelError as exc:
-        console.print(f"[bold red]viaduct: server refused tunnel: {exc}[/]")
+        messages = {
+            "ip_tunnel_limit": "too many tunnels already open from this address (server limit)",
+        }
+        msg = messages.get(str(exc), f"server refused tunnel: {exc}")
+        console.print(f"[bold red]viaduct: {msg}[/]")
         raise typer.Exit(1) from exc
     except protocol.ProtocolError as exc:
         console.print(
@@ -313,19 +374,66 @@ def _connection_settings(
     except config.ConfigError as exc:
         console.print(f"[bold red]viaduct: {exc}[/]")
         raise typer.Exit(2) from exc
-    server = server or _cfg_str(cfg, "server") or "127.0.0.1:4443"
-    use_tls = tls if tls is not None else cfg.get("tls") is True
-    ca = tls_ca or _cfg_str(cfg, "tls_ca")
-    ssl_ctx = ssl.create_default_context(cafile=ca) if use_tls else None
+    server = server or _cfg_str(cfg, "server") or DEFAULT_SERVER
     host, _, port_str = server.rpartition(":")
     if not host or not port_str.isdigit():
         raise typer.BadParameter("--server must be host:port")
+    # TLS: explicit flag wins, then config, else on for real hosts / off locally.
+    if tls is not None:
+        use_tls = tls
+    elif "tls" in cfg:
+        use_tls = cfg.get("tls") is True
+    else:
+        use_tls = host not in _LOCAL_HOSTS
+    ca = tls_ca or _cfg_str(cfg, "tls_ca")
+    ssl_ctx = ssl.create_default_context(cafile=ca) if use_tls else None
     return host, int(port_str), ssl_ctx
 
 
 def _cfg_str(cfg: dict[str, str | bool], key: str) -> str | None:
     value = cfg.get(key)
     return value if isinstance(value, str) else None
+
+
+#: Refusal reasons the client should not retry — it reports them and exits.
+FATAL_REASONS = ("ip_tunnel_limit",)
+
+
+#: Rendered once at startup on a real terminal (matches the installer wordmark).
+_WORDMARK = r"""         _           _            _
+  __   _(_) __ _  __| |_   _  ___| |_
+  \ \ / / |/ _` |/ _` | | | |/ __| __|
+   \ V /| | (_| | (_| | |_| | (__| |_
+    \_/ |_|\__,_|\__,_|\__,_|\___|\__|  .sh"""
+
+
+def _print_banner() -> None:
+    console.print()
+    console.print(_WORDMARK, style="color(214)", highlight=False)
+    console.print("  self-hosted reverse tunnel\n", style="dim")
+
+
+def _print_tunnel_up(hostname: str, local_port: int) -> None:
+    body = Text()
+    body.append("Forwarding   ", style="dim")
+    body.append(f"https://{hostname}", style="bold green")
+    body.append("  →  ")
+    body.append(f"http://127.0.0.1:{local_port}", style="cyan")
+    console.print(Panel.fit(body, border_style="color(214)"))
+    console.print("  Ctrl+C to stop\n", style="dim")
+
+
+async def _probe_local(host: str, port: int) -> bool:
+    """Best-effort check that something is listening locally (non-fatal)."""
+    try:
+        async with asyncio.timeout(0.5):
+            _, writer = await asyncio.open_connection(host, port)
+    except (OSError, TimeoutError):
+        return False
+    writer.close()
+    with contextlib.suppress(OSError):
+        await writer.wait_closed()
+    return True
 
 
 async def _run_http(
@@ -342,7 +450,24 @@ async def _run_http(
         with contextlib.suppress(NotImplementedError):
             loop.add_signal_handler(sig, stop.set)
 
+    fancy = console.is_terminal
+    if fancy:
+        _print_banner()
+    if not await _probe_local("127.0.0.1", local_port):
+        console.print(
+            f"[yellow]viaduct: nothing is listening on 127.0.0.1:{local_port} yet; "
+            f"requests will return 502 until you start it[/]"
+        )
+    if fancy:  # a quiet, once-a-day "new version" nudge (never on piped output)
+        newer = await asyncio.to_thread(update.check_for_update)
+        if newer:
+            console.print(
+                f"[yellow]viaduct: {newer} available (you have "
+                f"{update.installed_version()}); run 'viaduct upgrade'[/]"
+            )
+
     delay = 1.0
+    first = True
     while not stop.is_set():
         client = TunnelClient(
             server_host=server_host,
@@ -351,16 +476,26 @@ async def _run_http(
             pool_size=pool_size,
             ssl_ctx=ssl_ctx,
         )
+        connecting = (
+            console.status("[bold]establishing tunnel…", spinner="dots")
+            if fancy and first
+            else contextlib.nullcontext()
+        )
         try:
-            hostname = await client.start()
+            with connecting:
+                hostname = await client.start()
         except TunnelError as exc:
+            first = False
             await client.stop()
+            if str(exc) in FATAL_REASONS:
+                raise  # don't retry — let http() report it and exit
             console.print(f"[yellow]viaduct: {exc}; retrying in {delay:.0f}s[/]")
             if await _wait_or_stop(stop, delay):
                 return
             delay = min(delay * 2, 30.0)
             continue
         except (protocol.ProtocolError, OSError) as exc:
+            first = False
             await client.stop()
             console.print(
                 f"[yellow]viaduct: cannot reach server ({exc}); retrying in {delay:.0f}s[/]"
@@ -370,8 +505,12 @@ async def _run_http(
             delay = min(delay * 2, 30.0)
             continue
 
+        first = False
         delay = 1.0
-        console.print(f"[bold green]tunnel up[/] {hostname} → 127.0.0.1:{local_port}")
+        if fancy:
+            _print_tunnel_up(hostname, local_port)
+        else:
+            console.print(f"[bold green]tunnel up[/] {hostname} → 127.0.0.1:{local_port}")
         closed = asyncio.ensure_future(client.wait_closed())
         stopped = asyncio.ensure_future(stop.wait())
         await asyncio.wait({closed, stopped}, return_when=asyncio.FIRST_COMPLETED)
