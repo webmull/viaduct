@@ -75,29 +75,50 @@
       <div class="wrap">
         <div class="section-head">
           <p class="eyebrow">How it works</p>
-          <h2>Your machine dials out, so nothing has to reach in</h2>
-          <p>
-            The client opens one outbound connection to a server you run. Public
-            traffic terminates TLS at the edge and rides the tunnel back to your
-            localhost as raw bytes.
-          </p>
+          <h2>Your machine dials out</h2>
         </div>
-        <div class="flow">
-          <div class="flow-node"><div class="k">visitor</div><div class="v">the internet</div></div>
-          <div class="flow-arrow">→</div>
-          <div class="flow-node"><div class="k">edge</div><div class="v">Caddy · HTTPS</div></div>
-          <div class="flow-arrow">→</div>
-          <div class="flow-node is-primary"><div class="k">server</div><div class="v">viaductd</div></div>
-          <div class="flow-arrow">→</div>
-          <div class="flow-node is-primary"><div class="k">your machine</div><div class="v">viaduct</div></div>
-          <div class="flow-arrow">→</div>
-          <div class="flow-node"><div class="k">local</div><div class="v">your app</div></div>
-        </div>
+        <ol class="steps">
+          <li>
+            <span class="step-n">1</span>
+            <h3>You dial out</h3>
+            <p>Your machine opens one outbound connection to a server you run. No inbound ports, no NAT config.</p>
+          </li>
+          <li>
+            <span class="step-n">2</span>
+            <h3>You get a URL</h3>
+            <p>The server assigns a public HTTPS address and terminates TLS at the edge.</p>
+          </li>
+          <li>
+            <span class="step-n">3</span>
+            <h3>Traffic flows back</h3>
+            <p>Visitors hit the URL and their requests ride the tunnel down to your localhost.</p>
+          </li>
+        </ol>
         <p class="flow-note">
-          No HTTP parsing or multiplexing on the tunnel, which keeps the whole
-          thing small enough to read and the path fast. HTTP and WebSocket both
-          just work.
+          No HTTP parsing or multiplexing on the tunnel, so it stays small enough to
+          read and the path stays fast. HTTP and WebSocket both just work.
         </p>
+      </div>
+    </section>
+
+    <section id="inspect">
+      <div class="wrap">
+        <div class="section-head">
+          <p class="eyebrow">Inspect</p>
+          <h2>Watch every request as it happens</h2>
+          <p>Add <code>--inspect</code> and viaduct prints each request live: method, path, status, and timing. Ideal for debugging webhooks without leaving your terminal.</p>
+        </div>
+        <div class="terminal" style="max-width:44rem" aria-hidden="true">
+          <div class="terminal-bar">
+            <span class="dot dot-red"></span>
+            <span class="dot dot-amber"></span>
+            <span class="dot dot-teal"></span>
+            <span class="terminal-title">viaduct http 3000 --inspect</span>
+          </div>
+          <div class="terminal-body">
+            <div id="inspect-screen"></div>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -146,27 +167,16 @@
       <div class="wrap">
         <div class="section-head">
           <p class="eyebrow">Open source</p>
-          <h2>Built in the open, small enough to read</h2>
-          <p>No black box and no accounts. The whole client and server are around 1,600 lines of Python with two dependencies. Read it, fork it, send a patch.</p>
-        </div>
-        <div class="os-grid">
-          <a class="os-card" href="https://github.com/webmull/viaduct" target="_blank" rel="noreferrer">
-            <div class="os-num">~1,600</div><div class="os-lbl">lines of Python</div>
-          </a>
-          <a class="os-card" href="https://github.com/webmull/viaduct/blob/main/pyproject.toml" target="_blank" rel="noreferrer">
-            <div class="os-num">2</div><div class="os-lbl">runtime dependencies</div>
-          </a>
-          <a class="os-card" href="https://github.com/webmull/viaduct/blob/main/LICENSE" target="_blank" rel="noreferrer">
-            <div class="os-num">MIT</div><div class="os-lbl">licensed, forever</div>
-          </a>
+          <h2>Built in the open</h2>
+          <p>Around 1,600 lines of Python, two dependencies, MIT licensed. No black box, no accounts. Read it, fork it, send a patch.</p>
         </div>
         <div class="os-actions">
-          <div class="code-block" style="max-width:34rem;width:100%">
+          <div class="code-block" style="max-width:32rem;width:100%">
             <pre><span class="c-prompt">$ </span><span class="cmd">git clone https://github.com/webmull/viaduct</span></pre>
             <button class="copy-btn" type="button" data-copy="git clone https://github.com/webmull/viaduct">Copy</button>
           </div>
           <div class="actions" style="margin-top:0">
-            <a class="btn btn-outline" href="https://github.com/webmull/viaduct" target="_blank" rel="noreferrer">Browse the source</a>
+            <a class="btn btn-primary" href="https://github.com/webmull/viaduct" target="_blank" rel="noreferrer">Star on GitHub</a>
             <a class="btn btn-outline" href="https://github.com/webmull/viaduct/issues" target="_blank" rel="noreferrer">Open an issue</a>
           </div>
         </div>
@@ -325,6 +335,50 @@
 
     var replayBtn = document.querySelector('.term-replay');
     if (replayBtn) replayBtn.addEventListener('click', function () { run(); });
+    run();
+  })();
+
+  (function () {
+    var screen = document.getElementById('inspect-screen');
+    if (!screen) return;
+    var HOST = 'funny-otter.viaduct.sh';
+    var reqs = [
+      ['GET ', '/', 200, '5ms'],
+      ['GET ', '/assets/app.css', 200, '2ms'],
+      ['POST', '/api/checkout', 200, '142ms'],
+      ['GET ', '/api/status', 200, '8ms'],
+      ['POST', '/webhooks/stripe', 200, '61ms'],
+      ['GET ', '/favicon.ico', 404, '1ms'],
+      ['GET ', '/ws', 101, '3ms']
+    ];
+    var sleep = function (ms) { return new Promise(function (r) { setTimeout(r, ms); }); };
+    var token = 0;
+    function line(html) { var d = document.createElement('div'); d.className = 'ln'; d.innerHTML = html; screen.appendChild(d); return d; }
+    function esc(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+    function clock(i) { var t = 14 * 3600 + 121 + i * 3, p = function (n) { return (n < 10 ? '0' : '') + n; }; return p(Math.floor(t / 3600) % 24) + ':' + p(Math.floor(t / 60) % 60) + ':' + p(t % 60); }
+    function cls(c) { return c < 300 ? 'c-ok' : c < 400 ? 'c-local' : c < 500 ? 'c-warn' : 'c-err'; }
+    async function run() {
+      var my = ++token; screen.innerHTML = '';
+      line('<span class="c-ok">✓</span> tunnel live');
+      line(' ');
+      line('  <span class="c-url">https://' + HOST + '</span>');
+      line('  <span class="c-dim">→ http://localhost:3000</span>');
+      line(' ');
+      await sleep(650);
+      for (var i = 0; i < reqs.length; i++) {
+        if (my !== token) return;
+        var r = reqs[i];
+        var path = (r[1].length > 22 ? r[1].slice(0, 21) + '…' : r[1]);
+        while (path.length < 22) path += ' ';
+        line('<span class="c-dim">' + clock(i) + '</span>  <span class="c-req">' + r[0]
+          + '</span> ' + esc(path) + '  <span class="' + cls(r[2]) + '">' + r[2]
+          + '</span> <span class="c-dim">' + r[3] + '</span>');
+        await sleep(600 + Math.floor(Math.random() * 700));
+      }
+      line('<span class="c-dim">  waiting for requests…</span>');
+      await sleep(2600);
+      if (my === token) run();
+    }
     run();
   })();
   </script>

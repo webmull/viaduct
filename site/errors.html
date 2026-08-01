@@ -39,7 +39,7 @@
     .browser { border: 1px solid var(--border-strong); border-radius: 0.85rem; overflow: hidden; background: var(--card); box-shadow: 0 20px 45px -25px rgba(0,0,0,0.6); }
     .browser-bar { display: flex; align-items: center; gap: 0.45rem; padding: 0.6rem 0.85rem; border-bottom: 1px solid var(--border); }
     .browser-bar .dot { height: 0.7rem; width: 0.7rem; border-radius: 999px; }
-    .browser-bar .url { margin-left: 0.6rem; flex: 1; font-family: var(--font-mono); font-size: 0.76rem; color: var(--muted-foreground); background: var(--background); border: 1px solid var(--border); border-radius: 999px; padding: 0.28rem 0.8rem; }
+    .browser-bar .url { margin-left: 0.6rem; flex: 1; min-width: 0; font-family: var(--font-mono); font-size: 0.76rem; color: var(--muted-foreground); background: var(--background); border: 1px solid var(--border); border-radius: 999px; padding: 0.28rem 0.8rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .browser-bar .url b { color: var(--foreground); font-weight: 500; }
   </style>
 </head>

@@ -144,8 +144,8 @@ h1, h2, h3 { font-family: var(--font-display); letter-spacing: -0.02em; }
 }
 .term-replay:hover, .term-replay:focus-visible { color: var(--foreground); border-color: var(--primary); }
 .terminal-body { padding: 1.05rem 1.1rem 1.2rem; overflow-x: auto; }
-#screen {
-  font-family: var(--font-mono); font-size: clamp(0.78rem, 2.7vw, 0.9rem); line-height: 1.7;
+#screen, #inspect-screen {
+  font-family: var(--font-mono); font-size: clamp(0.72rem, 2.6vw, 0.88rem); line-height: 1.7;
   color: var(--foreground); white-space: pre; margin: 0; min-height: 12.5em;
 }
 .ln { white-space: pre; }
@@ -154,6 +154,9 @@ h1, h2, h3 { font-family: var(--font-display); letter-spacing: -0.02em; }
 .c-url { color: var(--success); font-weight: 600; }
 .c-local { color: var(--accent); }
 .c-ok { color: var(--success); font-weight: 600; }
+.c-req { color: #cfd3da; }
+.c-warn { color: #e0b23c; font-weight: 600; }
+.c-err { color: #ff6b6b; font-weight: 600; }
 .cursor {
   display: inline-block; width: 0.55em; height: 1.05em; margin-bottom: -0.18em;
   background: var(--primary); animation: blink 1s steps(1) infinite;
@@ -170,21 +173,24 @@ section { padding: clamp(2.25rem, 4.5vw, 3.5rem) 0; }
 .section-head h2 { font-size: clamp(1.6rem, 4vw, 2.25rem); line-height: 1.15; margin: 0; text-wrap: balance; }
 .section-head p { margin: 0.9rem auto 0; max-width: 34rem; color: var(--muted-foreground); }
 
-/* ---------- Flow diagram ---------- */
-.flow {
-  display: flex; flex-wrap: wrap; align-items: stretch; justify-content: center; gap: 0.7rem;
-  max-width: 54rem; margin: 0 auto;
+/* ---------- How it works (numbered steps) ---------- */
+.steps {
+  list-style: none; margin: 0 auto; padding: 0; max-width: 54rem;
+  display: grid; grid-template-columns: 1fr; gap: 1rem;
 }
-.flow-node {
-  flex: 1 1 8rem; min-width: 7.5rem;
-  border: 1px solid var(--border); border-radius: 0.7rem; background: var(--card);
-  padding: 1rem 0.9rem; text-align: center;
+.steps li {
+  border: 1px solid var(--border); border-radius: 0.8rem; background: var(--card);
+  padding: 1.3rem 1.4rem;
 }
-.flow-node .k { font-family: var(--font-mono); font-size: 0.7rem; color: var(--muted-foreground); text-transform: uppercase; letter-spacing: 0.08em; }
-.flow-node .v { font-family: var(--font-display); font-weight: 600; font-size: 0.98rem; margin-top: 0.3rem; }
-.flow-node.is-primary { border-color: color-mix(in oklab, var(--primary) 45%, var(--border)); }
-.flow-arrow { display: flex; align-items: center; color: var(--primary); font-size: 1.1rem; }
-.flow-note { text-align: center; color: var(--muted-foreground); font-size: 0.9rem; margin: 1.25rem auto 0; max-width: 40rem; }
+.step-n {
+  display: inline-grid; place-items: center; width: 1.9rem; height: 1.9rem;
+  border-radius: 0.5rem; background: color-mix(in oklab, var(--primary) 18%, transparent);
+  color: var(--primary); font-family: var(--font-display); font-weight: 700; font-size: 0.95rem;
+}
+.steps h3 { font-family: var(--font-display); font-size: 1.05rem; font-weight: 600; margin: 0.7rem 0 0; }
+.steps p { color: var(--muted-foreground); font-size: 0.93rem; margin: 0.35rem 0 0; }
+.flow-note { text-align: center; color: var(--muted-foreground); font-size: 0.9rem; margin: 1.5rem auto 0; max-width: 40rem; }
+@media (min-width: 720px) { .steps { grid-template-columns: repeat(3, 1fr); } }
 
 /* ---------- Features ---------- */
 .features { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr; gap: 1rem; }
@@ -203,18 +209,7 @@ section { padding: clamp(2.25rem, 4.5vw, 3.5rem) 0; }
 .features p { margin: 0.4rem 0 0; font-size: 0.92rem; color: var(--muted-foreground); }
 
 /* ---------- Open source ---------- */
-.os-grid { display: grid; grid-template-columns: 1fr; gap: 1rem; max-width: 44rem; margin: 0 auto; }
-.os-card {
-  display: flex; flex-direction: column; align-items: center; gap: 0.2rem;
-  text-decoration: none; color: inherit;
-  border: 1px solid var(--border); border-radius: 0.8rem; background: var(--card); padding: 1.4rem 1rem;
-  transition: border-color 0.15s ease, transform 0.15s ease;
-}
-.os-card:hover { border-color: var(--primary); transform: translateY(-2px); }
-.os-num { font-family: var(--font-display); font-size: 1.85rem; font-weight: 700; color: var(--primary); font-variant-numeric: tabular-nums; }
-.os-lbl { color: var(--muted-foreground); font-size: 0.9rem; }
-.os-actions { display: flex; flex-direction: column; align-items: center; gap: 1.1rem; margin-top: 2rem; }
-@media (min-width: 640px) { .os-grid { grid-template-columns: repeat(3, 1fr); } }
+.os-actions { display: flex; flex-direction: column; align-items: center; gap: 1.1rem; margin-top: 1.5rem; }
 
 /* ---------- Deploy band (DigitalOcean) ---------- */
 .deploy-band {
@@ -289,6 +284,22 @@ section { padding: clamp(2.25rem, 4.5vw, 3.5rem) 0; }
 @media (min-width: 860px) {
   .nav-desktop { display: flex; }
   .features { grid-template-columns: repeat(3, 1fr); }
+}
+
+/* phones: stack the flow vertically (arrows point down) and give buttons and
+   the git-clone line full width for comfortable tap targets */
+@media (max-width: 560px) {
+  .wrap { padding: 0 1.15rem; }
+  section { padding: 2.25rem 0; }
+  .hero { padding-top: 1.5rem; }
+  .hero-mark { height: 4.75rem; width: 4.75rem; }
+  .section-head { margin-bottom: 1.4rem; }
+  .actions { width: 100%; }
+  .actions .btn { width: 100%; }
+  .os-actions .code-block { width: 100%; }
+  .deploy-logo img { width: min(13rem, 60%); }
+  .terminal-title { display: none; }        /* free up the narrow terminal bar */
+  .cta .wrap { padding: 1.75rem 1.15rem; }
 }
 
 @media (prefers-reduced-motion: reduce) {
