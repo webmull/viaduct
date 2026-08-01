@@ -5,7 +5,7 @@ running on your machine a public HTTPS URL with one command, no inbound ports,
 port forwarding, or NAT configuration.
 
 ```console
-$ viaduct http 4000
+$ viaduct http 8080
          _           _            _
   __   _(_) __ _  __| |_   _  ___| |_
   \ \ / / |/ _` |/ _` | | | |/ __| __|
@@ -14,7 +14,7 @@ $ viaduct http 4000
   self-hosted reverse tunnel
 
 ╭───────────────────────────────────────────────────────────────────────╮
-│ Forwarding   https://funny-otter.viaduct.sh  →  http://127.0.0.1:4000  │
+│ Forwarding   https://funny-otter.viaduct.sh  →  http://127.0.0.1:8080  │
 ╰───────────────────────────────────────────────────────────────────────╯
   Ctrl+C to stop
 ```
@@ -59,7 +59,7 @@ That installs both the `viaduct` client and the `viaductd` server. The client
 targets the hosted `viaduct.sh` server by default, so you can go straight to:
 
 ```sh
-viaduct http 4000
+viaduct http 8080
 ```
 
 ## Usage
@@ -68,8 +68,8 @@ Point `viaduct http` at any local port. It prints a public HTTPS URL and forward
 traffic to that port until you stop it with Ctrl+C:
 
 ```sh
-viaduct http 4000
-# tunnel up: https://funny-otter.viaduct.sh → http://127.0.0.1:4000
+viaduct http 8080
+# tunnel up: https://funny-otter.viaduct.sh → http://127.0.0.1:8080
 ```
 
 The client dials out, so it never needs your machine's IP or any open inbound
@@ -149,7 +149,7 @@ viaductd` and the monthly certificate refresh are safe during live traffic.
 
 ```
 visitor ──HTTPS──▶ Caddy ──▶ viaductd ──tunnel──▶ viaduct ──▶ your app
-(public)           (TLS)     (server)   (1 hop)   (client)    127.0.0.1:4000
+(public)           (TLS)     (server)   (1 hop)   (client)    127.0.0.1:8080
 ```
 
 The client opens one control connection to the server and keeps a small pool of
