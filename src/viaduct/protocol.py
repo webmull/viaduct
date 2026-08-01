@@ -11,7 +11,7 @@ buffered in the reader for the raw pipe to pick up.
 
 Control connection::
 
-    -> {"type": "hello", "local_port": ...}
+    -> {"type": "hello", "local_port": ...[, "pin": ...]}
     <- {"type": "ok", "hostname": ...}  |  {"type": "error", "reason": ...}
     <-> {"type": "ping"} / {"type": "pong"}   every HEARTBEAT_INTERVAL seconds
 
@@ -108,8 +108,11 @@ async def read_frame(reader: asyncio.StreamReader) -> Frame:
     return msg
 
 
-def hello(local_port: int) -> Frame:
-    return {"type": "hello", "local_port": local_port}
+def hello(local_port: int, pin: str | None = None) -> Frame:
+    frame: Frame = {"type": "hello", "local_port": local_port}
+    if pin:
+        frame["pin"] = pin  # opaque --pin seed; the server derives a stable name
+    return frame
 
 
 def data_hello(subdomain: str) -> Frame:

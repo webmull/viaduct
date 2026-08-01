@@ -85,6 +85,13 @@ tunnel, and serves `502` until your app comes up.
 | `--tls-ca PATH` | none | Extra CA bundle to trust (for a self-signed server) |
 | `--pool-size N` | 40 | Idle data connections kept ready for incoming requests |
 | `--inspect` | off | Log each request: method, path, status, and time |
+| `--pin` | off | Keep the same public URL across reconnects (stable subdomain) |
+
+By default every reconnect gets a fresh random URL. `--pin` keeps the same URL
+for a given local port across reconnects, which is handy for a webhook endpoint
+or a long-lived demo. The name is still server-assigned (you can't choose the
+string); it is derived from a random secret stored once at
+`~/.config/viaduct/pin.key`, so it stays stable without any server-side state.
 
 Flags can live in `~/.config/viaduct/config.toml` instead:
 

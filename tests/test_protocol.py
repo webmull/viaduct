@@ -38,6 +38,14 @@ def test_round_trip() -> None:
     assert run(read_from(protocol.encode_frame(frame))) == frame
 
 
+def test_hello_omits_pin_by_default() -> None:
+    assert "pin" not in protocol.hello(3000)
+
+
+def test_hello_includes_pin_when_given() -> None:
+    assert protocol.hello(3000, "abc123")["pin"] == "abc123"
+
+
 def test_length_prefix_is_big_endian() -> None:
     data = protocol.encode_frame(protocol.ping())
     assert data[:4] == struct.pack(">I", len(data) - 4)

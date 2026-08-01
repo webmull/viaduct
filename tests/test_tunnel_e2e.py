@@ -10,6 +10,8 @@ import asyncio
 import base64
 import hashlib
 
+import pytest
+
 import support
 from support import (
     BASE_DOMAIN,
@@ -21,7 +23,8 @@ from support import (
     run,
     tunnel_stack,
 )
-from viaduct import protocol
+from viaduct import names, protocol
+from viaduct.client import TunnelError
 
 
 def test_http_round_trip() -> None:
@@ -92,6 +95,48 @@ def test_two_tunnels_get_distinct_names() -> None:
                 assert second.subdomain in server.tunnels
             finally:
                 await second.stop()
+
+    run(scenario())
+
+
+def test_pinned_tunnel_gets_stable_derived_name() -> None:
+    seed = "stable-seed"
+    expected = names.derived_name(seed)
+
+    async def scenario() -> None:
+        async with bare_server() as server:
+            first = make_client(server, pin_seed=seed)
+            await first.start()
+            assert first.subdomain == expected
+            await first.stop()
+            for _ in range(500):  # wait for the server to free it on disconnect
+                if expected not in server.tunnels:
+                    break
+                await asyncio.sleep(0.01)
+            assert expected not in server.tunnels
+            second = make_client(server, pin_seed=seed)  # reconnect, same seed
+            try:
+                await second.start()
+                assert second.subdomain == expected  # same URL after reconnect
+            finally:
+                await second.stop()
+
+    run(scenario())
+
+
+def test_pinned_name_collision_is_rejected() -> None:
+    seed = "busy-seed"
+
+    async def scenario() -> None:
+        async with bare_server() as server:
+            first = make_client(server, pin_seed=seed)
+            await first.start()
+            try:
+                second = make_client(server, pin_seed=seed)  # same name, still live
+                with pytest.raises(TunnelError, match="pin_in_use"):
+                    await second.start()
+            finally:
+                await first.stop()
 
     run(scenario())
 

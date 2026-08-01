@@ -8,6 +8,7 @@ names are not predictable from one another.
 
 from __future__ import annotations
 
+import hashlib
 import secrets
 from collections.abc import Container
 
@@ -117,6 +118,23 @@ ANIMALS: tuple[str, ...] = (
 def random_name() -> str:
     """Return a fresh ``adjective-animal`` name."""
     return f"{secrets.choice(ADJECTIVES)}-{secrets.choice(ANIMALS)}"
+
+
+def derived_name(seed: str) -> str:
+    """Deterministic ``adjective-animal-xxxx`` name for a ``--pin`` seed.
+
+    The same seed always yields the same name, with no server-side state, so a
+    pinned tunnel keeps its URL across reconnects. The 16-bit hex suffix widens
+    the space (~150M combinations) so distinct seeds rarely collide and a
+    specific name cannot be cheaply targeted. The seed is opaque, so the name is
+    still server-assigned rather than user-chosen.
+    """
+    digest = hashlib.sha256(seed.encode()).digest()
+    n = int.from_bytes(digest, "big")
+    adjective = ADJECTIVES[n % len(ADJECTIVES)]
+    n //= len(ADJECTIVES)
+    animal = ANIMALS[n % len(ANIMALS)]
+    return f"{adjective}-{animal}-{digest[:2].hex()}"
 
 
 def unique_name(taken: Container[str], attempts: int = 50) -> str:

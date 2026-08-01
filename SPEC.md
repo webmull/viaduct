@@ -25,6 +25,26 @@ There is **no persistent state and no database** — the store is gone entirely.
 Everything else about the architecture (connection-pool data path, TLS on 4443
 to encrypt tunneled traffic in transit, hardening, deploy) stands.
 
+## Amendment (2026-08-01): opt-in stable subdomain (`--pin`)
+
+Relaxes "never persisted" from the 2026-07-31 amendment for one opt-in case,
+without reintroducing a database or user-chosen names.
+
+- **`viaduct http PORT --pin`** gives the tunnel a stable subdomain, the same on
+  every reconnect, instead of a fresh random one. It is for someone who wants a
+  durable URL for a webhook endpoint or a long-lived demo. Without `--pin`,
+  behaviour is unchanged (a fresh ephemeral name each time).
+- **The name is still server-derived, never user-chosen.** The client stores a
+  random secret once at `~/.config/viaduct/pin.key` (mode 0600) and sends
+  `sha256(secret:local_port)` in the hello frame. The server derives an
+  `adjective-animal-xxxx` name deterministically from that seed. The user cannot
+  choose the string, so squatting or impersonation (`login`, a brand name) stays
+  impossible. Different local ports yield different stable names.
+- **Still no server state and no database.** The server persists nothing: the
+  same seed always derives the same name, so stability is a pure function of the
+  client's secret. If the derived name is already held by another live tunnel,
+  the server rejects with `pin_in_use` and the client reports it and exits.
+
 ---
 
 ## Task

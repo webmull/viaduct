@@ -164,7 +164,17 @@ class TunnelServer:
             await self._reject(writer, "ip_tunnel_limit")
             return
 
-        subdomain = names.unique_name(self.tunnels)
+        pin = frame.get("pin")
+        if isinstance(pin, str) and pin:
+            # --pin: a stable, server-derived name (no state; same seed -> same
+            # name). Reject rather than reassign if it is already live.
+            subdomain = names.derived_name(pin)
+            if subdomain in self.tunnels:
+                log.info("pinned name in use subdomain=%s ip=%s", subdomain, ip)
+                await self._reject(writer, "pin_in_use")
+                return
+        else:
+            subdomain = names.unique_name(self.tunnels)
         tunnel = Tunnel(subdomain)
         self.tunnels[subdomain] = tunnel
         self._ip_tunnels[ip] = self._ip_tunnels.get(ip, 0) + 1

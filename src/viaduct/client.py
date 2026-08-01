@@ -58,6 +58,7 @@ class TunnelClient:
         pool_size: int = DEFAULT_POOL_SIZE,
         ssl_ctx: ssl.SSLContext | None = None,
         inspect: bool = False,
+        pin_seed: str | None = None,
     ) -> None:
         self._server_host = server_host
         self._server_port = server_port
@@ -66,6 +67,8 @@ class TunnelClient:
         self._local_port = local_port
         self._pool_size = pool_size
         self._inspect = inspect
+        #: opaque --pin seed; when set the server derives a stable subdomain
+        self._pin_seed = pin_seed
         #: adaptive pool: the baseline is pool_size idle connections; under a
         #: burst it grows toward _max_pool with short-lived surge connections
         #: that drain away on their own once demand falls.
@@ -90,7 +93,7 @@ class TunnelClient:
         reader, writer = await asyncio.open_connection(
             self._server_host, self._server_port, ssl=self._ssl_ctx
         )
-        await protocol.write_frame(writer, protocol.hello(self._local_port))
+        await protocol.write_frame(writer, protocol.hello(self._local_port, self._pin_seed))
         resp = await protocol.read_frame(reader)
         if resp["type"] == "error":
             writer.close()
@@ -361,13 +364,17 @@ def http(
     inspect: Annotated[
         bool, typer.Option("--inspect", help="Log each request: method, path, status, time")
     ] = False,
+    pin: Annotated[
+        bool,
+        typer.Option("--pin", help="Keep the same public URL across reconnects (stable subdomain)"),
+    ] = False,
     tls: _TlsOpt = None,
     tls_ca: _TlsCaOpt = None,
 ) -> None:
     """Open a tunnel exposing local PORT. The server assigns a random public URL.
 
-    Blocks until interrupted, reconnecting on drop (each reconnect gets a fresh
-    URL).
+    Blocks until interrupted, reconnecting on drop. Each reconnect gets a fresh
+    URL, unless --pin is given, which keeps the same URL for this port.
     """
     logging.basicConfig(
         level=logging.WARNING, format="%(asctime)s %(levelname)s %(name)s %(message)s"
@@ -380,12 +387,19 @@ def http(
         )
     host, srv_port, ssl_ctx = _connection_settings(server, tls, tls_ca)
     try:
-        asyncio.run(_run_http(host, srv_port, port, pool_size, ssl_ctx, inspect))
+        pin_seed = config.pin_seed(port) if pin else None
+    except config.ConfigError as exc:
+        console.print(f"[bold red]viaduct: {exc}[/]")
+        raise typer.Exit(1) from exc
+    try:
+        asyncio.run(_run_http(host, srv_port, port, pool_size, ssl_ctx, inspect, pin_seed))
     except KeyboardInterrupt:
         console.print("[yellow]viaduct: interrupted[/]")
     except TunnelError as exc:
         messages = {
             "ip_tunnel_limit": "too many tunnels already open from this address (server limit)",
+            "pin_in_use": "that pinned URL is already in use by another live tunnel "
+            "(is the same --pin tunnel already open elsewhere?)",
         }
         msg = messages.get(str(exc), f"server refused tunnel: {exc}")
         console.print(f"[bold red]viaduct: {msg}[/]")
@@ -438,7 +452,7 @@ def _cfg_str(cfg: dict[str, str | bool], key: str) -> str | None:
 
 
 #: Refusal reasons the client should not retry — it reports them and exits.
-FATAL_REASONS = ("ip_tunnel_limit",)
+FATAL_REASONS = ("ip_tunnel_limit", "pin_in_use")
 
 
 def _print_tunnel_up(hostname: str, local_port: int, quit_hint: bool = False) -> None:
@@ -550,6 +564,7 @@ async def _run_http(
     pool_size: int,
     ssl_ctx: ssl.SSLContext | None,
     inspect: bool = False,
+    pin_seed: str | None = None,
 ) -> None:
     """Keep the tunnel up: reconnect on drop with 1s→30s exponential backoff."""
     stop = asyncio.Event()
@@ -587,6 +602,7 @@ async def _run_http(
                 pool_size=pool_size,
                 ssl_ctx=ssl_ctx,
                 inspect=inspect,
+                pin_seed=pin_seed,
             )
             connecting = (
                 console.status("[bold]establishing tunnel…", spinner="dots")

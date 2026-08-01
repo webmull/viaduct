@@ -90,6 +90,7 @@ def make_client(
     local_port: int = 1,
     pool_size: int = 1,
     ssl_ctx: ssl.SSLContext | None = None,
+    pin_seed: str | None = None,
 ) -> TunnelClient:
     return TunnelClient(
         server_host="127.0.0.1",
@@ -97,6 +98,7 @@ def make_client(
         local_port=local_port,
         pool_size=pool_size,
         ssl_ctx=ssl_ctx,
+        pin_seed=pin_seed,
     )
 
 
