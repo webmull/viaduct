@@ -113,6 +113,7 @@ ${BASE_DOMAIN} {
 		dns digitalocean {env.DO_API_TOKEN}
 	}
 	root * /var/www/viaduct-site
+	header Cache-Control "no-cache"
 	file_server
 }
 www.${BASE_DOMAIN} {
@@ -136,6 +137,7 @@ EOF
 ${BASE_DOMAIN} {
 	tls internal
 	root * /var/www/viaduct-site
+	header Cache-Control "no-cache"
 	file_server
 }
 *.${BASE_DOMAIN} {
