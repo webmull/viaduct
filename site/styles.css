@@ -89,14 +89,14 @@ h1, h2, h3 { font-family: var(--font-display); letter-spacing: -0.02em; }
 .btn-outline:hover { border-color: var(--primary); }
 
 /* ---------- Hero ---------- */
-.hero { position: relative; padding: clamp(2.5rem, 7vw, 5.5rem) 0 3rem; text-align: center; }
+.hero { position: relative; padding: clamp(2rem, 4.5vw, 3.5rem) 0 2.25rem; text-align: center; }
 .hero::before {
   content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
   background:
     radial-gradient(60% 45% at 50% 0%, color-mix(in oklab, var(--primary) 18%, transparent), transparent 70%),
     radial-gradient(50% 40% at 85% 15%, color-mix(in oklab, var(--accent) 10%, transparent), transparent 70%);
 }
-.hero-mark { margin: 0 auto 1.25rem; height: 4.5rem; width: 4.5rem; }
+.hero-mark { margin: 0 auto 1.35rem; height: clamp(6rem, 15vw, 9rem); width: clamp(6rem, 15vw, 9rem); }
 .hero h1 {
   font-weight: 600; font-size: clamp(2.1rem, 6vw, 3.6rem); line-height: 1.05;
   margin: 0; text-wrap: balance;
@@ -111,12 +111,12 @@ h1, h2, h3 { font-family: var(--font-display); letter-spacing: -0.02em; }
   background: var(--secondary); padding: 0.1rem 0.35rem; border-radius: 0.3rem; color: var(--foreground);
 }
 .actions {
-  margin-top: 1.9rem; display: flex; flex-wrap: wrap; gap: 0.8rem; justify-content: center;
+  margin-top: 1.5rem; display: flex; flex-wrap: wrap; gap: 0.8rem; justify-content: center;
 }
 
 /* ---------- Terminal ---------- */
 .terminal {
-  margin: 2.75rem auto 0; max-width: 40rem; text-align: left;
+  margin: 1.9rem auto 0; max-width: 40rem; text-align: left;
   border: 1px solid var(--border-strong); border-radius: 0.85rem; overflow: hidden;
   background: oklch(0.16 0.03 250.5);
   box-shadow: 0 30px 60px -30px oklch(0 0 0 / 65%), 0 0 0 1px oklch(1 0 0 / 3%);
@@ -131,9 +131,18 @@ h1, h2, h3 { font-family: var(--font-display); letter-spacing: -0.02em; }
 .dot-amber { background: var(--primary); }
 .dot-teal { background: var(--accent); }
 .terminal-title {
-  margin-left: auto; margin-right: 2.1rem;
+  margin-left: auto;
   font-family: var(--font-mono); font-size: 0.72rem; color: var(--muted-foreground);
 }
+.term-replay {
+  margin-left: 0.75rem;
+  display: inline-flex; align-items: center; gap: 0.3rem;
+  border: 1px solid var(--border); background: transparent; color: var(--muted-foreground);
+  border-radius: 0.4rem; padding: 0.2rem 0.55rem;
+  font-family: var(--font-sans); font-size: 0.72rem; cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+.term-replay:hover, .term-replay:focus-visible { color: var(--foreground); border-color: var(--primary); }
 .terminal-body { padding: 1.05rem 1.1rem 1.2rem; overflow-x: auto; }
 #screen {
   font-family: var(--font-mono); font-size: clamp(0.78rem, 2.7vw, 0.9rem); line-height: 1.7;
@@ -152,8 +161,8 @@ h1, h2, h3 { font-family: var(--font-display); letter-spacing: -0.02em; }
 @keyframes blink { 50% { opacity: 0; } }
 
 /* ---------- Section scaffolding ---------- */
-section { padding: clamp(3rem, 7vw, 5rem) 0; }
-.section-head { max-width: 40rem; margin: 0 auto 2.5rem; text-align: center; }
+section { padding: clamp(2.25rem, 4.5vw, 3.5rem) 0; }
+.section-head { max-width: 40rem; margin: 0 auto 1.75rem; text-align: center; }
 .eyebrow {
   font-size: 0.72rem; letter-spacing: 0.28em; text-transform: uppercase;
   color: var(--primary); font-weight: 600; margin: 0 0 0.6rem;
@@ -175,7 +184,7 @@ section { padding: clamp(3rem, 7vw, 5rem) 0; }
 .flow-node .v { font-family: var(--font-display); font-weight: 600; font-size: 0.98rem; margin-top: 0.3rem; }
 .flow-node.is-primary { border-color: color-mix(in oklab, var(--primary) 45%, var(--border)); }
 .flow-arrow { display: flex; align-items: center; color: var(--primary); font-size: 1.1rem; }
-.flow-note { text-align: center; color: var(--muted-foreground); font-size: 0.9rem; margin: 1.5rem auto 0; max-width: 40rem; }
+.flow-note { text-align: center; color: var(--muted-foreground); font-size: 0.9rem; margin: 1.25rem auto 0; max-width: 40rem; }
 
 /* ---------- Features ---------- */
 .features { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr; gap: 1rem; }
@@ -192,6 +201,25 @@ section { padding: clamp(3rem, 7vw, 5rem) 0; }
 .feat-icon svg { height: 1.15rem; width: 1.15rem; stroke: currentColor; fill: none; stroke-width: 1.9; }
 .features h3 { font-size: 1.02rem; font-weight: 600; margin: 0; }
 .features p { margin: 0.4rem 0 0; font-size: 0.92rem; color: var(--muted-foreground); }
+
+/* ---------- Deploy band (DigitalOcean) ---------- */
+.deploy-band {
+  display: grid; grid-template-columns: 1fr; gap: 1.75rem; align-items: center;
+  border: 1px solid var(--border-strong); border-radius: 1rem;
+  padding: clamp(1.75rem, 4vw, 2.75rem);
+  background:
+    radial-gradient(90% 150% at 100% 0%, color-mix(in oklab, #0069ff 16%, transparent), transparent 62%),
+    var(--surface);
+}
+.deploy-copy .eyebrow { text-align: left; }
+.deploy-copy h2 { font-size: clamp(1.5rem, 3.5vw, 2rem); margin: 0 0 0.7rem; text-wrap: balance; }
+.deploy-copy p { color: var(--muted-foreground); margin: 0 0 1.3rem; max-width: 34rem; }
+.deploy-logo { display: flex; justify-content: center; }
+.deploy-logo img { width: min(15rem, 72%); height: auto; opacity: 0.95; }
+@media (min-width: 760px) {
+  .deploy-band { grid-template-columns: 1.35fr 1fr; }
+  .deploy-logo { justify-content: flex-end; }
+}
 
 /* ---------- Install ---------- */
 .install { max-width: 44rem; margin: 0 auto; }
@@ -220,7 +248,7 @@ section { padding: clamp(3rem, 7vw, 5rem) 0; }
 /* ---------- CTA ---------- */
 .cta { text-align: center; }
 .cta .wrap {
-  border: 1px solid var(--border-strong); border-radius: 1rem; padding: clamp(2rem, 5vw, 3.25rem) 1.5rem;
+  border: 1px solid var(--border-strong); border-radius: 1rem; padding: clamp(1.75rem, 4vw, 2.5rem) 1.5rem;
   background:
     radial-gradient(70% 120% at 50% 0%, color-mix(in oklab, var(--primary) 12%, transparent), transparent 70%),
     var(--surface);

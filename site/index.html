@@ -38,7 +38,7 @@
   <main>
     <section class="hero">
       <div class="wrap">
-        <img class="hero-mark" src="viaduct-mark.png" alt="viaduct.sh logo" />
+        <img class="hero-mark" src="viaduct-logo.svg" alt="viaduct.sh logo" />
         <h1>Your localhost, at a public&nbsp;URL</h1>
         <p class="lede">
           viaduct is a small, self-hosted reverse tunnel in Python. Expose any
@@ -53,15 +53,16 @@
           <a class="btn btn-outline" href="#install">Install</a>
         </div>
 
-        <div class="terminal" aria-hidden="true">
+        <div class="terminal">
           <div class="terminal-bar">
             <span class="dot dot-red"></span>
             <span class="dot dot-amber"></span>
             <span class="dot dot-teal"></span>
             <span class="terminal-title">bash</span>
+            <button class="term-replay" type="button" aria-label="Replay the demo">↻ Replay</button>
           </div>
           <div class="terminal-body">
-            <div id="screen"></div>
+            <div id="screen" aria-hidden="true"></div>
           </div>
         </div>
         <p class="lede" style="font-size:0.9rem;margin-top:1rem">
@@ -141,6 +142,27 @@
       </div>
     </section>
 
+    <section id="deploy">
+      <div class="wrap">
+        <div class="deploy-band">
+          <div class="deploy-copy">
+            <p class="eyebrow">Self-hosting</p>
+            <h2>Easiest on a DigitalOcean droplet</h2>
+            <p>
+              The provisioner is built for DigitalOcean. One Ubuntu droplet and
+              one script sets up Caddy, wildcard TLS, systemd, and the firewall
+              for you. A 1 GB droplet is plenty, and the same script rehearses
+              locally first.
+            </p>
+            <a class="btn btn-outline" href="https://github.com/webmull/viaduct/blob/main/deploy/setup.md" target="_blank" rel="noreferrer">Deployment guide</a>
+          </div>
+          <div class="deploy-logo">
+            <img src="do-logo.svg" alt="DigitalOcean" />
+          </div>
+        </div>
+      </div>
+    </section>
+
     <section id="install">
       <div class="wrap">
         <div class="section-head">
@@ -182,7 +204,7 @@
 
   <footer class="site-footer">
     <div class="wrap footer-inner">
-      <a href="https://github.com/webmull" target="_blank" rel="noreferrer"
+      <a href="https://adamdavis.co.uk" target="_blank" rel="noreferrer"
          style="display:flex;align-items:center;gap:0.6rem;text-decoration:none;color:inherit">
         <img src="adam.png" alt="Adam Davis" width="34" height="34" style="border-radius:999px;border:1px solid var(--border-strong)" />
         <span>Built by <strong style="color:var(--foreground);font-weight:600">Adam Davis</strong></span>
@@ -212,7 +234,6 @@
 
     var screen = document.getElementById('screen');
     if (!screen) return;
-    var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     var HOST = 'sunny-otter.viaduct.sh';
     var SPIN = ['⠋','⠙','⠹','⠸','⠼','⠴','⠦','⠧','⠇','⠏'];
     var sleep = function (ms) { return new Promise(function (r) { setTimeout(r, ms); }); };
@@ -238,23 +259,9 @@
       el.innerHTML = promptHTML + esc(text);
     }
 
-    function finalFrame() {
-      screen.innerHTML = '';
-      line(promptHTML + 'viaduct http 4000');
-      line('<span class="c-ok">✓</span> tunnel live');
-      line(' ');
-      line('  <span class="c-url">https://' + HOST + '</span>');
-      line('  <span class="c-dim">→ http://localhost:4000</span>');
-      line(' ');
-      line(promptHTML + 'curl -sI https://' + HOST);
-      line('<span class="c-ok">HTTP/2 200</span>');
-      line(promptHTML + '<span class="cursor"></span>');
-    }
-
     async function run() {
       var my = ++token;
       screen.innerHTML = '';
-      if (reduce) { finalFrame(); return; }
 
       var cmd = line();
       await type(cmd, 'viaduct http 4000', my);
@@ -285,6 +292,8 @@
       if (my === token) run();
     }
 
+    var replayBtn = document.querySelector('.term-replay');
+    if (replayBtn) replayBtn.addEventListener('click', function () { run(); });
     run();
   })();
   </script>

@@ -18,8 +18,6 @@ from typing import Annotated, Any
 
 import typer
 from rich.console import Console
-from rich.panel import Panel
-from rich.text import Text
 
 from viaduct import config, protocol, update
 from viaduct.relay import CHUNK, splice
@@ -399,28 +397,12 @@ def _cfg_str(cfg: dict[str, str | bool], key: str) -> str | None:
 FATAL_REASONS = ("ip_tunnel_limit",)
 
 
-#: Rendered once at startup on a real terminal (matches the installer wordmark).
-_WORDMARK = r"""         _           _            _
-  __   _(_) __ _  __| |_   _  ___| |_
-  \ \ / / |/ _` |/ _` | | | |/ __| __|
-   \ V /| | (_| | (_| | |_| | (__| |_
-    \_/ |_|\__,_|\__,_|\__,_|\___|\__|  .sh"""
-
-
-def _print_banner() -> None:
-    console.print()
-    console.print(_WORDMARK, style="color(214)", highlight=False)
-    console.print("  self-hosted reverse tunnel\n", style="dim")
-
-
 def _print_tunnel_up(hostname: str, local_port: int) -> None:
-    body = Text()
-    body.append("Forwarding   ", style="dim")
-    body.append(f"https://{hostname}", style="bold green")
-    body.append("  →  ")
-    body.append(f"http://127.0.0.1:{local_port}", style="cyan")
-    console.print(Panel.fit(body, border_style="color(214)"))
-    console.print("  Ctrl+C to stop\n", style="dim")
+    console.print("[green]✓[/] tunnel live", highlight=False)
+    console.print()
+    console.print(f"  [bold green]https://{hostname}[/]", highlight=False)
+    console.print(f"  [dim]→ http://localhost:{local_port}[/]", highlight=False)
+    console.print()
 
 
 async def _probe_local(host: str, port: int) -> bool:
@@ -451,8 +433,6 @@ async def _run_http(
             loop.add_signal_handler(sig, stop.set)
 
     fancy = console.is_terminal
-    if fancy:
-        _print_banner()
     if not await _probe_local("127.0.0.1", local_port):
         console.print(
             f"[yellow]viaduct: nothing is listening on 127.0.0.1:{local_port} yet; "
