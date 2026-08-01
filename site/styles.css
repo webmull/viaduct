@@ -134,15 +134,6 @@ h1, h2, h3 { font-family: var(--font-display); letter-spacing: -0.02em; margin: 
   margin-left: auto;
   font-family: var(--font-mono); font-size: 0.72rem; color: var(--muted-foreground);
 }
-.term-replay {
-  margin-left: 0.75rem;
-  display: inline-flex; align-items: center; gap: 0.3rem;
-  border: 1px solid var(--border); background: transparent; color: var(--muted-foreground);
-  border-radius: 0.4rem; padding: 0.2rem 0.55rem;
-  font-family: var(--font-sans); font-size: 0.72rem; cursor: pointer;
-  transition: color 0.15s ease, border-color 0.15s ease;
-}
-.term-replay:hover, .term-replay:focus-visible { color: var(--foreground); border-color: var(--primary); }
 .terminal-body { padding: 1.05rem 1.1rem 1.2rem; overflow-x: auto; }
 #screen, #inspect-screen {
   font-family: var(--font-mono); font-size: clamp(0.72rem, 2.6vw, 0.88rem); line-height: 1.7;

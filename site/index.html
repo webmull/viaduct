@@ -59,7 +59,6 @@
             <span class="dot dot-amber"></span>
             <span class="dot dot-teal"></span>
             <span class="terminal-title">bash</span>
-            <button class="term-replay" type="button" aria-label="Replay the demo">↻ Replay</button>
           </div>
           <div class="terminal-body">
             <div id="screen" aria-hidden="true"></div>
@@ -275,8 +274,6 @@
       if (my === token) run();
     }
 
-    var replayBtn = document.querySelector('.term-replay');
-    if (replayBtn) replayBtn.addEventListener('click', function () { run(); });
     run();
   })();
 
