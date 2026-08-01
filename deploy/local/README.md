@@ -9,8 +9,10 @@ Two options, low to high fidelity:
 - **`container-rehearse.sh`** — high fidelity. Runs the *same* `deploy/provision.sh`
   the droplet uses, inside a **systemd container**, so it reproduces the real
   services, users, and file permissions — including the `caddy`/`viaduct`
-  permission split behind the earlier 502. Needs a Docker daemon (e.g. Colima:
-  `brew install colima docker && colima start`), then:
+  permission split behind the earlier 502. Needs Colima installed
+  (`brew install colima docker`); the script starts the Docker VM if it isn't
+  already up and stops it afterward — but only if it started it, so a Colima you
+  already had running is left alone.
 
   ```sh
   deploy/local/container-rehearse.sh

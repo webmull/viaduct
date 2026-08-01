@@ -15,11 +15,25 @@ IMAGE=viaduct-rehearse:latest
 NAME=viaduct-rehearse
 BASE=viaduct.test
 
-docker info >/dev/null 2>&1 || { echo "no docker daemon — run 'colima start' (or start Docker) first"; exit 1; }
+# Bring up a Docker daemon if needed. If we start Colima, we stop it on the way
+# out — but if it was already running (yours), we leave it alone.
+STARTED_COLIMA=0
+if ! docker info >/dev/null 2>&1; then
+  if command -v colima >/dev/null 2>&1; then
+    echo "== starting Colima (Docker VM) =="
+    colima start >/dev/null 2>&1 || { echo "colima start failed — try running 'colima start' by hand"; exit 1; }
+    STARTED_COLIMA=1
+  else
+    echo "no Docker daemon and no colima found — install one: brew install colima docker"; exit 1
+  fi
+fi
 
-cleanup() { docker rm -f "$NAME" >/dev/null 2>&1 || true; }
+cleanup() {
+  docker rm -f "$NAME" >/dev/null 2>&1 || true
+  if [ "$STARTED_COLIMA" = 1 ]; then echo "== stopping Colima (we started it) =="; colima stop >/dev/null 2>&1 || true; fi
+}
 trap cleanup EXIT
-cleanup
+docker rm -f "$NAME" >/dev/null 2>&1 || true
 
 echo "== build systemd image =="
 docker build -q -t "$IMAGE" -f "$REPO/deploy/local/Dockerfile" "$REPO/deploy/local" || exit 1

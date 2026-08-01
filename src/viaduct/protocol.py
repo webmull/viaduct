@@ -44,9 +44,12 @@ MAX_FRAME: Final = 16 * 1024
 HEARTBEAT_INTERVAL: Final = 20.0
 
 #: Consider the peer dead after this much silence on the control connection.
-#: With both sides pinging every HEARTBEAT_INTERVAL, silence this long means
-#: at least two heartbeats were lost.
-DEAD_PEER_TIMEOUT: Final = HEARTBEAT_INTERVAL * 2.5
+#: Both sides ping every HEARTBEAT_INTERVAL, so this is many heartbeats of grace
+#: — long enough to ride out a phone sleeping or a brief network drop without
+#: tearing the tunnel down (which would reassign a new subdomain on reconnect).
+#: A cleanly closed connection is still detected immediately; this only bounds
+#: how long a silently-vanished peer lingers.
+DEAD_PEER_TIMEOUT: Final = 300.0  # 5 minutes
 
 _HEADER = struct.Struct(">I")
 

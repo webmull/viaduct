@@ -25,7 +25,7 @@ from viaduct.routing import plain_response
 
 log = logging.getLogger("viaduct.client")
 
-DEFAULT_POOL_SIZE = 20
+DEFAULT_POOL_SIZE = 40
 
 
 class TunnelError(Exception):
