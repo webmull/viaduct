@@ -390,3 +390,24 @@ main > section:nth-child(even) { background: var(--surface); }
 .hero-docs-link { margin-top: 0.9rem; font-size: 0.9rem; }
 .hero-docs-link a { color: var(--primary); text-decoration: none; font-weight: 500; }
 .hero-docs-link a:hover { text-decoration: underline; }
+
+/* phones: tighter doc rhythm, and collapse the options table into stacked cards
+   so the Description column never runs off-screen */
+@media (max-width: 560px) {
+  .doc-section { padding: 1.35rem 0; }
+  .docs-layout { gap: 1.25rem; }
+
+  .table-scroll { overflow: visible; }
+  .opt-table { min-width: 0; }
+  .opt-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .opt-table, .opt-table tbody { display: block; }
+  .opt-table tr {
+    display: block; border: 1px solid var(--border); border-radius: 0.6rem;
+    background: var(--card); padding: 0.85rem 1rem; margin-bottom: 0.7rem;
+  }
+  .opt-table td { display: block; border: 0; padding: 0; }
+  .opt-table td:first-child { margin-bottom: 0.5rem; }
+  .opt-table td:nth-child(2) { font-size: 0.85rem; color: var(--muted-foreground); margin-bottom: 0.4rem; }
+  .opt-table td:nth-child(2)::before { content: "Default: "; }
+  .opt-table td:last-child { font-size: 0.93rem; color: var(--muted-foreground); }
+}
