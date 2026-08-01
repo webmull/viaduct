@@ -18,15 +18,23 @@ import signal
 import ssl
 from pathlib import Path
 from typing import Annotated
+from urllib.parse import parse_qs, urlsplit
 
 import typer
 
-from viaduct import names, protocol, routing
+from viaduct import dns, names, protocol, routing
 from viaduct.relay import splice
 
 log = logging.getLogger("viaduct.server")
 
 Conn = tuple[asyncio.StreamReader, asyncio.StreamWriter]
+
+#: how long a resolved custom-domain -> subdomain mapping is trusted (seconds)
+DOMAIN_CACHE_TTL = 60.0
+#: how many CNAME hops to follow when resolving a custom domain to a tunnel
+CNAME_MAX_HOPS = 3
+#: Caddy's on-demand-TLS ask endpoint, served on the public listener
+TLS_CHECK_PATH = "/_viaduct/tls-check"
 
 
 class Tunnel:
@@ -103,6 +111,8 @@ class TunnelServer:
         self.max_tunnels_per_ip = max_tunnels_per_ip
         self._ip_tunnels: dict[str, int] = {}
         self.tunnels: dict[str, Tunnel] = {}
+        #: custom domain -> tunnel subdomain (or None), resolved via CNAME, cached
+        self._domain_cache: dict[str, tuple[str | None, float]] = {}
         self._active_splices = 0
         self._no_active_splices = asyncio.Event()
         self._no_active_splices.set()
@@ -284,8 +294,13 @@ class TunnelServer:
                 writer, "400 Bad Request", "Bad request", "That request could not be understood."
             )
             return
+        if routing.request_target(head).startswith(TLS_CHECK_PATH):
+            await self._tls_check(head, writer)  # Caddy on-demand-TLS ask endpoint
+            return
         host = routing.extract_host(head)
         subdomain = routing.subdomain_for_host(host, self.base_domain) if host else None
+        if subdomain is None and host:
+            subdomain = await self._custom_subdomain(host)  # bring-your-own-domain via CNAME
         tunnel = self.tunnels.get(subdomain) if subdomain else None
         if tunnel is None:
             log.info("no tunnel host=%r", host)  # %r escapes any control chars in the header
@@ -332,6 +347,52 @@ class TunnelServer:
             if self._active_splices == 0:
                 self._no_active_splices.set()
             tunnel.data_conns -= 1
+
+    async def _custom_subdomain(self, host: str) -> str | None:
+        """Resolve a non-wildcard Host to a tunnel by following its CNAME chain.
+
+        A custom domain CNAME'd to ``name.BASE_DOMAIN`` resolves back to that
+        ``name``; the mapping lives in the user's DNS, so nothing is stored here
+        beyond a short-lived cache. An A record (no CNAME to follow) yields None.
+        """
+        loop = asyncio.get_running_loop()
+        now = loop.time()
+        cached = self._domain_cache.get(host)
+        if cached is not None and cached[1] > now:
+            return cached[0]
+        if len(self._domain_cache) > 4096:  # bound memory against random-Host floods
+            self._domain_cache = {k: v for k, v in self._domain_cache.items() if v[1] > now}
+        subdomain = None
+        name = host
+        for _ in range(CNAME_MAX_HOPS):
+            target = await dns.resolve_cname(name)
+            if target is None:
+                break
+            candidate = routing.subdomain_for_host(target, self.base_domain)
+            if candidate is not None:
+                subdomain = candidate
+                break
+            name = target  # follow the chain toward BASE_DOMAIN
+        self._domain_cache[host] = (subdomain, now + DOMAIN_CACHE_TTL)
+        return subdomain
+
+    async def _tls_check(self, head: bytes, writer: asyncio.StreamWriter) -> None:
+        """Answer Caddy's on-demand-TLS ask: 200 only for a live tunnel's domain.
+
+        Without this gate, on-demand issuance would be an open certificate mill.
+        """
+        query = urlsplit(routing.request_target(head)).query
+        domain = (parse_qs(query).get("domain") or [""])[0].lower().rstrip(".")
+        subdomain = routing.subdomain_for_host(domain, self.base_domain) if domain else None
+        if subdomain is None and domain:
+            subdomain = await self._custom_subdomain(domain)
+        ok = bool(subdomain and subdomain in self.tunnels)
+        status = "200 OK" if ok else "404 Not Found"
+        reply = f"HTTP/1.1 {status}\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
+        with contextlib.suppress(ConnectionError):
+            writer.write(reply.encode())
+            await writer.drain()
+        writer.close()
 
     async def _respond(
         self,

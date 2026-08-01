@@ -56,6 +56,7 @@
           <li><a href="#pin">Keep the same URL</a></li>
           <li><a href="#inspect">Inspect requests</a></li>
           <li><a href="#combine">Combine flags</a></li>
+          <li><a href="#domains">Custom domains</a></li>
           <li><a href="#options">All options</a></li>
           <li><a href="#stop">Stop and update</a></li>
           <li><a href="#server">Run your own server</a></li>
@@ -208,6 +209,26 @@
             The order does not matter, and the local port can be any port your app
             listens on.
           </p>
+        </section>
+
+        <section class="doc-section" id="domains">
+          <h2>Custom domains <span style="color:var(--muted-foreground);font-weight:400">(bring your own)</span></h2>
+          <p>
+            Serve a tunnel on your own domain with a single CNAME. There's no extra
+            flag, the mapping lives in your DNS.
+          </p>
+          <ol class="doc-steps">
+            <li><strong>Pin the tunnel</strong> so it has a stable name: <code>viaduct http 8080 --pin</code> gives you something like <code>funny-otter-9a1c2b3d4e5f.viaduct.sh</code>.</li>
+            <li><strong>Add a CNAME</strong> at your registrar (the exact screen differs per provider): point <code>demo.example.com</code> at that <code>funny-otter-9a1c2b3d4e5f.viaduct.sh</code> name.</li>
+            <li><strong>Open it.</strong> The first request auto-provisions an HTTPS certificate, then <code>https://demo.example.com</code> serves your local app.</li>
+          </ol>
+          <div class="doc-note">
+            <strong>Why a CNAME, not an A record?</strong> viaductd follows the CNAME
+            back to your tunnel to know where to route, so it has to point at the
+            <code>*.viaduct.sh</code> name rather than straight at an IP. And because
+            the certificate is only issued once your domain already points here, you
+            can only serve domains whose DNS you actually control.
+          </div>
         </section>
 
         <section class="doc-section" id="options">

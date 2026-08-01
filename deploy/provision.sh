@@ -11,7 +11,7 @@
 #   REPO_DIR        checked-out repo                (default: this script's repo)
 #
 # Caddy is downloaded prebuilt from caddyserver.com (with the DigitalOcean DNS
-# plugin baked in for letsencrypt mode) — no Go build, so no xcaddy and no OOM
+# plugin baked in for letsencrypt mode), no Go build, so no xcaddy and no OOM
 # on a 1 GB droplet.
 set -euo pipefail
 
@@ -118,6 +118,9 @@ do_caddyfile() {
     cat > /etc/caddy/Caddyfile <<EOF
 {
 	email admin@${BASE_DOMAIN}
+	on_demand_tls {
+		ask http://127.0.0.1:8080/_viaduct/tls-check
+	}
 }
 ${BASE_DOMAIN} {
 	tls {
@@ -142,6 +145,12 @@ www.${BASE_DOMAIN} {
 *.${BASE_DOMAIN} {
 	tls {
 		dns digitalocean {env.DO_API_TOKEN}
+	}
+	reverse_proxy 127.0.0.1:8080
+}
+https:// {
+	tls {
+		on_demand
 	}
 	reverse_proxy 127.0.0.1:8080
 }
@@ -242,11 +251,11 @@ if [ "$TLS_MODE" = letsencrypt ]; then
       read -rs DO_API_TOKEN; echo
       DO_API_TOKEN="$(printf '%s' "${DO_API_TOKEN:-}" | tr -d '[:space:]')"
       [ -n "$DO_API_TOKEN" ] && verify_do_token "$DO_API_TOKEN" && { note "token verified with DigitalOcean ✔"; break; }
-      printf '  %srejected by DigitalOcean (401) — likely a truncated paste; try again%s\n' "$E" "$R"
+      printf '  %srejected by DigitalOcean (401), likely a truncated paste; try again%s\n' "$E" "$R"
       DO_API_TOKEN=""
     done
   fi
-  [ -n "${DO_API_TOKEN:-}" ] || { echo "no DO_API_TOKEN — set it in the environment or run interactively" >&2; exit 1; }
+  [ -n "${DO_API_TOKEN:-}" ] || { echo "no DO_API_TOKEN, set it in the environment or run interactively" >&2; exit 1; }
   verify_do_token "$DO_API_TOKEN" || { echo "DO_API_TOKEN rejected by the DigitalOcean API (401)" >&2; exit 1; }
 fi
 
@@ -270,7 +279,7 @@ step "Starting services (systemd)"    do_services
 echo
 printf '  %s✔ viaduct is provisioned%s  %s(%s, %s)%s\n' "$G$B" "$R" "$D" "$BASE_DOMAIN" "$TLS_MODE" "$R"
 if [ "$TLS_MODE" = letsencrypt ]; then
-  note "Caddy is fetching the TLS certificate now — https://${BASE_DOMAIN} goes live in a minute or two."
+  note "Caddy is fetching the TLS certificate now, https://${BASE_DOMAIN} goes live in a minute or two."
   note "viaductd starts automatically once that cert exists (it retries every 5s)."
 fi
 }

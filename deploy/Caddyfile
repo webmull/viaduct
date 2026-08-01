@@ -9,6 +9,9 @@
 
 {
 	email mail@adamdavis.co.uk
+	on_demand_tls {
+		ask http://127.0.0.1:8080/_viaduct/tls-check
+	}
 }
 
 # Landing page (repo /site, installed to /var/www/viaduct-site).
@@ -38,6 +41,14 @@ www.viaduct.sh {
 *.viaduct.sh {
 	tls {
 		dns digitalocean {env.DO_API_TOKEN}
+	}
+	reverse_proxy 127.0.0.1:8080
+}
+
+# A custom domain CNAME'd to a tunnel: on-demand cert (gated by the ask above).
+https:// {
+	tls {
+		on_demand
 	}
 	reverse_proxy 127.0.0.1:8080
 }

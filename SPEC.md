@@ -55,6 +55,27 @@ enough to attach a data connection and intercept or serve its traffic. This is
 an internal binding, not a user credential: there is still no signup, no
 `token create`, and no database.
 
+## Amendment (2026-08-02): custom domains via CNAME (bring your own domain)
+
+Re-introduces custom domains from the original spec, but stateless: no `domains`
+table, no `viaduct domain` command, no client flag. The mapping lives entirely in
+the user's DNS.
+
+- **Setup.** Pin a tunnel (`viaduct http 8080 --pin` gives a stable
+  `name.BASE_DOMAIN`), then CNAME your domain to it:
+  `demo.example.com  CNAME  name.BASE_DOMAIN`.
+- **Routing.** For a Host that is not `*.BASE_DOMAIN`, viaductd resolves the
+  host's CNAME chain (a small stdlib DNS query in `dns.py`, cached ~60s) back to
+  a `name.BASE_DOMAIN` label and routes to that tunnel. An A record straight to
+  the droplet does not work, there must be a CNAME to follow.
+- **TLS.** Caddy on-demand TLS issues a cert for the custom domain on first hit,
+  gated by an `ask` endpoint (`GET /_viaduct/tls-check`) that viaductd answers
+  200 only when the domain resolves to a live tunnel, so it is not an open cert
+  mill. Issuance uses HTTP-01, which only succeeds if the domain already points
+  at the droplet, so you can only serve domains whose DNS you control.
+- **Still no state.** The binding is the user's CNAME plus the live in-memory
+  tunnel; nothing is persisted, and a removed CNAME simply stops resolving.
+
 ---
 
 ## Task

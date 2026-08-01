@@ -41,6 +41,13 @@ def extract_host(head: bytes) -> str | None:
     return None
 
 
+def request_target(head: bytes) -> str:
+    """The request target (path plus query) from the first request line, or ''."""
+    first = head.split(b"\r\n", 1)[0]
+    parts = first.split(b" ")
+    return parts[1].decode("latin-1", "replace") if len(parts) >= 2 else ""
+
+
 def _strip_port(host: str) -> str:
     if host.startswith("["):  # IPv6 literal, e.g. [::1]:8080
         end = host.find("]")
