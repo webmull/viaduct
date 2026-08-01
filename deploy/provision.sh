@@ -242,6 +242,14 @@ if [ "$TLS_MODE" = letsencrypt ]; then
   verify_do_token "$DO_API_TOKEN" || { echo "DO_API_TOKEN rejected by the DigitalOcean API (401)" >&2; exit 1; }
 fi
 
+# The tunnel port (4443) has no auth, so offer to restrict it during setup, the
+# same way the DO token is prompted for. Preset TUNNEL_ALLOW_IPS to skip this.
+if [ "$SETUP_FIREWALL" = yes ] && [ -z "${TUNNEL_ALLOW_IPS:-}" ] && [ -t 0 ]; then
+  printf '  %sAllow-list for tunnel port 4443%s (comma-separated IPs; blank = open to the internet): ' "$B" "$R"
+  read -r TUNNEL_ALLOW_IPS || TUNNEL_ALLOW_IPS=""
+  export TUNNEL_ALLOW_IPS
+fi
+
 step "Installing viaduct CLIs"        do_clis
 step "Downloading Caddy ($TLS_MODE)"  do_caddy
 step "Creating service users"         do_users
