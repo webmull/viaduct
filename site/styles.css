@@ -247,8 +247,9 @@ main > section:nth-child(even) { background: var(--surface); }
 .code-block + .code-block { margin-top: 0.9rem; }
 .code-block pre {
   margin: 0; padding: 1rem 3.2rem 1rem 1.1rem;
-  font-family: var(--font-mono); font-size: 0.88rem; line-height: 1.6; color: var(--foreground);
-  white-space: pre-wrap; word-break: break-word;   /* long commands wrap instead of hiding under Copy */
+  font-family: var(--font-mono); font-size: clamp(0.75rem, 3.3vw, 0.88rem); line-height: 1.6;
+  color: var(--foreground);
+  white-space: pre-wrap; overflow-wrap: anywhere;   /* long commands wrap cleanly, never under Copy */
 }
 .code-block .c-prompt { color: var(--primary); user-select: none; }
 .copy-btn {
