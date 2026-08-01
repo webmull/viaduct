@@ -177,7 +177,7 @@ main > section:nth-child(even) { background: var(--surface); }
   color: var(--primary); font-weight: 600; margin: 0 0 0.6rem;
 }
 .section-head h2 { font-size: clamp(1.6rem, 4vw, 2.25rem); line-height: 1.15; margin: 0; text-wrap: balance; }
-.section-head p { margin: 0.9rem auto 0; max-width: 34rem; color: var(--muted-foreground); }
+.section-head p:not(.eyebrow) { margin: 0.9rem auto 0; max-width: 34rem; color: var(--muted-foreground); }
 
 /* ---------- How it works (clean numbered steps, no boxes) ---------- */
 /* mobile: compact rows — badge beside the title, description tucked under it */
