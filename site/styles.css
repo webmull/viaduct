@@ -61,7 +61,7 @@ p { margin: 0; }
 .header-inner { height: 3.75rem; display: flex; align-items: center; justify-content: space-between; }
 .brand { display: flex; align-items: center; gap: 0.5rem; text-decoration: none; color: var(--ink); }
 .brand img { height: 1.55rem; width: 1.55rem; }
-.brand span { font-family: var(--display); font-weight: 600; font-size: 1.15rem; }
+.brand span { font-family: "Space Grotesk", var(--sans); font-weight: 600; font-size: 1.1rem; letter-spacing: -0.01em; }
 .brand .tld { color: var(--accent); }
 .site-nav { display: flex; align-items: center; gap: 1.25rem; }
 .site-nav a { font-size: 0.95rem; color: var(--ink-dim); text-decoration: none; }
@@ -122,8 +122,11 @@ p { margin: 0; }
 .terminal-body { padding: 1rem 1.05rem 1.15rem; overflow-x: auto; }
 #screen, #inspect-screen {
   font-family: var(--mono); font-size: clamp(0.76rem, 3.2vw, 0.88rem); line-height: 1.65;
-  color: var(--term-ink); white-space: pre; margin: 0; min-height: 10em;
+  color: var(--term-ink); white-space: pre; margin: 0; overflow: hidden;
 }
+/* fixed heights so the animation never changes the panel size or shifts the page */
+#screen { height: 12.5em; }
+#inspect-screen { height: 18em; }
 .ln { white-space: pre; }
 .c-prompt { color: #f5b544; } .c-dim { color: var(--term-dim); }
 .c-url { color: #6fdd8b; font-weight: 500; } .c-local { color: #6bd3e0; }
@@ -175,14 +178,12 @@ section { padding: clamp(2.5rem, 8vw, 4rem) 0; border-top: 1px solid var(--line-
 /* ---------- self-host / DigitalOcean (dark contrast panel) ---------- */
 .deploy-band {
   display: grid; gap: 1.5rem; align-items: center;
-  background: var(--term); color: var(--term-ink);
+  background: var(--paper-2); border: 1px solid var(--line);
   border-radius: 14px; padding: clamp(1.5rem, 5vw, 2.25rem);
 }
-.deploy-copy .eyebrow { color: var(--accent-fill); }
-.deploy-copy h2 { color: var(--term-ink); font-size: clamp(1.5rem, 5vw, 2rem); }
-.deploy-copy p { color: var(--term-dim); margin: 0.8rem 0 1.25rem; max-width: 46ch; }
-.deploy-copy .btn-outline { color: var(--term-ink); border-color: var(--term-line); background: transparent; }
-.deploy-copy .btn-outline:hover { border-color: var(--accent-fill); }
+.deploy-copy .eyebrow { color: var(--accent); }
+.deploy-copy h2 { color: var(--ink); font-size: clamp(1.5rem, 5vw, 2rem); }
+.deploy-copy p { color: var(--ink-dim); margin: 0.8rem 0 1.25rem; max-width: 46ch; }
 .deploy-logo { display: flex; }
 .deploy-logo img { width: 13rem; max-width: 70%; opacity: 0.95; }
 @media (min-width: 760px) {
