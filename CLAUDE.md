@@ -35,6 +35,11 @@ beyond the milestones.
   to `error_response` in `src/viaduct/routing.py` and the reference must stay in
   sync: same dark ground, orange accent, `viaduct.sh` wordmark, big code numeral,
   and self-contained styling (no external fonts/CSS). 503s auto-refresh.
+- **The "Around 1,600 lines of Python" figure drifts.** The site (`site/index.html`,
+  open-source section) hardcodes an approximate line count. It goes stale as the
+  code changes, so re-check it periodically with
+  `find src/viaduct -name '*.py' | xargs wc -l` and update the copy to the nearest
+  round hundred.
 
 ## Commands
 
