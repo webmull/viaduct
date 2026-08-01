@@ -292,7 +292,7 @@ main > section:nth-child(even) { background: var(--surface); }
 /* phones: stack the flow vertically (arrows point down) and give buttons and
    the git-clone line full width for comfortable tap targets */
 @media (max-width: 560px) {
-  .wrap { padding: 0 1.15rem; }
+  .wrap { padding: 0 1.35rem; }
   section { padding: 1.6rem 0; }
   .hero { padding-top: 1.5rem; }
   .hero-mark { height: 4.75rem; width: 4.75rem; }
@@ -315,7 +315,9 @@ main > section:nth-child(even) { background: var(--surface); }
 .docs-hero h1 { font-size: clamp(2rem, 5vw, 2.9rem); font-weight: 600; margin: 0.35rem 0 0; text-wrap: balance; }
 .docs-hero p { color: var(--muted-foreground); max-width: 40rem; margin: 0.9rem auto 0; text-wrap: balance; }
 
-.docs-layout { display: grid; grid-template-columns: 1fr; gap: 1.75rem; padding: 1.25rem 0 3rem; }
+/* only set vertical padding here: .wrap owns the horizontal gutter, and a
+   `padding` shorthand would zero it out (both classes sit on the same element) */
+.docs-layout { display: grid; grid-template-columns: 1fr; gap: 1.75rem; padding-top: 1.25rem; padding-bottom: 3rem; }
 .docs-main { min-width: 0; max-width: 47rem; }
 
 /* Sidebar table of contents */
