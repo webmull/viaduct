@@ -1,123 +1,292 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>viaduct.sh · coming soon</title>
-<meta name="description" content="viaduct.sh is a free, open-source dev tool that exposes your local services to the internet with a single command. Coming soon.">
-<meta name="author" content="viaduct.sh">
-<meta property="og:title" content="viaduct.sh · coming soon">
-<meta property="og:description" content="Open-source tunneling for local development. Coming soon.">
-<meta property="og:type" content="website">
-<meta property="og:image" content="https://viaduct.sh/viaduct-mark.png">
-<meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="viaduct.sh · coming soon">
-<meta name="twitter:description" content="Open-source tunneling for local development. Coming soon.">
-<link rel="icon" type="image/svg+xml" href="/favicon.svg">
-<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
-<link rel="apple-touch-icon" href="/apple-touch-icon.png">
-<link rel="mask-icon" href="/favicon.svg" color="#f5b544">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap">
-<style>
-  :root {
-    --bg:        oklch(16% .035 250.5);
-    --bg-2:      oklch(20% .04 250.5);
-    --fg:        oklch(96% .01 250.5);
-    --amber:     oklch(72% .17 62);
-    --amber-dim: oklch(65% .18 60);
-    --teal:      oklch(72% .12 190);
-    --muted:     oklch(66% .04 250.5);
-    --line:      oklch(100% 0 0 / .1);
-    --font-display: "Space Grotesk", system-ui, sans-serif;
-    --font-body:    "DM Sans", system-ui, sans-serif;
-    --font-mono:    "JetBrains Mono", ui-monospace, monospace;
-  }
-
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  html { color-scheme: dark; }
-  body {
-    min-height: 100svh;
-    display: grid; place-items: center;
-    padding: 3rem 1.5rem;
-    background: var(--bg);
-    color: var(--fg);
-    font-family: var(--font-body);
-    text-align: center;
-    -webkit-font-smoothing: antialiased;
-    overflow-x: hidden;
-  }
-
-  /* ambient atmosphere */
-  .grid, .grain { position: fixed; inset: 0; z-index: -1; pointer-events: none; }
-  .grid {
-    background-image:
-      linear-gradient(var(--line) 1px, transparent 1px),
-      linear-gradient(90deg, var(--line) 1px, transparent 1px);
-    background-size: 64px 64px;
-    -webkit-mask-image: radial-gradient(80% 60% at 50% 40%, #000 30%, transparent 75%);
-            mask-image: radial-gradient(80% 60% at 50% 40%, #000 30%, transparent 75%);
-    opacity: .5;
-  }
-  .grain { opacity: .04; mix-blend-mode: screen;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  }
-
-  main { width: min(780px, 100%); display: flex; flex-direction: column; align-items: center; }
-
-  .mark { height: 4.75rem; width: 4.75rem; margin: 0 0 .4rem;
-    filter: drop-shadow(0 6px 20px oklch(72% .17 62 / .28)); }
-
-  h1 {
-    font-family: var(--font-display);
-    font-size: clamp(3rem, 12vw, 5.75rem);
-    font-weight: 600; letter-spacing: -.03em; line-height: 1;
-    color: #fff;
-  }
-  h1 .dot { color: var(--amber); }
-
-  .tagline {
-    margin-top: 1.1rem; max-width: 34rem;
-    font-size: clamp(1rem, 2.6vw, 1.2rem); line-height: 1.55; color: var(--muted);
-  }
-  .tagline b { color: var(--fg); font-weight: 500; }
-
-  .soon {
-    font-family: var(--font-display); font-weight: 500;
-    font-size: clamp(1.05rem, 3vw, 1.35rem); letter-spacing: -.01em;
-  }
-  .soon .flick { color: var(--amber); }
-  .foot { margin-top: 1.5rem; font-size: .8rem; color: oklch(58% .03 250.5); }
-
-  /* orchestrated entrance */
-  .rise { opacity: 0; transform: translateY(14px); animation: rise .8s cubic-bezier(.2,.7,.2,1) forwards; }
-  .d1 { animation-delay: .05s; } .d2 { animation-delay: .18s; } .d3 { animation-delay: .32s; }
-  .d4 { animation-delay: .48s; } .d5 { animation-delay: .78s; } .d6 { animation-delay: .95s; }
-  @keyframes rise { to { opacity: 1; transform: none; } }
-
-  @media (max-width: 520px) {
-    body { padding: 2rem 1.25rem; }
-    .mark { height: 3.75rem; width: 3.75rem; }
-    .grid { background-size: 44px 44px; }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .rise { animation: none; opacity: 1; transform: none; }
-  }
-</style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <link rel="mask-icon" href="favicon.svg" color="#f5b544" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <title>viaduct.sh — open-source reverse tunneling for local development</title>
+  <meta name="description" content="viaduct is a small, self-hosted, open-source reverse tunnel in Python. Expose a local port at a public HTTPS URL with one command. No inbound ports, no accounts." />
+  <meta property="og:title" content="viaduct.sh — open-source reverse tunneling" />
+  <meta property="og:description" content="Expose a local port at a public HTTPS URL with one command. Self-hosted, open source, no accounts." />
+  <meta property="og:type" content="website" />
+  <meta name="twitter:card" content="summary_large_image" />
 </head>
 <body>
-  <div class="grid"></div>
-  <div class="grain"></div>
+  <header class="site-header">
+    <div class="wrap header-inner">
+      <a class="brand" href="/">
+        <img src="viaduct-mark.png" alt="" />
+        <span>viaduct<span class="tld">.sh</span></span>
+      </a>
+      <nav class="site-nav">
+        <a class="nav-desktop" href="#how">How it works</a>
+        <a class="nav-desktop" href="#install">Install</a>
+        <a class="gh-pill" href="https://github.com/webmull/viaduct" target="_blank" rel="noreferrer">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.419 2.865 8.17 6.839 9.49.5.092.682-.218.682-.486 0-.236-.009-.866-.014-1.7-2.782.605-3.369-1.343-3.369-1.343-.454-1.156-1.11-1.464-1.11-1.464-.908-.62.069-.608.069-.608 1.004.07 1.532 1.03 1.532 1.03.892 1.529 2.341 1.087 2.91.831.092-.646.35-1.086.636-1.337-2.22-.251-4.555-1.111-4.555-4.943 0-1.091.39-1.984 1.03-2.683-.103-.253-.447-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0 1 12 6.836c.85.004 1.705.115 2.504.337 1.909-1.294 2.747-1.025 2.747-1.025.547 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.167 22 16.418 22 12c0-5.523-4.477-10-10-10z"/></svg>
+          GitHub
+        </a>
+      </nav>
+    </div>
+  </header>
 
   <main>
-    <img class="mark rise d2" src="/viaduct-mark.png" alt="viaduct.sh" width="76" height="76">
-    <h1 class="rise d3">viaduct<span class="dot">.sh</span></h1>
-    <p class="tagline rise d4">Expose your <b>localhost</b> to the world with a single command. Self-hosted, open source, no accounts.</p>
+    <section class="hero">
+      <div class="wrap">
+        <img class="hero-mark" src="viaduct-mark.png" alt="viaduct.sh logo" />
+        <h1>Your localhost, at a public&nbsp;URL</h1>
+        <p class="lede">
+          viaduct is a small, self-hosted reverse tunnel in Python. Expose any
+          local port at <code>https://name.viaduct.sh</code> with one command.
+          No inbound ports, no NAT config, no accounts.
+        </p>
+        <div class="actions">
+          <a class="btn btn-primary" href="https://github.com/webmull/viaduct" target="_blank" rel="noreferrer">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.419 2.865 8.17 6.839 9.49.5.092.682-.218.682-.486 0-.236-.009-.866-.014-1.7-2.782.605-3.369-1.343-3.369-1.343-.454-1.156-1.11-1.464-1.11-1.464-.908-.62.069-.608.069-.608 1.004.07 1.532 1.03 1.532 1.03.892 1.529 2.341 1.087 2.91.831.092-.646.35-1.086.636-1.337-2.22-.251-4.555-1.111-4.555-4.943 0-1.091.39-1.984 1.03-2.683-.103-.253-.447-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0 1 12 6.836c.85.004 1.705.115 2.504.337 1.909-1.294 2.747-1.025 2.747-1.025.547 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.167 22 16.418 22 12c0-5.523-4.477-10-10-10z"/></svg>
+            Star on GitHub
+          </a>
+          <a class="btn btn-outline" href="#install">Install</a>
+        </div>
 
-    <p class="soon rise d5"><br> <br>Launching <span class="flick">soon</span>.</p>
-    <p class="foot rise d6">Free and open source. MIT licensed.</p>
+        <div class="terminal" aria-hidden="true">
+          <div class="terminal-bar">
+            <span class="dot dot-red"></span>
+            <span class="dot dot-amber"></span>
+            <span class="dot dot-teal"></span>
+            <span class="terminal-title">bash</span>
+          </div>
+          <div class="terminal-body">
+            <div id="screen"></div>
+          </div>
+        </div>
+        <p class="lede" style="font-size:0.9rem;margin-top:1rem">
+          One command. A live public URL in under a second.
+        </p>
+      </div>
+    </section>
+
+    <section id="how">
+      <div class="wrap">
+        <div class="section-head">
+          <p class="eyebrow">How it works</p>
+          <h2>Your machine dials out, so nothing has to reach in</h2>
+          <p>
+            The client opens one outbound connection to a server you run. Public
+            traffic terminates TLS at the edge and rides the tunnel back to your
+            localhost as raw bytes.
+          </p>
+        </div>
+        <div class="flow">
+          <div class="flow-node"><div class="k">visitor</div><div class="v">the internet</div></div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-node"><div class="k">edge</div><div class="v">Caddy · HTTPS</div></div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-node is-primary"><div class="k">server</div><div class="v">viaductd</div></div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-node is-primary"><div class="k">your machine</div><div class="v">viaduct</div></div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-node"><div class="k">local</div><div class="v">your app</div></div>
+        </div>
+        <p class="flow-note">
+          No HTTP parsing or multiplexing on the tunnel, which keeps the whole
+          thing small enough to read and the path fast. HTTP and WebSocket both
+          just work.
+        </p>
+      </div>
+    </section>
+
+    <section style="background:var(--surface)">
+      <div class="wrap">
+        <div class="section-head">
+          <p class="eyebrow">Why viaduct</p>
+          <h2>Minimal on purpose</h2>
+        </div>
+        <ul class="features">
+          <li>
+            <div class="feat-icon"><svg viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3M16 3h3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-3"/></svg></div>
+            <h3>Free and open source</h3>
+            <p>MIT licensed, no quotas, no accounts. Run it locally or self-host the server.</p>
+          </li>
+          <li>
+            <div class="feat-icon"><svg viewBox="0 0 24 24"><path d="M4 17l6-6-6-6M12 19h8"/></svg></div>
+            <h3>One command</h3>
+            <p><code>viaduct http 4000</code> and you have a public HTTPS URL. The client dials out, so no inbound ports.</p>
+          </li>
+          <li>
+            <div class="feat-icon"><svg viewBox="0 0 24 24"><path d="M17 1l4 4-4 4M3 11V9a4 4 0 0 1 4-4h14M7 23l-4-4 4-4M21 13v2a4 4 0 0 1-4 4H3"/></svg></div>
+            <h3>HTTP and WebSocket</h3>
+            <p>Raw byte piping means live reload, dev servers, and real-time sockets pass straight through.</p>
+          </li>
+          <li>
+            <div class="feat-icon"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+            <h3>Self-hosted, no accounts</h3>
+            <p>One droplet, your domain, your data. Restrict access at the firewall instead of behind a login.</p>
+          </li>
+          <li>
+            <div class="feat-icon"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></div>
+            <h3>Automatic HTTPS</h3>
+            <p>Caddy fetches and renews wildcard certificates over DNS-01. Public TLS with nothing to configure.</p>
+          </li>
+          <li>
+            <div class="feat-icon"><svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></div>
+            <h3>Small enough to read</h3>
+            <p>The client and server are plain asyncio and the standard library. If it surprises you, read why.</p>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="install">
+      <div class="wrap">
+        <div class="section-head">
+          <p class="eyebrow">Install</p>
+          <h2>Up and running in two commands</h2>
+          <p>Requires Python 3.11 or newer. <a href="https://pipx.pypa.io" target="_blank" rel="noreferrer" style="color:var(--primary);text-decoration:none">pipx</a> keeps the CLI isolated and on your PATH.</p>
+        </div>
+        <div class="install">
+          <div class="code-block">
+            <pre><span class="c-prompt">$ </span><span class="cmd">pipx install git+https://github.com/webmull/viaduct</span></pre>
+            <button class="copy-btn" type="button" data-copy="pipx install git+https://github.com/webmull/viaduct">Copy</button>
+          </div>
+          <div class="code-block">
+            <pre><span class="c-prompt">$ </span><span class="cmd">viaduct http 4000</span></pre>
+            <button class="copy-btn" type="button" data-copy="viaduct http 4000">Copy</button>
+          </div>
+          <p class="install-note">
+            Full usage, self-hosting, and the design notes live in the
+            <a href="https://github.com/webmull/viaduct#readme" target="_blank" rel="noreferrer">README on GitHub</a>.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section class="cta">
+      <div class="wrap">
+        <h2>Read it, run it, host your own</h2>
+        <p>viaduct is a few hundred lines of Python you can actually understand. Clone it, star it, or stand up your own server.</p>
+        <div class="actions">
+          <a class="btn btn-primary" href="https://github.com/webmull/viaduct" target="_blank" rel="noreferrer">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.419 2.865 8.17 6.839 9.49.5.092.682-.218.682-.486 0-.236-.009-.866-.014-1.7-2.782.605-3.369-1.343-3.369-1.343-.454-1.156-1.11-1.464-1.11-1.464-.908-.62.069-.608.069-.608 1.004.07 1.532 1.03 1.532 1.03.892 1.529 2.341 1.087 2.91.831.092-.646.35-1.086.636-1.337-2.22-.251-4.555-1.111-4.555-4.943 0-1.091.39-1.984 1.03-2.683-.103-.253-.447-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0 1 12 6.836c.85.004 1.705.115 2.504.337 1.909-1.294 2.747-1.025 2.747-1.025.547 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.167 22 16.418 22 12c0-5.523-4.477-10-10-10z"/></svg>
+            View on GitHub
+          </a>
+          <a class="btn btn-outline" href="#install">Install</a>
+        </div>
+      </div>
+    </section>
   </main>
+
+  <footer class="site-footer">
+    <div class="wrap footer-inner">
+      <a href="https://github.com/webmull" target="_blank" rel="noreferrer"
+         style="display:flex;align-items:center;gap:0.6rem;text-decoration:none;color:inherit">
+        <img src="adam.png" alt="Adam Davis" width="34" height="34" style="border-radius:999px;border:1px solid var(--border-strong)" />
+        <span>Built by <strong style="color:var(--foreground);font-weight:600">Adam Davis</strong></span>
+      </a>
+      <div class="footer-links">
+        <a href="https://github.com/webmull/viaduct" target="_blank" rel="noreferrer">GitHub</a>
+        <a href="https://github.com/webmull/viaduct#readme" target="_blank" rel="noreferrer">Docs</a>
+        <a href="https://github.com/webmull/viaduct/blob/main/LICENSE" target="_blank" rel="noreferrer">MIT License</a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+  (function () {
+    document.querySelectorAll('.copy-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var text = btn.getAttribute('data-copy');
+        if (!navigator.clipboard) return;
+        navigator.clipboard.writeText(text).then(function () {
+          var old = btn.textContent;
+          btn.textContent = 'Copied';
+          btn.classList.add('copied');
+          setTimeout(function () { btn.textContent = old; btn.classList.remove('copied'); }, 1400);
+        });
+      });
+    });
+
+    var screen = document.getElementById('screen');
+    if (!screen) return;
+    var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var HOST = 'sunny-otter.viaduct.sh';
+    var SPIN = ['⠋','⠙','⠹','⠸','⠼','⠴','⠦','⠧','⠇','⠏'];
+    var sleep = function (ms) { return new Promise(function (r) { setTimeout(r, ms); }); };
+    var token = 0;
+
+    function line(html) {
+      var d = document.createElement('div');
+      d.className = 'ln';
+      if (html !== undefined) d.innerHTML = html;
+      screen.appendChild(d);
+      return d;
+    }
+    function esc(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+    var promptHTML = '<span class="c-prompt">$ </span>';
+
+    async function type(el, text, my) {
+      for (var i = 0; i <= text.length; i++) {
+        if (my !== token) return;
+        el.innerHTML = promptHTML + esc(text.slice(0, i)) + '<span class="cursor"></span>';
+        await sleep(52 + (Math.random() * 40 | 0));
+      }
+      if (my !== token) return;
+      el.innerHTML = promptHTML + esc(text);
+    }
+
+    function finalFrame() {
+      screen.innerHTML = '';
+      line(promptHTML + 'viaduct http 4000');
+      line('<span class="c-ok">✓</span> tunnel live');
+      line(' ');
+      line('  <span class="c-url">https://' + HOST + '</span>');
+      line('  <span class="c-dim">→ http://localhost:4000</span>');
+      line(' ');
+      line(promptHTML + 'curl -sI https://' + HOST);
+      line('<span class="c-ok">HTTP/2 200</span>');
+      line(promptHTML + '<span class="cursor"></span>');
+    }
+
+    async function run() {
+      var my = ++token;
+      screen.innerHTML = '';
+      if (reduce) { finalFrame(); return; }
+
+      var cmd = line();
+      await type(cmd, 'viaduct http 4000', my);
+      if (my !== token) return;
+      await sleep(300);
+
+      var spin = line();
+      for (var t = 0; t < 16; t++) {
+        if (my !== token) return;
+        spin.innerHTML = '<span class="c-prompt">' + SPIN[t % SPIN.length] + '</span> establishing tunnel…';
+        await sleep(80);
+      }
+      spin.innerHTML = '<span class="c-ok">✓</span> tunnel live';
+      line(' ');
+      line('  <span class="c-url">https://' + HOST + '</span>');
+      line('  <span class="c-dim">→ http://localhost:4000</span>');
+      line(' ');
+      await sleep(900);
+
+      var c2 = line();
+      await type(c2, 'curl -sI https://' + HOST, my);
+      if (my !== token) return;
+      await sleep(420);
+      line('<span class="c-ok">HTTP/2 200</span>');
+      line(promptHTML + '<span class="cursor"></span>');
+
+      await sleep(4600);
+      if (my === token) run();
+    }
+
+    run();
+  })();
+  </script>
 </body>
 </html>
