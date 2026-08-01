@@ -54,8 +54,8 @@ h1, h2, h3 { font-family: var(--font-display); letter-spacing: -0.02em; margin: 
   height: 4rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem;
 }
 .brand { display: flex; align-items: center; gap: 0.6rem; text-decoration: none; }
-.brand img { height: 2.15rem; width: 2.15rem; }
-.brand span { font-family: var(--font-display); font-size: 1.25rem; font-weight: 600; }
+.brand img { height: 2.5rem; width: 2.5rem; }
+.brand span { font-family: var(--font-display); font-size: 1.45rem; font-weight: 600; }
 .brand .tld { color: var(--primary); }
 .site-nav { display: flex; align-items: center; gap: 1.35rem; }
 .site-nav a {
