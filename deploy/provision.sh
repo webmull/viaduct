@@ -225,6 +225,14 @@ do_firewall() {
 # ---- run ----
 main() {
 banner
+printf '  %sPrerequisites%s\n' "$B" "$R"
+note "Ubuntu droplet, run as root (1 GB RAM is plenty)."
+if [ "$TLS_MODE" = letsencrypt ]; then
+  note "DNS: A ${BASE_DOMAIN} -> this droplet's IP, and CNAME *.${BASE_DOMAIN} -> ${BASE_DOMAIN}."
+  note "A DigitalOcean API token with DNS write scope, for wildcard TLS (prompted for below)."
+fi
+note "BASE_DOMAIN set to your domain (now: ${BASE_DOMAIN}). Optional: TUNNEL_ALLOW_IPS."
+printf '\n'
 step "Installing system packages" do_packages
 
 if [ "$TLS_MODE" = letsencrypt ]; then
