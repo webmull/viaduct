@@ -2,7 +2,7 @@
 
 One Ubuntu droplet runs Caddy (public HTTPS) and viaductd.
 
-**The automated path is [`deploy/provision.sh`](provision.sh)** — after creating
+**The automated path is [`deploy/provision.sh`](provision.sh)**, after creating
 the droplet and DNS (step 1 below), `git clone` the repo and run it; it does
 everything the rest of this document describes and prompts for your DO token.
 Rehearse it locally first with [`deploy/local/`](local/). The sections below are
@@ -12,21 +12,21 @@ understand the steps by hand.
 ## 1. DNS (DigitalOcean)
 
 ```
-A      viaduct.sh    -> <droplet-ip>
-CNAME  *.viaduct.sh  -> viaduct.sh
+A      your-domain.com    -> <droplet-ip>
+CNAME  *.your-domain.com  -> your-domain.com
 ```
 
 Create a DigitalOcean API token scoped to DNS writes (used for ACME DNS-01
-challenges). It lives only on the droplet — never in this repo.
+challenges). It lives only on the droplet, never in this repo.
 
 ## 2. Firewall
 
 ```sh
 ufw default deny incoming
-ufw allow 22/tcp     # SSH — key auth only; do NOT pin to one IP or a changed IP locks you out
+ufw allow 22/tcp     # SSH, key auth only; do NOT pin to one IP or a changed IP locks you out
 ufw allow 80/tcp     # ACME HTTP fallback + redirect
 ufw allow 443/tcp    # public HTTPS (Caddy)
-ufw allow 443/udp    # HTTP/3 (QUIC) — without this browsers hit ERR_QUIC_PROTOCOL_ERROR
+ufw allow 443/udp    # HTTP/3 (QUIC), without this browsers hit ERR_QUIC_PROTOCOL_ERROR
 ufw allow from <trusted-ip> to any port 4443 proto tcp   # tunnel port (see note)
 ufw enable
 ```
@@ -51,7 +51,7 @@ Put the API token in `/etc/viaduct/caddy.env` (`root:caddy`, mode 640):
 DO_API_TOKEN=<token>
 ```
 
-Run Caddy with `deploy/Caddyfile`. The first request for any `*.viaduct.sh`
+Run Caddy with `deploy/Caddyfile`. The first request for any `*.your-domain.com`
 host triggers wildcard issuance via DNS-01; nothing else to do.
 
 ## 4. TLS on the tunnel listener (port 4443)
@@ -60,25 +60,24 @@ viaductd reuses the wildcard certificate Caddy manages. Caddy stores it under
 its data directory, e.g.:
 
 ```
-/var/lib/caddy/.local/share/caddy/certificates/acme-v02.api.letsencrypt.org-directory/wildcard_.viaduct.sh/wildcard_.viaduct.sh.crt
-/var/lib/caddy/.local/share/caddy/certificates/acme-v02.api.letsencrypt.org-directory/wildcard_.viaduct.sh/wildcard_.viaduct.sh.key
+/var/lib/caddy/.local/share/caddy/certificates/acme-v02.api.letsencrypt.org-directory/wildcard_.your-domain.com/wildcard_.your-domain.com.crt
+/var/lib/caddy/.local/share/caddy/certificates/acme-v02.api.letsencrypt.org-directory/wildcard_.your-domain.com/wildcard_.your-domain.com.key
 ```
 
 - Add the `viaduct` user to the `caddy` group so the key is readable.
 - Start the server with:
 
 ```sh
-viaductd --bind 0.0.0.0 --base-domain viaduct.sh \
+viaductd --bind 0.0.0.0 --base-domain your-domain.com \
     --tls-cert <path>.crt --tls-key <path>.key
 ```
 
 (Public port stays bound to localhost via Caddy's `reverse_proxy 127.0.0.1:8080`;
 `--bind 0.0.0.0` is needed so the tunnel listener is reachable. If binding both
-to all interfaces bothers you, front 8080 with a localhost-only rule in ufw —
-it is already not exposed since ufw only opens 80/443/4443.)
+to all interfaces bothers you, front 8080 with a localhost-only rule in ufw, it is already not exposed since ufw only opens 80/443/4443.)
 
 Let's Encrypt rotates certs roughly every 60 days. viaductd loads the cert at
-startup, so restart it after renewal — M5 adds a monthly systemd restart timer.
+startup, so restart it after renewal, M5 adds a monthly systemd restart timer.
 A stale cert shows up client-side as a certificate-expired error.
 
 ## 5. Client machine
@@ -86,7 +85,7 @@ A stale cert shows up client-side as a certificate-expired error.
 `~/.config/viaduct/config.toml`:
 
 ```toml
-server = "viaduct.sh:4443"
+server = "your-domain.com:4443"
 tls = true
 ```
 
@@ -94,7 +93,7 @@ Then:
 
 ```sh
 viaduct http 3000
-# -> tunnel up funny-otter.viaduct.sh — public URL https://funny-otter.viaduct.sh
+# -> tunnel up funny-otter.your-domain.com, public URL https://funny-otter.your-domain.com
 ```
 
 The server picks a fresh random name for each tunnel and frees it on
@@ -103,8 +102,8 @@ concurrent tunnels.
 
 ## 6. Limits and kernel tuning
 
-The failure mode that matters is an audience scanning a QR code at once —
-hundreds of TCP connections arriving in a burst.
+The failure mode that matters is a sudden burst of traffic: hundreds of TCP
+connections arriving at once. The limits below keep the host from dropping them.
 
 ```sh
 # File descriptors: the systemd units set LimitNOFILE=65535 for the daemons.
@@ -135,8 +134,8 @@ mkdir -p /etc/viaduct
 
 # viaductd only needs the cert paths (no auth, no DB)
 cat > /etc/viaduct/viaductd.env <<'EOF'
-TLS_CERT=/var/lib/caddy/.local/share/caddy/certificates/acme-v02.api.letsencrypt.org-directory/wildcard_.viaduct.sh/wildcard_.viaduct.sh.crt
-TLS_KEY=/var/lib/caddy/.local/share/caddy/certificates/acme-v02.api.letsencrypt.org-directory/wildcard_.viaduct.sh/wildcard_.viaduct.sh.key
+TLS_CERT=/var/lib/caddy/.local/share/caddy/certificates/acme-v02.api.letsencrypt.org-directory/wildcard_.your-domain.com/wildcard_.your-domain.com.crt
+TLS_KEY=/var/lib/caddy/.local/share/caddy/certificates/acme-v02.api.letsencrypt.org-directory/wildcard_.your-domain.com/wildcard_.your-domain.com.key
 EOF
 chmod 640 /etc/viaduct/viaductd.env && chown root:viaduct /etc/viaduct/viaductd.env
 
@@ -148,7 +147,7 @@ systemctl daemon-reload
 systemctl enable --now caddy viaductd viaductd-restart.timer
 ```
 
-`viaduct.service` is for the *local* machine running the client — install it
+`viaduct.service` is for the *local* machine running the client, install it
 there, edit the port in ExecStart, and put server/tls in that user's
 `~/.config/viaduct/config.toml`.
 
@@ -159,7 +158,7 @@ with 1s to 30s backoff.
 
 ## 8. Landing page
 
-The coming-soon page in `site/` is served by Caddy at `https://viaduct.sh`
+The landing page in `site/` is served by Caddy at `https://your-domain.com`
 (`www` redirects to the apex):
 
 ```sh
@@ -174,5 +173,5 @@ whatever name `viaduct http` printed as the Host header:
 
 ```sh
 python scripts/load_test.py --host <droplet-ip-or-127.0.0.1> --port 8080 \
-    --hostname funny-otter.viaduct.sh --connections 500
+    --hostname funny-otter.your-domain.com --connections 500
 ```
