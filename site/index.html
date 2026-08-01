@@ -171,8 +171,8 @@
             <button class="copy-btn" type="button" data-copy="pipx install git+https://github.com/webmull/viaduct">Copy</button>
           </div>
           <div class="code-block">
-            <pre><span class="c-prompt">$ </span><span class="cmd">viaduct http 4000</span></pre>
-            <button class="copy-btn" type="button" data-copy="viaduct http 4000">Copy</button>
+            <pre><span class="c-prompt">$ </span><span class="cmd">viaduct http 8080</span></pre>
+            <button class="copy-btn" type="button" data-copy="viaduct http 8080">Copy</button>
           </div>
           <p class="install-note">
             Full usage, self-hosting, and the design notes live in the
@@ -246,7 +246,7 @@
       screen.innerHTML = '';
 
       var cmd = line();
-      await type(cmd, 'viaduct http 4000', my);
+      await type(cmd, 'viaduct http 8080', my);
       if (my !== token) return;
       await sleep(300);
 
@@ -259,7 +259,7 @@
       spin.innerHTML = '<span class="c-ok">✓</span> tunnel live';
       line(' ');
       line('  <span class="c-url">https://' + HOST + '</span>');
-      line('  <span class="c-dim">→ http://localhost:4000</span>');
+      line('  <span class="c-dim">→ http://localhost:8080</span>');
       line(' ');
       await sleep(900);
 
