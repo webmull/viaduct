@@ -17,7 +17,14 @@ viaduct.sh {
 		dns digitalocean {env.DO_API_TOKEN}
 	}
 	root * /var/www/viaduct-site
+	header Cache-Control "no-cache"
 	file_server
+	handle_errors {
+		rewrite * /404.html
+		file_server {
+			status 404
+		}
+	}
 }
 
 www.viaduct.sh {

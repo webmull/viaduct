@@ -59,3 +59,15 @@ def test_pin_seed_differs_by_machine_secret(
     first = config.pin_seed(8080)
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "b"))
     assert config.pin_seed(8080) != first  # different secret file -> different seed
+
+
+def test_pin_seed_regenerates_empty_key(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    import hashlib
+
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
+    key = config.pin_secret_path()
+    key.parent.mkdir(parents=True)
+    key.write_text("")  # an interrupted first write leaves a 0-byte key
+    seed = config.pin_seed(8080)
+    assert seed != hashlib.sha256(b":8080").hexdigest()  # NOT the predictable empty-secret seed
+    assert key.read_text().strip()  # a real secret was written

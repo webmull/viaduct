@@ -69,6 +69,9 @@ class TunnelClient:
         self._inspect = inspect
         #: opaque --pin seed; when set the server derives a stable subdomain
         self._pin_seed = pin_seed
+        #: per-tunnel capability token from the server's ok frame; sent on each
+        #: data connection so the server binds it to this tunnel
+        self._token: str | None = None
         #: adaptive pool: the baseline is pool_size idle connections; under a
         #: burst it grows toward _max_pool with short-lived surge connections
         #: that drain away on their own once demand falls.
@@ -93,15 +96,19 @@ class TunnelClient:
         reader, writer = await asyncio.open_connection(
             self._server_host, self._server_port, ssl=self._ssl_ctx
         )
-        await protocol.write_frame(writer, protocol.hello(self._local_port, self._pin_seed))
-        resp = await protocol.read_frame(reader)
-        if resp["type"] == "error":
-            writer.close()
-            raise TunnelError(protocol.require_str(resp, "reason"))
-        if resp["type"] != "ok":
-            writer.close()
-            raise TunnelError(f"unexpected reply type {resp['type']!r}")
-        self.hostname = protocol.require_str(resp, "hostname")
+        try:
+            await protocol.write_frame(writer, protocol.hello(self._local_port, self._pin_seed))
+            resp = await protocol.read_frame(reader)
+            if resp["type"] == "error":
+                raise TunnelError(protocol.require_str(resp, "reason"))
+            if resp["type"] != "ok":
+                raise TunnelError(f"unexpected reply type {resp['type']!r}")
+            self.hostname = protocol.require_str(resp, "hostname")
+            token = resp.get("token")  # absent only against a pre-token server
+            self._token = token if isinstance(token, str) else None
+        except BaseException:
+            writer.close()  # never leak the socket if the handshake fails
+            raise
         # The server picked our subdomain; it is the leading label of the host.
         self.subdomain = self.hostname.split(".", 1)[0]
         self._reader, self._writer = reader, writer
@@ -216,7 +223,9 @@ class TunnelClient:
                 continue
             backoff = 1.0
             try:
-                await protocol.write_frame(writer, protocol.data_hello(self.subdomain or ""))
+                await protocol.write_frame(
+                    writer, protocol.data_hello(self.subdomain or "", self._token)
+                )
                 self._idle += 1
                 try:
                     if permanent:
@@ -425,9 +434,7 @@ def _connection_settings(
         console.print(f"[bold red]viaduct: {exc}[/]")
         raise typer.Exit(2) from exc
     server = server or _cfg_str(cfg, "server") or DEFAULT_SERVER
-    host, _, port_str = server.rpartition(":")
-    if not host or not port_str.isdigit():
-        raise typer.BadParameter("--server must be host:port")
+    host, port = _split_hostport(server)
     # TLS: explicit flag wins, then config, else on for real hosts / off locally.
     if tls is not None:
         use_tls = tls
@@ -442,8 +449,29 @@ def _connection_settings(
         # passed via cafile would otherwise *replace* the public CAs).
         ssl_ctx = ssl.create_default_context()
         if ca:
-            ssl_ctx.load_verify_locations(cafile=ca)
-    return host, int(port_str), ssl_ctx
+            try:
+                ssl_ctx.load_verify_locations(cafile=ca)
+            except (OSError, ssl.SSLError) as exc:
+                raise typer.BadParameter(f"--tls-ca: cannot load {ca!r} ({exc})") from exc
+    return host, port, ssl_ctx
+
+
+def _split_hostport(server: str) -> tuple[str, int]:
+    """Parse ``host:port``, supporting bracketed IPv6 (e.g. ``[::1]:4443``)."""
+    s = server.strip()
+    if s.startswith("["):  # [ipv6]:port
+        addr, _, rest = s[1:].partition("]")
+        host, port_str = addr, (rest[1:] if rest.startswith(":") else "")
+    else:
+        host, sep, port_str = s.rpartition(":")
+        if not sep:  # no colon at all
+            host, port_str = s, ""
+    if not host or not port_str.isdigit():
+        raise typer.BadParameter("--server must be host:port (use [ipv6]:port for IPv6)")
+    port = int(port_str)
+    if not 1 <= port <= 65535:
+        raise typer.BadParameter("--server port must be between 1 and 65535")
+    return host, port
 
 
 def _cfg_str(cfg: dict[str, str | bool], key: str) -> str | None:

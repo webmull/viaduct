@@ -7,7 +7,7 @@ import re
 from viaduct import names
 
 NAME_RE = re.compile(r"^[a-z]+-[a-z]+$")
-PINNED_RE = re.compile(r"^[a-z]+-[a-z]+-[0-9a-f]{4}$")
+PINNED_RE = re.compile(r"^[a-z]+-[a-z]+-[0-9a-f]{12}$")
 
 
 def test_random_name_shape() -> None:

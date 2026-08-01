@@ -124,9 +124,10 @@ def derived_name(seed: str) -> str:
     """Deterministic ``adjective-animal-xxxx`` name for a ``--pin`` seed.
 
     The same seed always yields the same name, with no server-side state, so a
-    pinned tunnel keeps its URL across reconnects. The 16-bit hex suffix widens
-    the space (~150M combinations) so distinct seeds rarely collide and a
-    specific name cannot be cheaply targeted. The seed is opaque, so the name is
+    pinned tunnel keeps its URL across reconnects. The 48-bit hex suffix makes
+    the full name space ~2^59, so distinct seeds effectively never collide and
+    brute-forcing a seed that reproduces a specific target name is infeasible
+    (finding a preimage over that space). The seed is opaque, so the name is
     still server-assigned rather than user-chosen.
     """
     digest = hashlib.sha256(seed.encode()).digest()
@@ -134,7 +135,7 @@ def derived_name(seed: str) -> str:
     adjective = ADJECTIVES[n % len(ADJECTIVES)]
     n //= len(ADJECTIVES)
     animal = ANIMALS[n % len(ANIMALS)]
-    return f"{adjective}-{animal}-{digest[:2].hex()}"
+    return f"{adjective}-{animal}-{digest[:6].hex()}"
 
 
 def unique_name(taken: Container[str], attempts: int = 50) -> str:

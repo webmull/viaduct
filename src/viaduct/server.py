@@ -11,7 +11,9 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import hmac
 import logging
+import secrets
 import signal
 import ssl
 from pathlib import Path
@@ -30,8 +32,11 @@ Conn = tuple[asyncio.StreamReader, asyncio.StreamWriter]
 class Tunnel:
     """One connected client: its subdomain and idle pool of data connections."""
 
-    def __init__(self, subdomain: str) -> None:
+    def __init__(self, subdomain: str, token: str) -> None:
         self.subdomain = subdomain
+        #: per-tunnel capability: a data connection must present this exact token
+        #: (sent to the owning client over the TLS control channel) to attach.
+        self.token = token
         self.pool: asyncio.Queue[Conn] = asyncio.Queue()
         #: pooled + in-flight data connections, bounded by --max-conns-per-tunnel
         self.data_conns = 0
@@ -70,6 +75,7 @@ class TunnelServer:
         self,
         *,
         bind: str = "127.0.0.1",
+        public_bind: str = "127.0.0.1",
         public_port: int = 8080,
         tunnel_port: int = 4443,
         base_domain: str = "localhost",
@@ -80,6 +86,10 @@ class TunnelServer:
         max_tunnels_per_ip: int = 4,
     ) -> None:
         self.bind = bind
+        #: the plaintext public listener only ever needs to be reached by Caddy
+        #: on localhost, so it binds here (not --bind), independent of the tunnel
+        #: listener; keeps un-TLS'd HTTP off any external interface.
+        self.public_bind = public_bind
         self.public_port = public_port
         self.tunnel_port = tunnel_port
         self.base_domain = base_domain
@@ -101,7 +111,11 @@ class TunnelServer:
 
     async def start(self) -> None:
         self._public_server = await asyncio.start_server(
-            self._handle_public, self.bind, self.public_port, limit=routing.MAX_HEAD, backlog=512
+            self._handle_public,
+            self.public_bind,
+            self.public_port,
+            limit=routing.MAX_HEAD,
+            backlog=512,
         )
         self._tunnel_server = await asyncio.start_server(
             self._handle_tunnel, self.bind, self.tunnel_port, ssl=self._tls, backlog=512
@@ -110,7 +124,7 @@ class TunnelServer:
         self.tunnel_port = self._tunnel_server.sockets[0].getsockname()[1]
         log.info(
             "listening public=%s:%s tunnel=%s:%s base_domain=%s",
-            self.bind,
+            self.public_bind,
             self.public_port,
             self.bind,
             self.tunnel_port,
@@ -142,7 +156,8 @@ class TunnelServer:
         self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter
     ) -> None:
         try:
-            frame = await protocol.read_frame(reader)
+            async with asyncio.timeout(protocol.HANDSHAKE_TIMEOUT):
+                frame = await protocol.read_frame(reader)
             if frame["type"] == "hello":
                 await self._handle_control(frame, reader, writer)
             elif frame["type"] == "data_hello":
@@ -150,8 +165,8 @@ class TunnelServer:
             else:
                 log.warning("unexpected first frame type=%r", frame["type"])
                 writer.close()
-        except protocol.ProtocolError:
-            writer.close()
+        except (protocol.ProtocolError, TimeoutError):
+            writer.close()  # bad frame or a silent/slowloris connection
 
     async def _handle_control(
         self, frame: protocol.Frame, reader: asyncio.StreamReader, writer: asyncio.StreamWriter
@@ -175,14 +190,15 @@ class TunnelServer:
                 return
         else:
             subdomain = names.unique_name(self.tunnels)
-        tunnel = Tunnel(subdomain)
+        token = secrets.token_hex(16)  # capability binding data conns to this client
+        tunnel = Tunnel(subdomain, token)
         self.tunnels[subdomain] = tunnel
         self._ip_tunnels[ip] = self._ip_tunnels.get(ip, 0) + 1
         hostname = f"{subdomain}.{self.base_domain}"
         unanswered = [0]  # our pings not yet ponged; shared with the ping loop
         ping_task = asyncio.create_task(self._ping_loop(writer, unanswered))
         try:
-            await protocol.write_frame(writer, protocol.ok(hostname=hostname))
+            await protocol.write_frame(writer, protocol.ok(hostname=hostname, token=token))
             log.info("tunnel registered subdomain=%s hostname=%s", subdomain, hostname)
             while True:
                 async with asyncio.timeout(protocol.DEAD_PEER_TIMEOUT):
@@ -212,8 +228,20 @@ class TunnelServer:
         self, frame: protocol.Frame, reader: asyncio.StreamReader, writer: asyncio.StreamWriter
     ) -> None:
         subdomain = protocol.require_str(frame, "subdomain")
+        token = frame.get("token")
         tunnel = self.tunnels.get(subdomain)
-        if tunnel is None:
+        # Bind the data connection to its tunnel's owner: knowing the (public)
+        # subdomain is not enough, the caller must present the capability token
+        # the server handed the client over the TLS control channel. Without
+        # this, anyone reaching the tunnel port could attach to another tunnel
+        # and intercept or serve its traffic.
+        if (
+            tunnel is None
+            or not isinstance(token, str)
+            or not hmac.compare_digest(token, tunnel.token)
+        ):
+            if tunnel is not None:
+                log.warning("data conn rejected (bad token) subdomain=%s", subdomain)
             writer.close()
             return
         if tunnel.data_conns >= self.max_conns_per_tunnel:
@@ -281,22 +309,23 @@ class TunnelServer:
             )
             return
         t_reader, t_writer = conn
-        try:
-            t_writer.write(head)
-            await t_writer.drain()
-        except ConnectionError:
-            t_writer.close()
-            tunnel.data_conns -= 1
-            await self._respond(
-                writer,
-                "502 Bad Gateway",
-                "Tunnel connection dropped",
-                "The tunnel connection closed mid-request. Refresh to try again.",
-            )
-            return
+        # Count as active from acquisition (before the head write), so a drain in
+        # this window waits for the request instead of cancelling it mid-flight.
         self._active_splices += 1
         self._no_active_splices.clear()
         try:
+            try:
+                t_writer.write(head)
+                await t_writer.drain()
+            except ConnectionError:
+                t_writer.close()
+                await self._respond(
+                    writer,
+                    "502 Bad Gateway",
+                    "Tunnel connection dropped",
+                    "The tunnel connection closed mid-request. Refresh to try again.",
+                )
+                return
             await splice(reader, writer, t_reader, t_writer, idle_timeout=self.idle_timeout)
         finally:
             self._active_splices -= 1
@@ -324,7 +353,10 @@ app = typer.Typer(help="Viaduct server daemon.")
 @app.callback(invoke_without_command=True)
 def _cli(
     ctx: typer.Context,
-    bind: Annotated[str, typer.Option(help="Address to bind both listeners to")] = "127.0.0.1",
+    bind: Annotated[str, typer.Option(help="Address to bind the tunnel listener to")] = "127.0.0.1",
+    public_bind: Annotated[
+        str, typer.Option(help="Address for the plaintext public listener (Caddy is local)")
+    ] = "127.0.0.1",
     public_port: Annotated[int, typer.Option(help="Port for public HTTP traffic")] = 8080,
     tunnel_port: Annotated[int, typer.Option(help="Port for client tunnel connections")] = 4443,
     base_domain: Annotated[str, typer.Option(help="Domain that subdomains hang off")] = "localhost",
@@ -356,6 +388,7 @@ def _cli(
         asyncio.run(
             _serve(
                 bind,
+                public_bind,
                 public_port,
                 tunnel_port,
                 base_domain,
@@ -369,6 +402,7 @@ def _cli(
 
 async def _serve(
     bind: str,
+    public_bind: str,
     public_port: int,
     tunnel_port: int,
     base_domain: str,
@@ -379,6 +413,7 @@ async def _serve(
 ) -> None:
     server = TunnelServer(
         bind=bind,
+        public_bind=public_bind,
         public_port=public_port,
         tunnel_port=tunnel_port,
         base_domain=base_domain,

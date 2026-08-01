@@ -6,6 +6,8 @@
 #   TLS_MODE        letsencrypt | internal         (default: letsencrypt)
 #   DO_API_TOKEN    Caddy DNS-01 token; prompted for if unset in letsencrypt mode
 #   SETUP_FIREWALL  yes | no                        (default: yes; use no in containers)
+#   TUNNEL_ALLOW_IPS  comma/space-separated IPs allowed on the no-auth tunnel
+#                     port 4443 (default: unset = open to the internet, warned)
 #   REPO_DIR        checked-out repo                (default: this script's repo)
 #
 # Caddy is downloaded prebuilt from caddyserver.com (with the DigitalOcean DNS
@@ -65,8 +67,12 @@ step() {  # step "label" cmd args...
 note() { printf '  %s%s%s\n' "$D" "$1" "$R"; }
 
 verify_do_token() {
-  [ "$(curl -sS -o /dev/null -w '%{http_code}' -H "Authorization: Bearer ${1:-}" \
-        https://api.digitalocean.com/v2/account 2>/dev/null || echo 000)" = 200 ]
+  # Pass the token via a curl config on stdin, never on the command line (which
+  # ps / /proc would expose). printf is a bash builtin, so the token never lands
+  # in any process's argv either.
+  [ "$(printf 'header = "Authorization: Bearer %s"\n' "${1:-}" \
+        | curl -sS -o /dev/null -w '%{http_code}' -K - \
+          https://api.digitalocean.com/v2/account 2>/dev/null || echo 000)" = 200 ]
 }
 
 # ---- step bodies ----
@@ -91,6 +97,11 @@ do_caddy() {
   [ "$TLS_MODE" = letsencrypt ] && url="${url}&p=github.com/caddy-dns/digitalocean"
   curl -fsSL "$url" -o /usr/local/bin/caddy
   chmod +x /usr/local/bin/caddy
+  # Liveness check: confirm we fetched a runnable binary, not an HTML error page.
+  # (The on-demand DNS-plugin build publishes no checksum to pin, so this is not
+  # an integrity guarantee; the download is HTTPS from caddyserver.com.)
+  /usr/local/bin/caddy version >/dev/null 2>&1 \
+    || { echo "downloaded caddy is not a runnable binary" >&2; return 1; }
 }
 
 do_users() {
@@ -161,15 +172,18 @@ EOF
 }
 
 do_env() {
-  : > /etc/viaduct/caddy.env
-  [ "$TLS_MODE" = letsencrypt ] && echo "DO_API_TOKEN=${DO_API_TOKEN}" > /etc/viaduct/caddy.env
-  chown root:caddy /etc/viaduct/caddy.env && chmod 640 /etc/viaduct/caddy.env
-  cat > /etc/viaduct/viaductd.env <<EOF
+  # Create both files with their FINAL perms up front (install from /dev/null),
+  # so the DO token is never written into a world-readable file that is only
+  # tightened afterwards. printf is a bash builtin, so the token stays out of argv.
+  install -m 640 -o root -g caddy /dev/null /etc/viaduct/caddy.env
+  [ "$TLS_MODE" = letsencrypt ] \
+    && printf 'DO_API_TOKEN=%s\n' "${DO_API_TOKEN}" >> /etc/viaduct/caddy.env
+  install -m 640 -o root -g viaduct /dev/null /etc/viaduct/viaductd.env
+  cat >> /etc/viaduct/viaductd.env <<EOF
 BASE_DOMAIN=${BASE_DOMAIN}
 TLS_CERT=/etc/viaduct/certs/tls.crt
 TLS_KEY=/etc/viaduct/certs/tls.key
 EOF
-  chown root:viaduct /etc/viaduct/viaductd.env && chmod 640 /etc/viaduct/viaductd.env
 }
 
 do_services() {
@@ -193,9 +207,18 @@ do_firewall() {
     printf '*  soft  nofile  65535  # viaduct\n*  hard  nofile  65535  # viaduct\n' >> /etc/security/limits.conf
   echo 'net.core.somaxconn = 1024' > /etc/sysctl.d/90-viaduct.conf
   sysctl --system >/dev/null 2>&1 || true
-  # SSH open (key auth); 443/udp is HTTP/3; 4443 is the (no-auth) tunnel port.
+  # SSH open (key auth); 443/udp is HTTP/3. 4443 is the no-auth tunnel port:
+  # restrict it to TUNNEL_ALLOW_IPS when given, else open it (with a warning).
   ufw --force default deny incoming
-  ufw allow 22/tcp; ufw allow 80/tcp; ufw allow 443/tcp; ufw allow 443/udp; ufw allow 4443/tcp
+  ufw allow 22/tcp; ufw allow 80/tcp; ufw allow 443/tcp; ufw allow 443/udp
+  if [ -n "${TUNNEL_ALLOW_IPS:-}" ]; then
+    for _ip in ${TUNNEL_ALLOW_IPS//,/ }; do
+      ufw allow from "$_ip" to any port 4443 proto tcp
+    done
+  else
+    echo "  WARNING: TUNNEL_ALLOW_IPS unset; opening tunnel port 4443 to the whole internet (it has no auth)." >&2
+    ufw allow 4443/tcp
+  fi
   ufw --force enable
 }
 

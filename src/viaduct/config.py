@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import hashlib
 import os
 import secrets
@@ -33,19 +34,51 @@ def pin_seed(local_port: int) -> str:
     stable across reconnects, while different ports get different names.
     """
     path = pin_secret_path()
+    secret = _read_pin_secret(path) or _create_pin_secret(path)
+    return hashlib.sha256(f"{secret}:{local_port}".encode()).hexdigest()
+
+
+def _read_pin_secret(path: Path) -> str:
     try:
-        secret = path.read_text().strip()
+        return path.read_text().strip()
     except FileNotFoundError:
-        secret = secrets.token_hex(32)
-        try:
-            path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text(secret)
-            path.chmod(0o600)
-        except OSError as exc:
-            raise ConfigError(f"cannot write pin key {path}: {exc}") from exc
+        return ""  # not created yet
     except OSError as exc:
         raise ConfigError(f"cannot read pin key {path}: {exc}") from exc
-    return hashlib.sha256(f"{secret}:{local_port}".encode()).hexdigest()
+
+
+def _create_pin_secret(path: Path) -> str:
+    """Create the pin key atomically at mode 0600, tolerating a concurrent race.
+
+    ``O_CREAT | O_EXCL`` closes the TOCTOU window (no readable-then-chmod gap)
+    and makes concurrent first-runs safe: the loser reuses the winner's secret.
+    An empty/corrupt leftover (e.g. an interrupted first write) is dropped and
+    regenerated rather than silently yielding a predictable ``sha256(":port")``.
+    """
+    try:
+        path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    except OSError as exc:
+        raise ConfigError(f"cannot create config dir {path.parent}: {exc}") from exc
+    secret = secrets.token_hex(32)
+    for _ in range(2):
+        try:
+            fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        except FileExistsError:
+            existing = _read_pin_secret(path)
+            if existing:
+                return existing  # another process won the race; use its secret
+            with contextlib.suppress(OSError):
+                path.unlink()  # empty/corrupt leftover; drop it and retry once
+            continue
+        except OSError as exc:
+            raise ConfigError(f"cannot create pin key {path}: {exc}") from exc
+        try:
+            with os.fdopen(fd, "w") as handle:
+                handle.write(secret)
+        except OSError as exc:
+            raise ConfigError(f"cannot write pin key {path}: {exc}") from exc
+        return secret
+    raise ConfigError(f"cannot initialise pin key {path}")
 
 
 def load() -> dict[str, str | bool]:

@@ -12,7 +12,7 @@ buffered in the reader for the raw pipe to pick up.
 Control connection::
 
     -> {"type": "hello", "local_port": ...[, "pin": ...]}
-    <- {"type": "ok", "hostname": ...}  |  {"type": "error", "reason": ...}
+    <- {"type": "ok", "hostname": ..., "token": ...}  |  {"type": "error", "reason": ...}
     <-> {"type": "ping"} / {"type": "pong"}   every HEARTBEAT_INTERVAL seconds
 
 The server assigns a random subdomain and returns it in ``ok.hostname``; the
@@ -21,7 +21,7 @@ connections.
 
 Data connection::
 
-    -> {"type": "data_hello", "subdomain": ...}
+    -> {"type": "data_hello", "subdomain": ..., "token": ...}
     (server holds it idle; on assignment, raw bytes follow immediately)
 
 Read timeouts are the caller's concern (wrap calls in ``asyncio.timeout``).
@@ -53,9 +53,14 @@ DEAD_PEER_TIMEOUT: Final = 300.0  # 5 minutes
 #: ponged. This many unanswered in a row means the peer is gone. It catches a
 #: half-open link (where frames still arrive one way, so DEAD_PEER_TIMEOUT never
 #: fires) and detects death in ~HEARTBEAT_MAX_MISSED x HEARTBEAT_INTERVAL
-#: (~60s) instead of 5 minutes. A sleeping laptop pauses the loop, so it is not
-#: a false positive.
+#: (~60s) instead of 5 minutes. Trade-off: a peer that goes fully silent (a
+#: laptop asleep with the lid shut) is also dropped after ~60s and reconnects on
+#: wake; --pin keeps the same URL across that reconnect.
 HEARTBEAT_MAX_MISSED: Final = 2
+
+#: Deadline for a fresh connection to send its first (hello / data_hello) frame.
+#: Bounds slowloris: an idle connection that never speaks is closed, not parked.
+HANDSHAKE_TIMEOUT: Final = 10.0
 
 _HEADER = struct.Struct(">I")
 
@@ -113,8 +118,11 @@ def hello(local_port: int, pin: str | None = None) -> Frame:
     return frame
 
 
-def data_hello(subdomain: str) -> Frame:
-    return {"type": "data_hello", "subdomain": subdomain}
+def data_hello(subdomain: str, token: str | None = None) -> Frame:
+    frame: Frame = {"type": "data_hello", "subdomain": subdomain}
+    if token:
+        frame["token"] = token  # per-tunnel capability; binds this conn to its owner
+    return frame
 
 
 def ok(**fields: Any) -> Frame:

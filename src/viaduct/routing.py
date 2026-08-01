@@ -35,7 +35,8 @@ def extract_host(head: bytes) -> str | None:
     for line in head.split(b"\r\n")[1:]:
         name, sep, value = line.partition(b":")
         if sep and name.strip().lower() == b"host":
-            host = _strip_port(value.strip().decode("latin-1").lower())
+            # rstrip('.') normalizes a fully-qualified Host (e.g. "x.example.com.")
+            host = _strip_port(value.strip().decode("latin-1").lower()).rstrip(".")
             return host or None
     return None
 

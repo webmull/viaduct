@@ -29,5 +29,19 @@ LimitNOFILE=65535
 KillSignal=SIGTERM
 TimeoutStopSec=40
 
+# Sandboxing. ExecStartPre keeps its '+' so it can read Caddy's 0600 key;
+# ReadWritePaths lets that step write the synced cert under the strict rootfs.
+NoNewPrivileges=yes
+ProtectSystem=strict
+ReadWritePaths=/etc/viaduct/certs
+ProtectHome=yes
+PrivateTmp=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+RestrictNamespaces=yes
+LockPersonality=yes
+
 [Install]
 WantedBy=multi-user.target

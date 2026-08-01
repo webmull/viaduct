@@ -115,7 +115,7 @@ def check_for_update(force: bool = False) -> str | None:
     cache = _read_cache()
     latest: str | None
     last = cache.get("checked", 0)
-    if not force and isinstance(last, int | float) and now - last < CHECK_INTERVAL:
+    if not force and isinstance(last, int | float) and 0 <= now - last < CHECK_INTERVAL:
         latest = cache.get("latest") if isinstance(cache.get("latest"), str) else None
     else:
         latest = fetch_stable_version()
@@ -143,9 +143,10 @@ def run_upgrade() -> bool:
         subprocess.run(
             ["pipx", "install", "--force", GIT_TARGET],
             check=True,
+            timeout=300,  # a hung clone must not block tunnel startup forever
         )
         return True
-    except (FileNotFoundError, subprocess.CalledProcessError):
+    except (FileNotFoundError, subprocess.CalledProcessError, subprocess.TimeoutExpired):
         return False
 
 

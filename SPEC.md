@@ -45,6 +45,16 @@ without reintroducing a database or user-chosen names.
   client's secret. If the derived name is already held by another live tunnel,
   the server rejects with `pin_in_use` and the client reports it and exits.
 
+## Amendment (2026-08-02): data-connection capability token
+
+Closes a hijack hole in the no-auth model without adding user auth. On
+registration the server generates a random per-tunnel token and returns it to
+the owning client in the `ok` frame (over the TLS control channel). Every
+`data_hello` must then present it, so knowing a tunnel's public subdomain is not
+enough to attach a data connection and intercept or serve its traffic. This is
+an internal binding, not a user credential: there is still no signup, no
+`token create`, and no database.
+
 ---
 
 ## Task

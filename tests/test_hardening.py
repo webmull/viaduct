@@ -112,7 +112,9 @@ def test_per_tunnel_connection_cap() -> None:
             try:
                 for _ in range(2):
                     reader, writer = await asyncio.open_connection("127.0.0.1", server.tunnel_port)
-                    await protocol.write_frame(writer, protocol.data_hello(subdomain))
+                    await protocol.write_frame(
+                        writer, protocol.data_hello(subdomain, control._token)
+                    )
                     conns.append((reader, writer))
                 for _ in range(500):
                     if server.tunnels[subdomain].pool.qsize() >= 2:
@@ -121,7 +123,7 @@ def test_per_tunnel_connection_cap() -> None:
                 assert server.tunnels[subdomain].data_conns == 2
 
                 reader, writer = await asyncio.open_connection("127.0.0.1", server.tunnel_port)
-                await protocol.write_frame(writer, protocol.data_hello(subdomain))
+                await protocol.write_frame(writer, protocol.data_hello(subdomain, control._token))
                 assert await reader.read() == b""  # over cap: dropped
                 assert server.tunnels[subdomain].data_conns == 2
                 writer.close()
@@ -129,6 +131,38 @@ def test_per_tunnel_connection_cap() -> None:
                 for _, w in conns:
                     w.close()
                 await control.stop()
+
+    run(scenario())
+
+
+def test_data_hello_wrong_token_is_rejected() -> None:
+    async def scenario() -> None:
+        async with bare_server() as server:
+            control = make_client(server, pool_size=0)
+            await control.start()
+            subdomain = control.subdomain
+            # correct (public) subdomain but a bogus token: the hijack guard drops it
+            reader, writer = await asyncio.open_connection("127.0.0.1", server.tunnel_port)
+            await protocol.write_frame(writer, protocol.data_hello(subdomain, "deadbeefdeadbeef"))
+            assert await reader.read() == b""
+            assert server.tunnels[subdomain].data_conns == 0
+            writer.close()
+            # and a missing token is likewise dropped
+            reader, writer = await asyncio.open_connection("127.0.0.1", server.tunnel_port)
+            await protocol.write_frame(writer, protocol.data_hello(subdomain))
+            assert await reader.read() == b""
+            assert server.tunnels[subdomain].data_conns == 0
+            writer.close()
+            # the real token (handed to the owning client) does attach
+            reader, writer = await asyncio.open_connection("127.0.0.1", server.tunnel_port)
+            await protocol.write_frame(writer, protocol.data_hello(subdomain, control._token))
+            for _ in range(300):
+                if server.tunnels[subdomain].data_conns == 1:
+                    break
+                await asyncio.sleep(0.01)
+            assert server.tunnels[subdomain].data_conns == 1
+            writer.close()
+            await control.stop()
 
     run(scenario())
 
