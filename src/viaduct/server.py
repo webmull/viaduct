@@ -169,7 +169,8 @@ class TunnelServer:
         self.tunnels[subdomain] = tunnel
         self._ip_tunnels[ip] = self._ip_tunnels.get(ip, 0) + 1
         hostname = f"{subdomain}.{self.base_domain}"
-        ping_task = asyncio.create_task(self._ping_loop(writer))
+        unanswered = [0]  # our pings not yet ponged; shared with the ping loop
+        ping_task = asyncio.create_task(self._ping_loop(writer, unanswered))
         try:
             await protocol.write_frame(writer, protocol.ok(hostname=hostname))
             log.info("tunnel registered subdomain=%s hostname=%s", subdomain, hostname)
@@ -178,6 +179,8 @@ class TunnelServer:
                     msg = await protocol.read_frame(reader)
                 if msg["type"] == "ping":
                     await protocol.write_frame(writer, protocol.pong())
+                elif msg["type"] == "pong":
+                    unanswered[0] = 0  # the client is answering us
         except TimeoutError:
             log.info("dead peer subdomain=%s", subdomain)
         except (protocol.ProtocolError, ConnectionError):
@@ -215,10 +218,14 @@ class TunnelServer:
         tunnel.pool.put_nowait((reader, writer))
         log.debug("data conn pooled subdomain=%s idle=%s", subdomain, tunnel.pool.qsize())
 
-    async def _ping_loop(self, writer: asyncio.StreamWriter) -> None:
+    async def _ping_loop(self, writer: asyncio.StreamWriter, unanswered: list[int]) -> None:
         with contextlib.suppress(ConnectionError):
             while True:
                 await asyncio.sleep(protocol.HEARTBEAT_INTERVAL)
+                if unanswered[0] >= protocol.HEARTBEAT_MAX_MISSED:
+                    writer.close()  # client not answering pings; drop the dead peer
+                    return
+                unanswered[0] += 1
                 await protocol.write_frame(writer, protocol.ping())
 
     async def _reject(self, writer: asyncio.StreamWriter, reason: str) -> None:

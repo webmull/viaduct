@@ -81,6 +81,9 @@ class TunnelClient:
         self._busy: set[asyncio.Task[None]] = set()
         self._closed = asyncio.Event()
         self._stopping = False
+        #: our pings sent since the last pong; reset on any pong (acknowledged
+        #: heartbeat). Grows when the server stops answering.
+        self._unanswered_pings = 0
 
     async def start(self) -> str:
         """Open the control connection, fill the pool, return the assigned hostname."""
@@ -151,6 +154,8 @@ class TunnelClient:
                     frame = await protocol.read_frame(reader)
                 if frame["type"] == "ping":
                     await protocol.write_frame(writer, protocol.pong())
+                elif frame["type"] == "pong":
+                    self._unanswered_pings = 0  # the server is answering us
         except TimeoutError:
             log.warning("server went silent — treating connection as dead")
         except (protocol.ProtocolError, ConnectionError):
@@ -162,6 +167,12 @@ class TunnelClient:
         with contextlib.suppress(ConnectionError):
             while True:
                 await asyncio.sleep(protocol.HEARTBEAT_INTERVAL)
+                if self._unanswered_pings >= protocol.HEARTBEAT_MAX_MISSED:
+                    log.warning("server not answering heartbeats — treating connection as dead")
+                    self._closed.set()
+                    writer.close()
+                    return
+                self._unanswered_pings += 1
                 await protocol.write_frame(writer, protocol.ping())
 
     def _spawn_data_conn(self, permanent: bool) -> None:

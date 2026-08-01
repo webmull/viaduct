@@ -48,8 +48,16 @@ HEARTBEAT_INTERVAL: Final = 20.0
 #: — long enough to ride out a phone sleeping or a brief network drop without
 #: tearing the tunnel down (which would reassign a new subdomain on reconnect).
 #: A cleanly closed connection is still detected immediately; this only bounds
-#: how long a silently-vanished peer lingers.
+#: how long a silently-vanished peer lingers when it stops sending entirely.
 DEAD_PEER_TIMEOUT: Final = 300.0  # 5 minutes
+
+#: Acknowledged heartbeats: each side counts its own pings that have not been
+#: ponged. This many unanswered in a row means the peer is gone. It catches a
+#: half-open link (where frames still arrive one way, so DEAD_PEER_TIMEOUT never
+#: fires) and detects death in ~HEARTBEAT_MAX_MISSED x HEARTBEAT_INTERVAL
+#: (~60s) instead of 5 minutes. A sleeping laptop pauses the loop, so it is not
+#: a false positive.
+HEARTBEAT_MAX_MISSED: Final = 2
 
 _HEADER = struct.Struct(">I")
 

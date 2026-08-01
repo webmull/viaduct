@@ -61,6 +61,47 @@ def test_client_detects_silent_server(monkeypatch: pytest.MonkeyPatch) -> None:
     run(scenario())
 
 
+def test_client_detects_unanswered_heartbeat(monkeypatch: pytest.MonkeyPatch) -> None:
+    # A half-open link: the server keeps sending pings (so the client's read
+    # never times out) but never answers the client's pings. The acknowledged
+    # heartbeat must catch it well under the long read backstop.
+    monkeypatch.setattr(protocol, "HEARTBEAT_INTERVAL", 0.1)
+    monkeypatch.setattr(protocol, "DEAD_PEER_TIMEOUT", 100.0)
+
+    async def scenario() -> None:
+        async def half_open_server(
+            reader: asyncio.StreamReader, writer: asyncio.StreamWriter
+        ) -> None:
+            await protocol.read_frame(reader)  # hello
+            await protocol.write_frame(writer, protocol.ok(hostname="quiet-mole.viaduct.test"))
+
+            async def swallow() -> None:
+                with contextlib.suppress(Exception):
+                    while await reader.read(4096):
+                        pass  # read (and drop) the client's pings, never pong
+
+            sink = asyncio.ensure_future(swallow())
+            try:
+                with contextlib.suppress(Exception):
+                    while True:  # keep the client's read side fresh
+                        await protocol.write_frame(writer, protocol.ping())
+                        await asyncio.sleep(0.1)
+            finally:
+                sink.cancel()
+
+        srv = await asyncio.start_server(half_open_server, "127.0.0.1", 0)
+        port = srv.sockets[0].getsockname()[1]
+        client = TunnelClient(server_host="127.0.0.1", server_port=port, local_port=1, pool_size=0)
+        try:
+            await client.start()
+            await asyncio.wait_for(client.wait_closed(), timeout=3)  # not the 100s backstop
+        finally:
+            await client.stop()
+            srv.close()
+
+    run(scenario())
+
+
 def test_per_tunnel_connection_cap() -> None:
     async def scenario() -> None:
         async with bare_server(max_conns_per_tunnel=2) as server:
