@@ -37,7 +37,7 @@ html {
 body { margin: 0; background: var(--background); color: var(--foreground); overflow-x: hidden; }
 a { color: inherit; }
 img { display: block; max-width: 100%; }
-h1, h2, h3 { font-family: var(--font-display); letter-spacing: -0.02em; }
+h1, h2, h3 { font-family: var(--font-display); letter-spacing: -0.02em; margin: 0; }
 ::selection { background: color-mix(in oklab, var(--primary) 40%, transparent); }
 :focus-visible { outline: 2px solid var(--ring); outline-offset: 3px; border-radius: 4px; }
 
@@ -168,10 +168,10 @@ h1, h2, h3 { font-family: var(--font-display); letter-spacing: -0.02em; }
 @keyframes blink { 50% { opacity: 0; } }
 
 /* ---------- Section scaffolding ---------- */
-section { padding: clamp(1.75rem, 3.5vw, 2.5rem) 0; }
+section { padding: clamp(1.6rem, 3vw, 2.25rem) 0; }
 /* alternate section grounds so each block is visually distinct as they sit closer */
 main > section:nth-child(even) { background: var(--surface); }
-.section-head { max-width: 40rem; margin: 0 auto 1.3rem; text-align: center; }
+.section-head { max-width: 40rem; margin: 0 auto 1.1rem; text-align: center; }
 .eyebrow {
   font-size: 0.72rem; letter-spacing: 0.28em; text-transform: uppercase;
   color: var(--primary); font-weight: 600; margin: 0 0 0.6rem;
@@ -301,10 +301,10 @@ main > section:nth-child(even) { background: var(--surface); }
    the git-clone line full width for comfortable tap targets */
 @media (max-width: 560px) {
   .wrap { padding: 0 1.15rem; }
-  section { padding: 2.25rem 0; }
+  section { padding: 1.6rem 0; }
   .hero { padding-top: 1.5rem; }
   .hero-mark { height: 4.75rem; width: 4.75rem; }
-  .section-head { margin-bottom: 1.4rem; }
+  .section-head { margin-bottom: 1rem; }
   .actions { width: 100%; }
   .actions .btn { width: 100%; }
   .os-actions .code-block { width: 100%; }
