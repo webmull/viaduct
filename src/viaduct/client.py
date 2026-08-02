@@ -73,6 +73,7 @@ class TunnelClient:
         ssl_ctx: ssl.SSLContext | None = None,
         inspect: bool = False,
         pin_seed: str | None = None,
+        host_header: str | None = None,
     ) -> None:
         self._server_host = server_host
         self._server_port = server_port
@@ -83,6 +84,9 @@ class TunnelClient:
         self._inspect = inspect
         #: opaque --pin seed; when set the server derives a stable subdomain
         self._pin_seed = pin_seed
+        #: when set, each request's Host header is rewritten to this before the
+        #: local app sees it (fixes dev servers that reject "unknown" hosts)
+        self._host_header = host_header.encode("latin-1") if host_header else None
         #: per-tunnel capability token from the server's ok frame; sent on each
         #: data connection so the server binds it to this tunnel
         self._token: str | None = None
@@ -298,12 +302,6 @@ class TunnelClient:
                 )
                 await writer.drain()
             return
-        try:
-            l_writer.write(first)
-            await l_writer.drain()
-        except ConnectionError:
-            l_writer.close()
-            return
         on_b_first: Callable[[bytes], None] | None = None
         if self._inspect:
             method, path = _req_line(first)
@@ -313,6 +311,19 @@ class TunnelClient:
                 elapsed_ms = (asyncio.get_running_loop().time() - t0) * 1000
                 _log_request(method, path, _status_code(head), elapsed_ms)
 
+        if self._host_header:
+            # route the first head + everything after through the Host rewriter
+            await splice(
+                reader, writer, l_reader, l_writer, on_b_first=on_b_first,
+                rewrite_host=self._host_header, rewrite_initial=first,
+            )
+            return
+        try:
+            l_writer.write(first)
+            await l_writer.drain()
+        except ConnectionError:
+            l_writer.close()
+            return
         await splice(reader, writer, l_reader, l_writer, on_b_first=on_b_first)
 
 
@@ -406,6 +417,14 @@ def http(
     ] = False,
     tls: _TlsOpt = None,
     tls_ca: _TlsCaOpt = None,
+    host_header: Annotated[
+        str | None,
+        typer.Option(
+            "--host-header",
+            help="Rewrite the Host header sent to your app (e.g. localhost), for "
+            "dev servers that reject unknown hosts",
+        ),
+    ] = None,
 ) -> None:
     """Open a tunnel exposing local PORT. The server assigns a random public URL.
 
@@ -422,13 +441,16 @@ def http(
             f"continuing on {update.installed_version()}[/]"
         )
     host, srv_port, ssl_ctx = _connection_settings(server, tls, tls_ca, region)
+    host_header = host_header or _cfg_str(config.load(), "host_header")
     try:
         pin_seed = config.pin_seed(port) if pin else None
     except config.ConfigError as exc:
         console.print(f"[bold red]viaduct: {exc}[/]")
         raise typer.Exit(1) from exc
     try:
-        asyncio.run(_run_http(host, srv_port, port, pool_size, ssl_ctx, inspect, pin_seed))
+        asyncio.run(
+            _run_http(host, srv_port, port, pool_size, ssl_ctx, inspect, pin_seed, host_header)
+        )
     except KeyboardInterrupt:
         console.print("[yellow]viaduct: interrupted[/]")
     except TunnelError as exc:
@@ -627,6 +649,7 @@ async def _run_http(
     ssl_ctx: ssl.SSLContext | None,
     inspect: bool = False,
     pin_seed: str | None = None,
+    host_header: str | None = None,
 ) -> None:
     """Keep the tunnel up: reconnect on drop with 1s→30s exponential backoff."""
     stop = asyncio.Event()
@@ -665,6 +688,7 @@ async def _run_http(
                 ssl_ctx=ssl_ctx,
                 inspect=inspect,
                 pin_seed=pin_seed,
+                host_header=host_header,
             )
             connecting = (
                 console.status("[bold]establishing tunnel…", spinner="dots")

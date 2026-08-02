@@ -274,7 +274,15 @@
 
         <section class="doc-section" id="options">
           <h2>All options</h2>
-          <p>Every flag on <code>viaduct http</code>:</p>
+          <p>
+            Every flag on <code>viaduct http</code>. One worth calling out:
+            <code>--host-header</code>. Some dev servers (Vite, Next.js, Django,
+            Rails) keep an allow-list of hostnames and reject a request whose
+            <code>Host</code> is the public tunnel URL ("Invalid Host header" /
+            "Blocked request"). <code>--host-header localhost</code> makes your app
+            see the request as if it arrived on <code>localhost</code>, while
+            visitors still use the public URL.
+          </p>
           <div class="table-scroll">
             <table class="opt-table">
               <thead>
@@ -284,6 +292,7 @@
                 <tr><td><code>--server host:port</code></td><td><code>viaduct.sh:4443</code></td><td>The <code>viaductd</code> server to dial.</td></tr>
                 <tr><td><code>--region lon|nyc|sg|syd|blr</code></td><td>none</td><td>Pick a server region; a shortcut for <code>--server</code>.</td></tr>
                 <tr><td><code>--pin</code></td><td>off</td><td>Keep the same public URL across reconnects (stable subdomain).</td></tr>
+                <tr><td><code>--host-header HOST</code></td><td>off</td><td>Rewrite the <code>Host</code> header your app sees (e.g. <code>localhost</code>), for dev servers that reject unknown hosts.</td></tr>
                 <tr><td><code>--inspect</code></td><td>off</td><td>Log each request: method, path, status, and time.</td></tr>
                 <tr><td><code>--pool-size N</code></td><td>40</td><td>Idle data connections kept ready for incoming requests.</td></tr>
                 <tr><td><code>--tls</code> / <code>--no-tls</code></td><td>on, off for localhost</td><td>TLS to the tunnel port.</td></tr>

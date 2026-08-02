@@ -92,6 +92,7 @@ tunnel, and serves `502` until your app comes up.
 | `--pool-size N` | 40 | Idle data connections kept ready for incoming requests |
 | `--inspect` | off | Log each request: method, path, status, and time |
 | `--pin` | off | Keep the same public URL across reconnects (stable subdomain) |
+| `--host-header HOST` | off | Rewrite the `Host` header your app sees (e.g. `localhost`), for dev servers that reject unknown hosts |
 
 By default every reconnect gets a fresh random URL. `--pin` keeps the same URL
 for a given local port across reconnects, which is handy for a webhook endpoint
@@ -103,8 +104,15 @@ Flags can live in `~/.config/viaduct/config.toml` instead:
 
 ```toml
 server = "my-server.example.com:4443"
-# tls  = true            # override the on-except-localhost default if needed
+# tls  = true                 # override the on-except-localhost default if needed
+# host_header = "localhost"   # rewrite the Host header sent to your local app
 ```
+
+Some dev servers (Vite, Next.js, Django, Rails, …) keep an allow-list of hostnames
+and reject a request whose `Host` is the public tunnel URL with an error like
+"Invalid Host header" or "Blocked request". `--host-header localhost` makes your
+app see the request as if it arrived on `localhost`, so it stops rejecting them,
+while visitors still use the public URL.
 
 ## Run your own server
 
