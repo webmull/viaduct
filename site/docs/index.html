@@ -235,9 +235,9 @@
         <section class="doc-section" id="regions">
           <h2>Regions</h2>
           <p>
-            viaduct.sh operates tunnel nodes in three regions. Run your tunnel on
-            the one nearest your traffic with <code>--region</code> (a shortcut for
-            <code>--server</code>); with no flag you get London by default.
+            viaduct.sh operates tunnel nodes in four regions. Run your tunnel on
+            the one nearest your traffic with <code>--region</code>; with no flag
+            you get London by default.
           </p>
           <div class="table-scroll">
             <table class="opt-table">
@@ -279,6 +279,7 @@
               </thead>
               <tbody>
                 <tr><td><code>--server host:port</code></td><td><code>viaduct.sh:4443</code></td><td>The <code>viaductd</code> server to dial.</td></tr>
+                <tr><td><code>--region lon|nyc|sg|syd</code></td><td>none</td><td>Pick a server region; a shortcut for <code>--server</code>.</td></tr>
                 <tr><td><code>--pin</code></td><td>off</td><td>Keep the same public URL across reconnects (stable subdomain).</td></tr>
                 <tr><td><code>--inspect</code></td><td>off</td><td>Log each request: method, path, status, and time.</td></tr>
                 <tr><td><code>--pool-size N</code></td><td>40</td><td>Idle data connections kept ready for incoming requests.</td></tr>
