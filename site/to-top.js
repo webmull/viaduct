@@ -9,11 +9,23 @@
   document.body.appendChild(btn);
 
   var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var footer = document.querySelector(".site-footer");
+  var BASE = 18; // ~1.15rem resting offset from the bottom
+
   function update() {
     btn.classList.toggle("show", window.scrollY > 420);
+    // dock above the footer once it scrolls into view, so it never overlaps
+    var lift = 0;
+    if (footer) {
+      var top = footer.getBoundingClientRect().top;
+      lift = Math.max(0, window.innerHeight - top + 12);
+    }
+    btn.style.bottom = BASE + lift + "px";
   }
   window.addEventListener("scroll", update, { passive: true });
+  window.addEventListener("resize", update);
   update();
+
   btn.addEventListener("click", function () {
     window.scrollTo({ top: 0, behavior: reduce ? "auto" : "smooth" });
   });

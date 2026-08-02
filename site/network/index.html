@@ -22,9 +22,8 @@
       margin: 1.5rem 0;
     }
     .globe-wrap { width: 100%; max-width: min(86vw, 460px); margin: 0 auto; aspect-ratio: 1 / 1; }
-    .globe { width: 100%; height: 100%; display: block; }
-    .globe-cap { text-align: center; margin: 0.9rem 0 0; color: var(--muted-foreground);
-      font: 500 0.82rem "JetBrains Mono", monospace; letter-spacing: 0.04em; }
+    .globe { width: 100%; height: 100%; display: block; touch-action: pan-y; cursor: grab; -webkit-user-select: none; user-select: none; }
+    .globe.dragging { cursor: grabbing; }
     .table-scroll { overflow-x: auto; }
     .reg-table { width:100%; border-collapse:collapse; font-size:0.92rem; }
     .reg-table th, .reg-table td { text-align:left; padding:0.6rem 0.8rem; border-bottom:1px solid var(--border); white-space:nowrap; }
@@ -72,7 +71,6 @@
           <canvas id="globe" class="globe" role="img"
             aria-label="Rotating globe showing viaduct regions in New York, London, Singapore, and Sydney."></canvas>
         </div>
-        <p class="globe-cap">New York &middot; London &middot; Singapore &middot; Sydney</p>
       </div>
 
       <div class="table-scroll">
@@ -130,8 +128,10 @@
       n.vx = cl * COS(lo); n.vy = SIN(la); n.vz = cl * SIN(lo);
     });
 
-    var TILT = 18 * RAD, ct = COS(TILT), st = SIN(TILT);
-    var lon0 = reduce ? 40 : 0, R, cx, cy;
+    var lon0 = reduce ? 40 : 0;   // spin longitude (deg)
+    var TILT0 = 18 * RAD, tilt = TILT0;   // view latitude (rad), draggable
+    var homing = false;           // easing tilt back to level after idle
+    var R, cx, cy;
 
     function size() {
       var dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -145,6 +145,7 @@
       .getPropertyValue("--primary") || "#f5b544").trim();
 
     function draw(t) {
+      var ct = COS(tilt), st = SIN(tilt);
       ctx.clearRect(0, 0, cx * 2, cy * 2);
       var g = ctx.createRadialGradient(cx - R * 0.34, cy - R * 0.4, R * 0.08, cx, cy, R);
       g.addColorStop(0, "rgba(74,88,116,0.55)");
@@ -200,9 +201,38 @@
       }
     }
 
+    // drag to spin (mouse + touch); vertical swipes still scroll via touch-action
+    var autoSpin = !reduce, dragging = false, px = 0, py = 0, resume = 0;
+    cv.addEventListener("pointerdown", function (e) {
+      dragging = true; autoSpin = false; px = e.clientX; py = e.clientY;
+      cv.classList.add("dragging");
+      if (cv.setPointerCapture) cv.setPointerCapture(e.pointerId);
+      clearTimeout(resume);
+      if (reduce) draw(0);
+    });
+    cv.addEventListener("pointermove", function (e) {
+      if (!dragging) return;
+      lon0 = (lon0 - (e.clientX - px) * 0.35 + 360) % 360;
+      tilt = Math.max(-1.4, Math.min(1.4, tilt + (e.clientY - py) * 0.006));
+      px = e.clientX; py = e.clientY;
+      if (e.pointerType === "mouse" && e.cancelable) e.preventDefault();
+      if (reduce) draw(0);
+    });
+    function endDrag() {
+      if (!dragging) return;
+      dragging = false; cv.classList.remove("dragging");
+      if (!reduce) resume = setTimeout(function () { autoSpin = true; homing = true; }, 4000);
+    }
+    cv.addEventListener("pointerup", endDrag);
+    cv.addEventListener("pointercancel", endDrag);
+
     var raf = 0, last = 0;
     function frame(t) {
-      if (last) lon0 = (lon0 + (t - last) * 0.007) % 360;
+      if (autoSpin && last) lon0 = (lon0 + (t - last) * 0.007) % 360;
+      if (homing) {
+        tilt += (TILT0 - tilt) * 0.08;
+        if (Math.abs(TILT0 - tilt) < 0.003) { tilt = TILT0; homing = false; }
+      }
       last = t; draw(t); raf = requestAnimationFrame(frame);
     }
     function start() { if (!raf) { last = 0; raf = requestAnimationFrame(frame); } }
