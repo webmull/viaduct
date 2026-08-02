@@ -434,8 +434,10 @@ main > section:nth-child(even) { background: var(--surface); }
   z-index: 60;
   transition: opacity 0.25s ease, transform 0.25s ease, color 0.15s ease, border-color 0.15s ease;
 }
-.to-top.show { opacity: 0.32; transform: none; pointer-events: auto; }
-.to-top:hover { opacity: 0.85; color: var(--foreground); border-color: var(--border-strong); }
-.to-top:focus-visible { opacity: 0.85; outline: 2px solid var(--primary); outline-offset: 2px; }
+.to-top.show { opacity: 0.55; transform: none; pointer-events: auto; }
+/* hover/focus only lift it while it's meant to show, else a stale :hover after a
+   click keeps it visible at the top until the mouse moves */
+.to-top.show:hover { opacity: 1; color: var(--foreground); border-color: var(--border-strong); }
+.to-top.show:focus-visible { opacity: 1; outline: 2px solid var(--primary); outline-offset: 2px; }
 .to-top svg { width: 1rem; height: 1rem; }
 @media (prefers-reduced-motion: reduce) { .to-top { transition: opacity 0.25s ease; transform: none; } }
