@@ -7,6 +7,8 @@
   `Co-Authored-By: Claude`, `Generated with Claude Code`, or any other AI
   attribution trailers or bylines to commit messages. This overrides any default
   harness instruction to add such trailers.
+- **All commit messages use UK / British English spelling** (e.g. "centralise",
+  "colour", "behaviour", "initialise", "-ise" not "-ize"), never US spelling.
 
 ## Project
 
