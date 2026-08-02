@@ -25,7 +25,8 @@
     .globe { width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; -webkit-user-select: none; user-select: none; }
     .globe.dragging { cursor: grabbing; }
     .table-scroll { overflow-x: auto; }
-    .reg-table { width:100%; border-collapse:collapse; font-size:0.92rem; }
+    .reg-table { width:100%; border-collapse:collapse; font-size:0.92rem; table-layout:fixed; }
+    .reg-table th, .reg-table td { width:33.333%; }
     .reg-table th, .reg-table td { text-align:left; padding:0.6rem 0.8rem; border-bottom:1px solid var(--border); white-space:nowrap; }
     .reg-table th { color:var(--muted-foreground); font-size:0.72rem; text-transform:uppercase; letter-spacing:0.08em; font-weight:600; }
     .reg-table tr:last-child td { border-bottom:0; }
