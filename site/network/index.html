@@ -22,7 +22,7 @@
       margin: 1.5rem 0;
     }
     .globe-wrap { width: 100%; max-width: min(86vw, 460px); margin: 0 auto; aspect-ratio: 1 / 1; }
-    .globe { width: 100%; height: 100%; display: block; touch-action: pan-y; cursor: grab; -webkit-user-select: none; user-select: none; }
+    .globe { width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; -webkit-user-select: none; user-select: none; }
     .globe.dragging { cursor: grabbing; }
     .table-scroll { overflow-x: auto; }
     .reg-table { width:100%; border-collapse:collapse; font-size:0.92rem; }
@@ -212,10 +212,11 @@
     });
     cv.addEventListener("pointermove", function (e) {
       if (!dragging) return;
-      lon0 = (lon0 - (e.clientX - px) * 0.35 + 360) % 360;
-      tilt = Math.max(-1.4, Math.min(1.4, tilt + (e.clientY - py) * 0.006));
+      var dx = e.clientX - px, dy = e.clientY - py;
       px = e.clientX; py = e.clientY;
-      if (e.pointerType === "mouse" && e.cancelable) e.preventDefault();
+      lon0 = ((lon0 + dx * 0.35) % 360 + 360) % 360;   // rotate the way the finger moves
+      tilt = Math.max(-1.4, Math.min(1.4, tilt - dy * 0.006));
+      if (e.cancelable) e.preventDefault();             // globe owns the gesture (touch-action: none)
       if (reduce) draw(0);
     });
     function endDrag() {
