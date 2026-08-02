@@ -1,8 +1,11 @@
 name: Publish Node client to npm
 
 # Publishes the node/ package (viaduct-sh) to npm when a version tag (v*) is
-# pushed. One-time setup: add an npm automation token as the repo secret
-# NPM_TOKEN (npmjs.com -> Access Tokens -> Generate -> Automation).
+# pushed. Uses npm Trusted Publishing (OIDC): no token stored in the repo.
+# One-time setup on npmjs.com: on the viaduct-sh package -> Settings -> Trusted
+# Publisher, add GitHub Actions with repository "webmull/viaduct" and workflow
+# "publish-npm.yml". The package must already exist (do the first publish
+# locally with `npm publish`), since the trusted publisher lives on the package.
 
 on:
   push:
@@ -11,6 +14,7 @@ on:
 
 permissions:
   contents: read
+  id-token: write # mint the OIDC token npm trusts
 
 jobs:
   publish:
@@ -24,6 +28,5 @@ jobs:
         with:
           node-version: "20"
           registry-url: "https://registry.npmjs.org"
+      - run: npm install -g npm@latest # OIDC trusted publishing needs npm >= 11.5.1
       - run: npm publish --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
