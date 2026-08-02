@@ -13,6 +13,7 @@
 set -eu
 
 : "${BASE_DOMAIN:?BASE_DOMAIN not set}"
+BASE_DOMAIN="${BASE_DOMAIN%%,*}"  # multi-base: the primary holds the multi-SAN cert
 DST=/etc/viaduct/certs
 STORE=/var/lib/caddy/.local/share/caddy/certificates
 

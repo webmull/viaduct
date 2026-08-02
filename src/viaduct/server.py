@@ -100,7 +100,11 @@ class TunnelServer:
         self.public_bind = public_bind
         self.public_port = public_port
         self.tunnel_port = tunnel_port
-        self.base_domain = base_domain
+        #: primary base domain (used to name new tunnels) plus any aliases the
+        #: same tunnels are also reachable under, e.g. "viaduct.sh,lon.viaduct.sh"
+        bases = [b.strip() for b in base_domain.split(",") if b.strip()]
+        self.base_domains = bases or ["localhost"]
+        self.base_domain = self.base_domains[0]
         self._tls = tls
         self.max_conns_per_tunnel = max_conns_per_tunnel
         self.idle_timeout = idle_timeout
@@ -298,7 +302,7 @@ class TunnelServer:
             await self._tls_check(head, writer)  # Caddy on-demand-TLS ask endpoint
             return
         host = routing.extract_host(head)
-        subdomain = routing.subdomain_for_host(host, self.base_domain) if host else None
+        subdomain = self._match_subdomain(host)
         if subdomain is None and host:
             subdomain = await self._custom_subdomain(host)  # bring-your-own-domain via CNAME
         tunnel = self.tunnels.get(subdomain) if subdomain else None
@@ -348,6 +352,16 @@ class TunnelServer:
                 self._no_active_splices.set()
             tunnel.data_conns -= 1
 
+    def _match_subdomain(self, host: str | None) -> str | None:
+        """Label of *host* under any of our base domains (primary or alias)."""
+        if not host:
+            return None
+        for base in self.base_domains:
+            sub = routing.subdomain_for_host(host, base)
+            if sub is not None:
+                return sub
+        return None
+
     async def _custom_subdomain(self, host: str) -> str | None:
         """Resolve a non-wildcard Host to a tunnel by following its CNAME chain.
 
@@ -368,7 +382,7 @@ class TunnelServer:
             target = await dns.resolve_cname(name)
             if target is None:
                 break
-            candidate = routing.subdomain_for_host(target, self.base_domain)
+            candidate = self._match_subdomain(target)
             if candidate is not None:
                 subdomain = candidate
                 break
@@ -383,7 +397,7 @@ class TunnelServer:
         """
         query = urlsplit(routing.request_target(head)).query
         domain = (parse_qs(query).get("domain") or [""])[0].lower().rstrip(".")
-        subdomain = routing.subdomain_for_host(domain, self.base_domain) if domain else None
+        subdomain = self._match_subdomain(domain)
         if subdomain is None and domain:
             subdomain = await self._custom_subdomain(domain)
         ok = bool(subdomain and subdomain in self.tunnels)
@@ -420,7 +434,9 @@ def _cli(
     ] = "127.0.0.1",
     public_port: Annotated[int, typer.Option(help="Port for public HTTP traffic")] = 8080,
     tunnel_port: Annotated[int, typer.Option(help="Port for client tunnel connections")] = 4443,
-    base_domain: Annotated[str, typer.Option(help="Domain that subdomains hang off")] = "localhost",
+    base_domain: Annotated[
+        str, typer.Option(help="Domain(s) subdomains hang off; comma-separated for aliases")
+    ] = "localhost",
     tls_cert: Annotated[
         Path | None, typer.Option(help="PEM certificate enabling TLS on the tunnel listener")
     ] = None,

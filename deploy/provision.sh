@@ -114,15 +114,21 @@ do_users() {
 do_site() { cp -r "$REPO_DIR"/site/* /var/www/viaduct-site/ 2>/dev/null || true; }
 
 do_caddyfile() {
+  # BASE_DOMAIN may be comma-separated (primary + aliases): primary names the
+  # tunnels and the site; apex/wild expand to all names for one multi-SAN cert.
+  local primary="${BASE_DOMAIN%%,*}"
+  local apex wild
+  apex=$(printf '%s' "$BASE_DOMAIN" | sed 's/,/, /g')
+  wild=$(printf '%s' "$BASE_DOMAIN" | awk -F, '{for(i=1;i<=NF;i++) printf (i>1?", ":"") "*." $i}')
   if [ "$TLS_MODE" = letsencrypt ]; then
     cat > /etc/caddy/Caddyfile <<EOF
 {
-	email admin@${BASE_DOMAIN}
+	email admin@${primary}
 	on_demand_tls {
 		ask http://127.0.0.1:8080/_viaduct/tls-check
 	}
 }
-${BASE_DOMAIN} {
+${apex} {
 	tls {
 		dns digitalocean {env.DO_API_TOKEN}
 	}
@@ -136,13 +142,13 @@ ${BASE_DOMAIN} {
 		}
 	}
 }
-www.${BASE_DOMAIN} {
+www.${primary} {
 	tls {
 		dns digitalocean {env.DO_API_TOKEN}
 	}
-	redir https://${BASE_DOMAIN}{uri} permanent
+	redir https://${primary}{uri} permanent
 }
-*.${BASE_DOMAIN} {
+${wild} {
 	tls {
 		dns digitalocean {env.DO_API_TOKEN}
 	}

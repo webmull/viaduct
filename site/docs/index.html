@@ -57,6 +57,7 @@
           <li><a href="#inspect">Inspect requests</a></li>
           <li><a href="#combine">Combine flags</a></li>
           <li><a href="#domains">Custom domains</a></li>
+          <li><a href="#regions">Regions</a></li>
           <li><a href="#options">All options</a></li>
           <li><a href="#stop">Stop and update</a></li>
           <li><a href="#server">Run your own server</a></li>
@@ -228,6 +229,42 @@
             <code>*.viaduct.sh</code> name rather than straight at an IP. And because
             the certificate is only issued once your domain already points here, you
             can only serve domains whose DNS you actually control.
+          </div>
+        </section>
+
+        <section class="doc-section" id="regions">
+          <h2>Regions</h2>
+          <p>
+            Run your tunnel on the node nearest your traffic. Pick one with
+            <code>--region</code> (a shortcut for <code>--server</code>); with no
+            flag you get London by default.
+          </p>
+          <div class="table-scroll">
+            <table class="opt-table">
+              <thead>
+                <tr><th>Region</th><th><code>--region</code></th><th>Tunnel URL</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>London (default)</td><td><code>lon</code></td><td><code>name.viaduct.sh</code></td></tr>
+                <tr><td>New York</td><td><code>nyc</code></td><td><code>name.nyc.viaduct.sh</code></td></tr>
+                <tr><td>Singapore</td><td><code>sg</code></td><td><code>name.sg.viaduct.sh</code></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="code-block">
+            <pre><span class="c-prompt">$ </span><span class="cmd">viaduct http 8080 --region nyc</span>   <span class="c-dim"># -> name.nyc.viaduct.sh</span></pre>
+            <button class="copy-btn" type="button" data-copy="viaduct http 8080 --region nyc">Copy</button>
+          </div>
+          <div class="code-block">
+            <pre><span class="c-prompt">$ </span><span class="cmd">viaduct http 8080 --region sg</span>    <span class="c-dim"># -> name.sg.viaduct.sh</span></pre>
+            <button class="copy-btn" type="button" data-copy="viaduct http 8080 --region sg">Copy</button>
+          </div>
+          <p>List them any time with <code>viaduct regions</code>.</p>
+          <div class="doc-note">
+            <strong>On latency:</strong> a tunnel always ends at your machine, so a
+            region mainly helps when your visitors and your machine are both far
+            from the default. Pick the node nearest your traffic; there's no benefit
+            to switching if London is already close.
           </div>
         </section>
 

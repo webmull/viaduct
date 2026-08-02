@@ -38,6 +38,15 @@ DEFAULT_SERVER = "viaduct.sh:4443"
 #: off for them (it stays on for every other host).
 _LOCAL_HOSTS = frozenset({"localhost", "127.0.0.1", "::1"})
 
+#: Region nodes: code -> (display name, server host:port). --region is a friendly
+#: alias over --server, so `--region nyc` == `--server nyc.viaduct.sh:4443`.
+REGIONS: dict[str, tuple[str, str]] = {
+    "lon": ("London", "lon.viaduct.sh:4443"),
+    "nyc": ("New York", "nyc.viaduct.sh:4443"),
+    "sg": ("Singapore", "sg.viaduct.sh:4443"),
+}
+_REGION_HINT = ", ".join(f"{code} ({name})" for code, (name, _host) in REGIONS.items())
+
 #: A surge (temporary) pool connection retires if it sits idle this long unused,
 #: so the pool drains back to the baseline after a burst subsides.
 SURGE_IDLE_TIMEOUT = 20.0
@@ -364,9 +373,22 @@ def upgrade() -> None:
 
 
 @app.command()
+def regions() -> None:
+    """List the server regions you can pass to viaduct http --region."""
+    console.print("[bold]Regions[/] (viaduct http PORT --region <code>):", highlight=False)
+    for code, (name, host) in REGIONS.items():
+        console.print(f"  [bold]{code:<4}[/] {name:<12} [dim]{host}[/]", highlight=False)
+    console.print("  [dim]omit --region to use the default server[/]", highlight=False)
+
+
+@app.command()
 def http(
     port: Annotated[int, typer.Argument(help="Local port to expose")],
     server: _ServerOpt = None,
+    region: Annotated[
+        str | None,
+        typer.Option("--region", help=f"Server region ({_REGION_HINT}); a shortcut for --server"),
+    ] = None,
     pool_size: Annotated[
         int, typer.Option(help="Idle data connections to maintain")
     ] = DEFAULT_POOL_SIZE,
@@ -394,7 +416,7 @@ def http(
             f"[yellow]viaduct: could not auto-upgrade to {stalled_at}; "
             f"continuing on {update.installed_version()}[/]"
         )
-    host, srv_port, ssl_ctx = _connection_settings(server, tls, tls_ca)
+    host, srv_port, ssl_ctx = _connection_settings(server, tls, tls_ca, region)
     try:
         pin_seed = config.pin_seed(port) if pin else None
     except config.ConfigError as exc:
@@ -425,7 +447,7 @@ def http(
 
 
 def _connection_settings(
-    server: str | None, tls: bool | None, tls_ca: str | None
+    server: str | None, tls: bool | None, tls_ca: str | None, region: str | None = None
 ) -> tuple[str, int, ssl.SSLContext | None]:
     """Resolve server/TLS from flags, env, and config.toml (in that order)."""
     try:
@@ -433,6 +455,13 @@ def _connection_settings(
     except config.ConfigError as exc:
         console.print(f"[bold red]viaduct: {exc}[/]")
         raise typer.Exit(2) from exc
+    if region is not None:
+        if server is not None:
+            raise typer.BadParameter("use either --region or --server, not both")
+        entry = REGIONS.get(region.lower())
+        if entry is None:
+            raise typer.BadParameter(f"unknown region {region!r}; available: {_REGION_HINT}")
+        server = entry[1]
     server = server or _cfg_str(cfg, "server") or DEFAULT_SERVER
     host, port = _split_hostport(server)
     # TLS: explicit flag wins, then config, else on for real hosts / off locally.
