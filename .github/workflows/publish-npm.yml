@@ -1,0 +1,29 @@
+name: Publish Node client to npm
+
+# Publishes the node/ package (viaduct-sh) to npm when a version tag (v*) is
+# pushed. One-time setup: add an npm automation token as the repo secret
+# NPM_TOKEN (npmjs.com -> Access Tokens -> Generate -> Automation).
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: node
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          registry-url: "https://registry.npmjs.org"
+      - run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
