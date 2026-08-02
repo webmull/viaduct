@@ -144,7 +144,7 @@
       n.vx = cl * COS(lo); n.vy = SIN(la); n.vz = cl * SIN(lo);
     });
 
-    var lon0 = reduce ? 40 : 0;   // spin longitude (deg)
+    var lon0 = 0;                 // spin longitude (deg)
     var TILT0 = 18 * RAD, tilt = TILT0;   // view latitude (rad), draggable
     var homing = false;           // easing tilt back to level after idle
     var R, cx, cy;
@@ -218,7 +218,7 @@
     }
 
     // drag to spin (mouse + touch); vertical swipes still scroll via touch-action
-    var autoSpin = !reduce, dragging = false, px = 0, py = 0, resume = 0;
+    var autoSpin = true, dragging = false, px = 0, py = 0, resume = 0;
     cv.addEventListener("pointerdown", function (e) {
       dragging = true; autoSpin = false; px = e.clientX; py = e.clientY;
       cv.classList.add("dragging");
@@ -238,7 +238,7 @@
     function endDrag() {
       if (!dragging) return;
       dragging = false; cv.classList.remove("dragging");
-      if (!reduce) resume = setTimeout(function () { autoSpin = true; homing = true; }, 4000);
+      resume = setTimeout(function () { autoSpin = true; homing = true; }, 4000);
     }
     cv.addEventListener("pointerup", endDrag);
     cv.addEventListener("pointercancel", endDrag);
@@ -256,14 +256,11 @@
     function stop() { if (raf) { cancelAnimationFrame(raf); raf = 0; } }
 
     size();
-    window.addEventListener("resize", function () { size(); if (reduce) draw(0); });
-    if (reduce) { draw(0); }
-    else {
-      start();
-      document.addEventListener("visibilitychange", function () {
-        if (document.hidden) stop(); else start();
-      });
-    }
+    window.addEventListener("resize", size);
+    start();  // auto-spin runs regardless of prefers-reduced-motion
+    document.addEventListener("visibilitychange", function () {
+      if (document.hidden) stop(); else start();
+    });
   })();
   </script>
   <script>
