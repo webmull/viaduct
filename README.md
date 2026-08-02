@@ -1,6 +1,6 @@
 # viaduct
 
-Self-hosted reverse tunneling in a few hundred lines of Python. Give a service
+Self-hosted reverse tunneling in a couple thousand lines of Python. Give a service
 running on your machine a public HTTPS URL with one command, no inbound ports,
 port forwarding, or NAT configuration.
 
@@ -44,7 +44,7 @@ and only `typer` and `rich` as runtime dependencies.
 - Automatic public TLS via Caddy and Let's Encrypt (DNS-01 wildcard)
 - Graceful drain on server restart and automatic client reconnect with backoff
 - A per-source-IP tunnel cap as an abuse safeguard for a no-auth server
-- Self-update tracking a `stable` release tag, off by default
+- Self-update tracking PyPI releases, off by default
 
 ## Install
 
@@ -176,15 +176,15 @@ when they pass.
 
 ```sh
 viaduct --version
-viaduct upgrade          # reinstall from the latest stable release
+viaduct upgrade          # reinstall the latest release from PyPI
 ```
 
-`viaduct upgrade` follows the `stable` git tag, which is the release channel. On
-an interactive terminal the client also prints a one-line notice, at most once a
-day, when a newer stable release exists (silence it with
-`VIADUCT_NO_UPDATE_CHECK=1`). Automatic upgrades are off by default; set
-`VIADUCT_AUTO_UPGRADE=1` (or `auto_upgrade = true` in `config.toml`) to have the
-client jump to the latest stable release on startup.
+`viaduct upgrade` reinstalls the latest `viaduct-sh` release from PyPI via pipx.
+On an interactive terminal the client also prints a one-line notice, at most once
+a day, when a newer release is out (silence it with `VIADUCT_NO_UPDATE_CHECK=1`).
+Automatic upgrades are off by default; set `VIADUCT_AUTO_UPGRADE=1` (or
+`auto_upgrade = true` in `config.toml`) to have the client jump to the latest
+release on startup.
 
 ## Development
 

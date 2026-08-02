@@ -1,33 +1,34 @@
-"""Self-update against the ``stable`` git tag (the prod channel).
+"""Self-update against the ``viaduct-sh`` release on PyPI.
 
 The client never silently runs newer code by default: it can *notify* that a
-newer stable release exists, and ``viaduct upgrade`` applies it via pipx. Truly
+newer release exists on PyPI, and ``viaduct upgrade`` applies it via pipx. Truly
 automatic upgrades are opt-in (``VIADUCT_AUTO_UPGRADE=1`` or ``auto_upgrade`` in
-config.toml) and only ever jump to whatever the ``stable`` tag points at.
+config.toml) and only ever jump to the latest published release.
 
-"Behind" is decided by the version string in ``pyproject.toml`` at the ``stable``
-ref, so promoting a release means: bump ``version``, move the ``stable`` tag onto
-that commit, and push it.
+"Behind" is decided by the latest version on PyPI, so cutting a release means:
+bump ``version`` and push a ``vX.Y.Z`` tag; CI publishes it to PyPI.
 """
 
 from __future__ import annotations
 
+import json
 import os
 import subprocess
 import sys
 import time
-import tomllib
 import urllib.request
 from importlib import metadata
 from pathlib import Path
 
 from viaduct import config
 
-REPO_SLUG = "webmull/viaduct"
-STABLE_REF = "stable"
-RAW_PYPROJECT = f"https://raw.githubusercontent.com/{REPO_SLUG}/{STABLE_REF}/pyproject.toml"
-#: what ``viaduct upgrade`` / auto-upgrade installs (pinned to the moving tag)
-GIT_TARGET = f"git+https://github.com/{REPO_SLUG}@{STABLE_REF}"
+#: PyPI distribution and its JSON API (the release channel)
+PYPI_NAME = "viaduct-sh"
+PYPI_JSON = f"https://pypi.org/pypi/{PYPI_NAME}/json"
+#: how ``viaduct upgrade`` / auto-upgrade reinstalls the latest release
+UPGRADE_CMD = ["pipx", "install", "--force", PYPI_NAME]
+#: the same command as a copy-pasteable hint for error messages
+UPGRADE_HINT = " ".join(UPGRADE_CMD)
 
 CHECK_INTERVAL = 86_400.0  # notify at most once a day
 FETCH_TIMEOUT = 1.5
@@ -64,12 +65,12 @@ def is_newer(candidate: str, current: str) -> bool:
 
 
 def fetch_stable_version(timeout: float = FETCH_TIMEOUT) -> str | None:
-    """Version declared in pyproject.toml at the ``stable`` tag, or None."""
+    """Latest ``viaduct-sh`` version published on PyPI, or None on any failure."""
     try:
-        req = urllib.request.Request(RAW_PYPROJECT, headers={"User-Agent": "viaduct"})
+        req = urllib.request.Request(PYPI_JSON, headers={"User-Agent": "viaduct"})
         with urllib.request.urlopen(req, timeout=timeout) as resp:
-            data = tomllib.loads(resp.read().decode("utf-8"))
-        version = data["project"]["version"]
+            data = json.loads(resp.read().decode("utf-8"))
+        version = data["info"]["version"]
         return version if isinstance(version, str) else None
     except Exception:  # network, parse, missing key; never fatal
         return None
@@ -141,12 +142,12 @@ def auto_enabled() -> bool:
 
 
 def run_upgrade() -> bool:
-    """Reinstall from the ``stable`` tag via pipx. Returns True on success."""
+    """Reinstall the latest release from PyPI via pipx. Returns True on success."""
     try:
         subprocess.run(
-            ["pipx", "install", "--force", GIT_TARGET],
+            UPGRADE_CMD,
             check=True,
-            timeout=300,  # a hung clone must not block tunnel startup forever
+            timeout=300,  # a hung install must not block tunnel startup forever
         )
         return True
     except (FileNotFoundError, subprocess.CalledProcessError, subprocess.TimeoutExpired):

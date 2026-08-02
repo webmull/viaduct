@@ -357,9 +357,9 @@ def upgrade() -> None:
     latest = update.fetch_stable_version()
     if latest is None:
         console.print(
-            "[bold red]viaduct: could not reach the stable channel[/] "
+            "[bold red]viaduct: could not reach PyPI[/] "
             "(check your connection, or upgrade by hand: "
-            f"pipx install --force {update.GIT_TARGET})"
+            f"{update.UPGRADE_HINT})"
         )
         raise typer.Exit(1)
     if not update.is_newer(latest, current):
@@ -371,7 +371,7 @@ def upgrade() -> None:
     else:
         console.print(
             "[bold red]viaduct: upgrade failed[/]. Is pipx installed? Then run: "
-            f"pipx install --force {update.GIT_TARGET}"
+            f"{update.UPGRADE_HINT}"
         )
         raise typer.Exit(1)
 

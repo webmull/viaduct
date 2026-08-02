@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 # The importable package and the CLI stay `viaduct`; the PyPI distribution is
 # `viaduct-sh` because the bare `viaduct` name is already taken on PyPI.
 name = "viaduct-sh"
-version = "1.0.0"
+version = "1.0.1"
 description = "Self-hosted reverse tunnel: expose a local service at a public HTTPS hostname"
 readme = "README.md"
 requires-python = ">=3.11"
