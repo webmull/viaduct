@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 # The importable package and the CLI stay `viaduct`; the PyPI distribution is
 # `viaduct-sh` because the bare `viaduct` name is already taken on PyPI.
 name = "viaduct-sh"
-version = "0.8.2"
+version = "1.0.0"
 description = "Self-hosted reverse tunnel: expose a local service at a public HTTPS hostname"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -15,7 +15,7 @@ license-files = ["LICENSE"]
 authors = [{ name = "Adam Davis" }]
 keywords = ["tunnel", "reverse-tunnel", "ngrok", "self-hosted", "https", "webhook", "https-tunnel"]
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 5 - Production/Stable",
     "Environment :: Console",
     "Intended Audience :: Developers",
     "Intended Audience :: System Administrators",
