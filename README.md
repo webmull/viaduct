@@ -52,11 +52,16 @@ Requires Python 3.11 or newer. [pipx](https://pipx.pypa.io) keeps the CLI in its
 own isolated environment and puts `viaduct` on your `PATH`:
 
 ```sh
-pipx install git+https://github.com/webmull/viaduct
+pipx install viaduct-sh
 ```
 
-That installs both the `viaduct` client and the `viaductd` server. The client
-targets the hosted `viaduct.sh` server by default, so you can go straight to:
+The PyPI distribution is named `viaduct-sh` (the bare `viaduct` name was already
+taken), and it installs both the `viaduct` client and the `viaductd` server. To
+track the latest commit instead of a release, install straight from git with
+`pipx install git+https://github.com/webmull/viaduct`.
+
+The client targets the hosted `viaduct.sh` server by default, so you can go
+straight to:
 
 ```sh
 viaduct http 8080
