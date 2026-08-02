@@ -11,9 +11,9 @@
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
   <title>viaduct.sh: open-source reverse tunneling for local development</title>
-  <meta name="description" content="viaduct is a small, self-hosted, open-source reverse tunnel in Python. Expose a local port at a public HTTPS URL with one command. No inbound ports, no accounts." />
+  <meta name="description" content="viaduct is a small, open-source reverse tunnel in Python. Give a local port a public HTTPS URL with one command, free on our hosted service or self-hosted on your own. No inbound ports, no accounts." />
   <meta property="og:title" content="viaduct.sh: put your localhost on a public URL" />
-  <meta property="og:description" content="Open-source, self-hosted reverse tunneling. Give a web app on your machine a public HTTPS URL in one command. No accounts, no inbound ports. A small alternative to ngrok you run on your own server." />
+  <meta property="og:description" content="A free, open-source reverse tunnel. Give a web app on your machine a public HTTPS URL in one command, on our hosted service or self-hosted on your own. No accounts, no inbound ports." />
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://viaduct.sh/" />
   <meta property="og:image" content="https://viaduct.sh/og.png" />
@@ -49,8 +49,8 @@
         <h1>Your localhost, at a public&nbsp;URL</h1>
         <p class="lede">
           Give a web app running on your machine a public HTTPS URL, for demos,
-          webhooks, or sharing work in progress. A small, self-hosted alternative
-          to ngrok you run on your own server.
+          webhooks, or sharing work in progress. Free to use on our hosted
+          service, completely open source, and yours to self-host.
         </p>
         <div class="actions">
           <a class="btn btn-primary" href="https://github.com/webmull/viaduct" target="_blank" rel="noreferrer">
@@ -130,7 +130,7 @@
         <div class="section-head">
           <p class="eyebrow">Open source</p>
           <h2>Built in the open</h2>
-          <p>Around 2,100 lines of Python, two dependencies, MIT licensed. No black box, no accounts. Read it, fork it, send a patch.</p>
+          <p>Completely open source: around 2,100 lines of Python, two dependencies, MIT licensed. The hosted service is free, with no accounts. Read it, fork it, send a patch.</p>
         </div>
         <div class="os-actions">
           <div class="code-block" style="max-width:32rem;width:100%">
@@ -152,10 +152,10 @@
             <p class="eyebrow">Self-hosting</p>
             <h2>Easiest on a DigitalOcean droplet</h2>
             <p>
-              The provisioner is built for DigitalOcean. One Ubuntu droplet and
-              one script sets up Caddy, wildcard TLS, systemd, and the firewall
-              for you. A 1 GB droplet is plenty, and the same script rehearses
-              locally first.
+              viaduct.sh is free and hosted, but the whole thing is yours to run.
+              One Ubuntu droplet and one script sets up Caddy, wildcard TLS,
+              systemd, and the firewall for you. A 1 GB droplet is plenty, and the
+              same script rehearses locally first.
             </p>
             <a class="btn btn-outline" href="https://github.com/webmull/viaduct/blob/main/deploy/setup.md" target="_blank" rel="noreferrer">Deployment guide</a>
           </div>
@@ -183,7 +183,8 @@
             <button class="copy-btn" type="button" data-copy="viaduct http 8080">Copy</button>
           </div>
           <p class="install-note">
-            Full usage, self-hosting, and the design notes live in the
+            That second command uses our free hosted service, no signup. Prefer
+            your own? It is the same tool, self-hosted (below). Full usage lives in the
             <a href="https://github.com/webmull/viaduct#readme" target="_blank" rel="noreferrer">README on GitHub</a>.
           </p>
         </div>
@@ -202,6 +203,7 @@
       <div class="footer-links">
         <a href="https://github.com/webmull/viaduct" target="_blank" rel="noreferrer">GitHub</a>
         <a href="/docs/">Docs</a>
+        <a href="/terms/">Fair use</a>
         <a href="https://github.com/webmull/viaduct/blob/main/LICENSE" target="_blank" rel="noreferrer">MIT License</a>
       </div>
     </div>
