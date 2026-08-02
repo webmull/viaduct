@@ -31,4 +31,14 @@ jobs:
       # OIDC trusted publishing needs npm >= 11.5.1; pin it (npm@latest now
       # requires Node 22+, which would EBADENGINE on this Node 20 runner).
       - run: npm install -g npm@11.5.1
-      - run: npm publish --access public
+      # Publish only when node/package.json names a version not already on npm,
+      # so a Python-only release (shared v* tag, Node unchanged) is a clean skip
+      # instead of a duplicate-version failure.
+      - name: Publish if this version is new
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          if npm view "viaduct-sh@$VERSION" version >/dev/null 2>&1; then
+            echo "viaduct-sh@$VERSION already on npm; nothing to publish."
+          else
+            npm publish --access public
+          fi

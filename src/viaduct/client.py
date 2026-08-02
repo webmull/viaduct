@@ -19,10 +19,12 @@ from collections.abc import Callable, Coroutine, Iterator
 from typing import Annotated, Any
 
 import typer
+from rich import box
 from rich.console import Console
 from rich.markup import escape
+from rich.table import Table
 
-from viaduct import config, protocol, update
+from viaduct import config, protocol, registry, update
 from viaduct.relay import CHUNK, splice
 from viaduct.routing import error_response
 
@@ -397,6 +399,86 @@ def regions() -> None:
     console.print("  [dim]omit --region to use the default server[/]", highlight=False)
 
 
+def _uptime(seconds: float) -> str:
+    s = int(max(0.0, seconds))
+    if s < 60:
+        return f"{s}s"
+    m, s = divmod(s, 60)
+    if m < 60:
+        return f"{m}m"
+    h, m = divmod(m, 60)
+    if h < 24:
+        return f"{h}h{m:02d}m"
+    d, h = divmod(h, 24)
+    return f"{d}d{h}h"
+
+
+@app.command("list")
+def list_tunnels() -> None:
+    """List the tunnels you have open on this machine."""
+    tunnels = registry.active()
+    if not tunnels:
+        console.print("[dim]no active tunnels on this machine[/]", highlight=False)
+        return
+    table = Table(box=box.SIMPLE, pad_edge=False, highlight=False)
+    table.add_column("NAME", style="bold")
+    table.add_column("PORT", justify="right")
+    table.add_column("URL", style="green")
+    table.add_column("UP", justify="right")
+    table.add_column("PID", justify="right", style="dim")
+    now = time.time()
+    for t in tunnels:
+        table.add_row(
+            str(t.get("subdomain", "?")),
+            str(t.get("port", "?")),
+            str(t.get("url", "?")),
+            _uptime(now - float(t.get("started", now))),
+            str(t.get("pid", "?")),
+        )
+    console.print(table)
+
+
+@app.command()
+def kill(
+    targets: Annotated[
+        list[str] | None,
+        typer.Argument(help="Subdomain(s) or PID(s) to stop; omit when using --all"),
+    ] = None,
+    all_tunnels: Annotated[
+        bool, typer.Option("--all", help="Stop every tunnel on this machine")
+    ] = False,
+) -> None:
+    """Stop tunnels running on this machine (they drain, then exit)."""
+    tunnels = registry.active()
+    if not tunnels:
+        console.print("[dim]no active tunnels on this machine[/]", highlight=False)
+        return
+    if all_tunnels:
+        chosen = tunnels
+    elif targets:
+        wanted = set(targets)
+        chosen = [
+            t for t in tunnels
+            if str(t.get("subdomain")) in wanted or str(t.get("pid")) in wanted
+        ]
+        known = {str(t.get("subdomain")) for t in tunnels} | {str(t.get("pid")) for t in tunnels}
+        for miss in sorted(wanted - known):
+            console.print(f"[yellow]viaduct: no tunnel matching {miss!r}[/]", highlight=False)
+    else:
+        console.print("[bold red]viaduct: name a tunnel to stop, or pass --all[/]", highlight=False)
+        raise typer.Exit(2)
+    stopped = 0
+    for t in chosen:
+        if registry.terminate(int(t["pid"])):
+            console.print(
+                f"[green]✓[/] stopping [bold]{t.get('subdomain')}[/] [dim](pid {t['pid']})[/]",
+                highlight=False,
+            )
+            stopped += 1
+    if stopped:
+        console.print(f"[dim]{stopped} tunnel(s) draining[/]", highlight=False)
+
+
 @app.command()
 def http(
     port: Annotated[int, typer.Argument(help="Local port to expose")],
@@ -471,6 +553,8 @@ def http(
     except OSError as exc:
         console.print(f"[bold red]viaduct: cannot reach server: {exc}[/]")
         raise typer.Exit(1) from exc
+    finally:
+        registry.deregister()
 
 
 def _connection_settings(
@@ -676,6 +760,7 @@ async def _run_http(
             f"requests will return 502 until you start it[/]"
         )
 
+    started = time.time()
     with _quit_on_q(loop, stop, fancy) as q_active:
         delay = 1.0
         first = True
@@ -725,6 +810,13 @@ async def _run_http(
                 _print_tunnel_up(hostname, local_port, q_active)
             else:
                 console.print(f"[bold green]tunnel up[/] {hostname} → 127.0.0.1:{local_port}")
+            registry.register(
+                port=local_port,
+                subdomain=hostname.split(".", 1)[0],
+                url=f"https://{hostname}",
+                server=f"{server_host}:{server_port}",
+                started=started,
+            )
             closed = asyncio.ensure_future(client.wait_closed())
             stopped = asyncio.ensure_future(stop.wait())
             await asyncio.wait({closed, stopped}, return_when=asyncio.FIRST_COMPLETED)

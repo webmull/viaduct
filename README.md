@@ -114,6 +114,19 @@ and reject a request whose `Host` is the public tunnel URL with an error like
 app see the request as if it arrived on `localhost`, so it stops rejecting them,
 while visitors still use the public URL.
 
+### Managing tunnels
+
+Each `viaduct http` runs in its own process. To see and stop the tunnels you have
+open on this machine, from any shell:
+
+```sh
+viaduct list                 # name, port, URL, uptime, pid
+viaduct kill funny-otter     # stop one by name (or pid)
+viaduct kill --all           # stop them all
+```
+
+These are machine-local: they only see the tunnels you started on this box.
+
 ## From your code
 
 Open a tunnel without the CLI. Handy for tests that need a real public URL
