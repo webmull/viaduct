@@ -30,6 +30,12 @@
     .reg-table th { color:var(--muted-foreground); font-size:0.72rem; text-transform:uppercase; letter-spacing:0.08em; font-weight:600; }
     .reg-table tr:last-child td { border-bottom:0; }
     .reg-table code { font-family:var(--font-mono); font-size:0.85em; background:var(--secondary); padding:0.1rem 0.4rem; border-radius:0.3rem; color:var(--foreground); }
+    .reg-status { color:var(--muted-foreground); font-variant-numeric:tabular-nums; }
+    .reg-status .dot { display:inline-block; width:0.5rem; height:0.5rem; border-radius:999px; background:var(--muted-foreground); margin-right:0.45rem; vertical-align:middle; transition:background 0.2s ease; }
+    .reg-status.up { color:var(--foreground); }
+    .reg-status.up .dot { background:#3fb950; box-shadow:0 0 0 3px color-mix(in oklab,#3fb950 20%,transparent); }
+    .reg-status.down { color:#f0836b; }
+    .reg-status.down .dot { background:#f85149; }
     .reg-def { color:var(--muted-foreground); font-size:0.82em; }
   </style>
 </head>
@@ -74,7 +80,7 @@
       </div>
 
       <div class="table-scroll">
-        <table class="reg-table"><thead><tr><th>Region</th><th>Endpoint</th></tr></thead><tbody><tr><td>London <span class="reg-def">default</span></td><td><code>viaduct.sh</code></td></tr><tr><td>New York</td><td><code>nyc.viaduct.sh</code></td></tr><tr><td>Singapore</td><td><code>sg.viaduct.sh</code></td></tr><tr><td>Sydney</td><td><code>syd.viaduct.sh</code></td></tr></tbody></table>
+        <table class="reg-table"><thead><tr><th>Region</th><th>Endpoint</th><th>Status</th></tr></thead><tbody><tr><td>London <span class="reg-def">default</span></td><td><code>viaduct.sh</code></td><td class="reg-status" data-host="viaduct.sh"><span class="dot"></span>checking</td></tr><tr><td>New York</td><td><code>nyc.viaduct.sh</code></td><td class="reg-status" data-host="nyc.viaduct.sh"><span class="dot"></span>checking</td></tr><tr><td>Singapore</td><td><code>sg.viaduct.sh</code></td><td class="reg-status" data-host="sg.viaduct.sh"><span class="dot"></span>checking</td></tr><tr><td>Sydney</td><td><code>syd.viaduct.sh</code></td><td class="reg-status" data-host="syd.viaduct.sh"><span class="dot"></span>checking</td></tr></tbody></table>
       </div>
 
       <div class="doc-section" style="border-top:1px solid var(--border);padding-top:1.5rem">
@@ -248,6 +254,32 @@
         if (document.hidden) stop(); else start();
       });
     }
+  })();
+  </script>
+  <script>
+  (function () {
+    var cells = document.querySelectorAll(".reg-status");
+    function probe(cell) {
+      var host = cell.getAttribute("data-host");
+      var ctrl = new AbortController();
+      var to = setTimeout(function () { ctrl.abort(); }, 6000);
+      var t0 = performance.now();
+      fetch("https://" + host + "/_viaduct/health", { cache: "no-store", signal: ctrl.signal })
+        .then(function (r) {
+          clearTimeout(to);
+          if (!r.ok) throw 0;
+          cell.className = "reg-status up";
+          cell.innerHTML = '<span class="dot"></span>' + Math.round(performance.now() - t0) + " ms";
+        })
+        .catch(function () {
+          clearTimeout(to);
+          cell.className = "reg-status down";
+          cell.innerHTML = '<span class="dot"></span>unreachable';
+        });
+    }
+    function run() { for (var i = 0; i < cells.length; i++) probe(cells[i]); }
+    run();
+    setInterval(run, 20000);
   })();
   </script>
   <script src="/to-top.js" defer></script>

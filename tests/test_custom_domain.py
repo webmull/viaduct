@@ -93,6 +93,23 @@ def test_tls_check_gates_on_live_tunnel(monkeypatch) -> None:
     run(scenario())
 
 
+def test_health_endpoint_is_open_and_cors_enabled() -> None:
+    async def scenario() -> None:
+        async with bare_server() as server:
+            reader, writer = await asyncio.open_connection("127.0.0.1", server.public_port)
+            writer.write(
+                b"GET /_viaduct/health HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n"
+            )
+            await writer.drain()
+            data = await reader.read(-1)
+            writer.close()
+            assert data.startswith(b"HTTP/1.1 200"), data[:80]
+            assert b"Access-Control-Allow-Origin: *" in data
+            assert b'{"ok":true}' in data
+
+    run(scenario())
+
+
 def test_prewarm_fires_for_live_custom_domain_only(monkeypatch) -> None:
     async def scenario() -> None:
         async with bare_server() as server:

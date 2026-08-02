@@ -35,6 +35,8 @@ DOMAIN_CACHE_TTL = 60.0
 CNAME_MAX_HOPS = 3
 #: Caddy's on-demand-TLS ask endpoint, served on the public listener
 TLS_CHECK_PATH = "/_viaduct/tls-check"
+#: public, CORS-open liveness endpoint the region status page probes
+HEALTH_PATH = "/_viaduct/health"
 #: where the local Caddy terminates public TLS (for cert pre-warming)
 CADDY_TLS_ADDR = ("127.0.0.1", 443)
 #: don't re-trigger on-demand issuance for the same custom domain within this window
@@ -311,6 +313,9 @@ class TunnelServer:
         if routing.request_target(head).startswith(TLS_CHECK_PATH):
             await self._tls_check(head, writer)  # Caddy on-demand-TLS ask endpoint
             return
+        if routing.request_target(head).startswith(HEALTH_PATH):
+            await self._health(writer)  # region status page probes this
+            return
         host = routing.extract_host(head)
         subdomain = self._match_subdomain(host)
         if subdomain is None and host:
@@ -399,6 +404,26 @@ class TunnelServer:
             name = target  # follow the chain toward BASE_DOMAIN
         self._domain_cache[host] = (subdomain, now + DOMAIN_CACHE_TTL)
         return subdomain
+
+    async def _health(self, writer: asyncio.StreamWriter) -> None:
+        """Public liveness check for the region status page (CORS-open, no secrets).
+
+        A 200 here means this node's public path (Caddy -> viaductd) is answering;
+        the page measures its own round-trip and marks the region up or down.
+        """
+        body = b'{"ok":true}'
+        reply = (
+            "HTTP/1.1 200 OK\r\n"
+            "Content-Type: application/json\r\n"
+            "Access-Control-Allow-Origin: *\r\n"
+            "Cache-Control: no-store\r\n"
+            f"Content-Length: {len(body)}\r\n"
+            "Connection: close\r\n\r\n"
+        ).encode() + body
+        with contextlib.suppress(ConnectionError):
+            writer.write(reply)
+            await writer.drain()
+        writer.close()
 
     async def _tls_check(self, head: bytes, writer: asyncio.StreamWriter) -> None:
         """Answer Caddy's on-demand-TLS ask: 200 only for a live tunnel's domain.

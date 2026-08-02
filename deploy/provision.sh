@@ -132,6 +132,7 @@ ${apex} {
 	tls {
 		dns digitalocean {env.DO_API_TOKEN}
 	}
+	reverse_proxy /_viaduct/health 127.0.0.1:8080
 	root * /var/www/viaduct-site
 	header Cache-Control "no-cache"
 	file_server
@@ -168,6 +169,7 @@ EOF
 }
 ${BASE_DOMAIN} {
 	tls internal
+	reverse_proxy /_viaduct/health 127.0.0.1:8080
 	root * /var/www/viaduct-site
 	header Cache-Control "no-cache"
 	file_server
