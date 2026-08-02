@@ -1,0 +1,29 @@
+name: Publish to PyPI
+
+# Publishes viaduct-sh to PyPI when a version tag (v*) is pushed. Uses PyPI
+# Trusted Publishing (OIDC): no API token is stored in the repo. One-time setup
+# on PyPI: add a pending publisher for project "viaduct-sh", owner "webmull",
+# repository "viaduct", workflow "publish.yml" (leave the environment blank).
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write # mint the OIDC token PyPI trusts
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install --upgrade build
+      - run: python -m build
+      - run: pipx run twine check dist/*
+      - uses: pypa/gh-action-pypi-publish@release/v1

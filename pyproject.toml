@@ -3,15 +3,39 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "viaduct"
+# The importable package and the CLI stay `viaduct`; the PyPI distribution is
+# `viaduct-sh` because the bare `viaduct` name is already taken on PyPI.
+name = "viaduct-sh"
 version = "0.8.2"
 description = "Self-hosted reverse tunnel: expose a local service at a public HTTPS hostname"
 readme = "README.md"
 requires-python = ">=3.11"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Adam Davis" }]
+keywords = ["tunnel", "reverse-tunnel", "ngrok", "self-hosted", "https", "webhook", "https-tunnel"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Intended Audience :: System Administrators",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Internet :: Proxy Servers",
+    "Topic :: Internet :: WWW/HTTP",
+    "Topic :: Software Development :: Testing",
+]
 dependencies = [
     "typer>=0.12",
     "rich>=13",
 ]
+
+[project.urls]
+Homepage = "https://viaduct.sh"
+Documentation = "https://viaduct.sh/docs/"
+Repository = "https://github.com/webmull/viaduct"
 
 [project.scripts]
 viaduct = "viaduct.client:main"
@@ -25,6 +49,10 @@ dev = [
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/viaduct"]
+
+[tool.hatch.build.targets.sdist]
+# keep the sdist to the package itself, not the marketing site or deploy assets
+include = ["src/viaduct", "tests", "README.md", "LICENSE", "SPEC.md", "pyproject.toml"]
 
 [tool.ruff]
 line-length = 100

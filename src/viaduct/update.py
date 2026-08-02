@@ -36,10 +36,13 @@ _UPGRADED_SENTINEL = "_VIADUCT_UPGRADED"
 
 
 def installed_version() -> str:
-    try:
-        return metadata.version("viaduct")
-    except metadata.PackageNotFoundError:
-        return "0.0.0"
+    # PyPI distribution is "viaduct-sh"; "viaduct" covers older source installs.
+    for dist in ("viaduct-sh", "viaduct"):
+        try:
+            return metadata.version(dist)
+        except metadata.PackageNotFoundError:
+            continue
+    return "0.0.0"
 
 
 def _ver_tuple(v: str) -> tuple[int, ...]:
