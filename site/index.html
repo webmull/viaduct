@@ -269,12 +269,42 @@
       await sleep(2600);
     }
 
+    async function listScene(my) {
+      screen.innerHTML = '';
+      var cmd = line();
+      await type(cmd, 'viaduct list', my);
+      if (my !== token) return;
+      await sleep(360);
+      line(' ');
+      line('  <span class="c-dim">NAME          PORT  URL                              UP   PID</span>');
+      line('  funny-otter   8080  <span class="c-url">https://funny-otter.viaduct.sh</span>   2m   41821');
+      line('  mighty-coati  3000  <span class="c-url">https://mighty-coati.viaduct.sh</span>  31s  41850');
+      await sleep(2800);
+    }
+
+    async function killScene(my) {
+      screen.innerHTML = '';
+      var cmd = line();
+      await type(cmd, 'viaduct kill --all', my);
+      if (my !== token) return;
+      await sleep(360);
+      line(' ');
+      line('  <span class="c-ok">✓</span> stopping funny-otter <span class="c-dim">(pid 41821)</span>');
+      line('  <span class="c-ok">✓</span> stopping mighty-coati <span class="c-dim">(pid 41850)</span>');
+      line('  <span class="c-dim">2 tunnels draining</span>');
+      await sleep(2400);
+    }
+
     async function run() {
       var my = ++token;
       for (var s = 0; s < SCENARIOS.length; s++) {
         if (my !== token) return;
         await tunnel(SCENARIOS[s], my);
       }
+      if (my !== token) return;
+      await listScene(my);
+      if (my !== token) return;
+      await killScene(my);
       if (my === token) run();
     }
 
