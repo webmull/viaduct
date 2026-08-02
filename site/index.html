@@ -31,13 +31,17 @@
   <meta name="twitter:description" content="A free, open-source reverse tunnel. Give a web app on your machine a public HTTPS URL in one command, on our hosted service or self-hosted on your own. No accounts, no inbound ports." />
 </head>
 <body>
-  <header class="site-header">
+  <header class="site-header has-menu">
     <div class="wrap header-inner">
       <a class="brand" href="/">
         <img src="viaduct-mark.png" alt="" width="320" height="320" />
         <span>viaduct<span class="tld">.sh</span></span>
       </a>
-      <nav class="site-nav">
+      <button class="nav-toggle" type="button" aria-label="Menu" aria-expanded="false" aria-controls="site-nav">
+        <svg class="ico-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        <svg class="ico-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg>
+      </button>
+      <nav class="site-nav" id="site-nav">
         <a class="nav-desktop" href="#how">How it works</a>
         <a class="nav-desktop" href="#install">Install</a>
         <a class="nav-desktop" href="/network/">Network</a>
@@ -357,6 +361,7 @@
     run();
   })();
   </script>
+  <script src="/nav-toggle.js" defer></script>
   <script src="/to-top.js" defer></script>
 </body>
 </html>

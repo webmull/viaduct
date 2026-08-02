@@ -452,3 +452,48 @@ main > section:nth-child(even) { background: var(--surface); }
 .to-top.show:focus-visible { opacity: 1; outline: 2px solid var(--primary); outline-offset: 2px; }
 .to-top svg { width: 1rem; height: 1rem; }
 @media (prefers-reduced-motion: reduce) { .to-top { transition: opacity 0.25s ease; transform: none; } }
+
+/* ---- mobile hamburger menu (opt-in via .site-header.has-menu) ---- */
+.nav-toggle {
+  display: none;
+  align-items: center; justify-content: center;
+  width: 2.5rem; height: 2.5rem; padding: 0;
+  background: transparent; border: 1px solid var(--border-strong);
+  border-radius: 0.6rem; color: var(--foreground); cursor: pointer;
+}
+.nav-toggle svg { width: 1.2rem; height: 1.2rem; }
+.nav-toggle .ico-close { display: none; }
+
+.site-header.has-menu .nav-toggle { display: inline-flex; }
+.site-header.has-menu.open .nav-toggle .ico-open { display: none; }
+.site-header.has-menu.open .nav-toggle .ico-close { display: inline; }
+
+.site-header.has-menu .site-nav {
+  position: absolute; top: 100%; left: 0; right: 0;
+  flex-direction: column; align-items: stretch; gap: 0;
+  background: color-mix(in oklab, var(--background) 97%, transparent);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  padding: 0.4rem 1.35rem 1.1rem;
+  box-shadow: 0 26px 44px -26px rgba(0,0,0,0.75);
+  display: none;
+}
+.site-header.has-menu.open .site-nav { display: flex; }
+.site-header.has-menu .site-nav .nav-desktop {
+  display: block; padding: 0.9rem 0.2rem; font-size: 1rem;
+  color: var(--foreground); border-bottom: 1px solid var(--border);
+}
+.site-header.has-menu .site-nav .gh-pill { margin-top: 1rem; align-self: flex-start; }
+
+@media (min-width: 860px) {
+  .site-header.has-menu .nav-toggle { display: none; }
+  .site-header.has-menu .site-nav {
+    position: static; flex-direction: row; align-items: center; gap: 1.35rem;
+    background: none; backdrop-filter: none; border: 0; padding: 0; box-shadow: none;
+    display: flex;
+  }
+  .site-header.has-menu .site-nav .nav-desktop {
+    display: flex; border: 0; padding: 0; font-size: 0.9rem; color: var(--muted-foreground);
+  }
+  .site-header.has-menu .site-nav .gh-pill { margin-top: 0; align-self: auto; }
+}
