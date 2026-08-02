@@ -47,6 +47,7 @@ REGIONS: dict[str, tuple[str, str]] = {
     "lon": ("London", "viaduct.sh:4443"),
     "nyc": ("New York", "nyc.viaduct.sh:4443"),
     "sg": ("Singapore", "sg.viaduct.sh:4443"),
+    "syd": ("Sydney", "syd.viaduct.sh:4443"),
 }
 _REGION_HINT = ", ".join(f"{code} ({name})" for code, (name, _host) in REGIONS.items())
 
