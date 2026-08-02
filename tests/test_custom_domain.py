@@ -91,3 +91,36 @@ def test_tls_check_gates_on_live_tunnel(monkeypatch) -> None:
                 await client.stop()
 
     run(scenario())
+
+
+def test_prewarm_fires_for_live_custom_domain_only(monkeypatch) -> None:
+    async def scenario() -> None:
+        async with bare_server() as server:
+            client = make_client(server, pool_size=0)
+            await client.start()
+            sub = client.subdomain
+            warmed: list[str] = []
+
+            async def record(self, domain: str) -> None:
+                warmed.append(domain)
+
+            monkeypatch.setattr(support.TunnelServer, "_prewarm_cert", record)
+
+            async def fake(name: str) -> str | None:
+                return f"{sub}.{BASE_DOMAIN}" if name == "demo.example.test" else None
+
+            monkeypatch.setattr(dns, "resolve_cname", fake)
+            try:
+                # wildcard host is covered by our own cert -> never pre-warmed
+                assert await _ask(server.public_port, f"{sub}.{BASE_DOMAIN}") == 200
+                # a live custom domain warms exactly once per window (deduped)
+                assert await _ask(server.public_port, "demo.example.test") == 200
+                assert await _ask(server.public_port, "demo.example.test") == 200
+                # a domain with no live tunnel is never pre-warmed
+                assert await _ask(server.public_port, "random.example.test") == 404
+                await asyncio.sleep(0)  # let scheduled tasks run
+                assert warmed == ["demo.example.test"]
+            finally:
+                await client.stop()
+
+    run(scenario())

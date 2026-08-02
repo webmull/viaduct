@@ -35,6 +35,12 @@ DOMAIN_CACHE_TTL = 60.0
 CNAME_MAX_HOPS = 3
 #: Caddy's on-demand-TLS ask endpoint, served on the public listener
 TLS_CHECK_PATH = "/_viaduct/tls-check"
+#: where the local Caddy terminates public TLS (for cert pre-warming)
+CADDY_TLS_ADDR = ("127.0.0.1", 443)
+#: don't re-trigger on-demand issuance for the same custom domain within this window
+PREWARM_TTL = 120.0
+#: cap on a single pre-warm handshake, generous enough for a cold ACME round-trip
+PREWARM_TIMEOUT = 30.0
 
 
 class Tunnel:
@@ -117,6 +123,10 @@ class TunnelServer:
         self.tunnels: dict[str, Tunnel] = {}
         #: custom domain -> tunnel subdomain (or None), resolved via CNAME, cached
         self._domain_cache: dict[str, tuple[str | None, float]] = {}
+        #: custom domain -> time until which a pre-warm need not be repeated
+        self._prewarmed: dict[str, float] = {}
+        #: strong refs to fire-and-forget pre-warm tasks, so they aren't GC'd
+        self._bg_tasks: set[asyncio.Task[None]] = set()
         self._active_splices = 0
         self._no_active_splices = asyncio.Event()
         self._no_active_splices.set()
@@ -397,16 +407,58 @@ class TunnelServer:
         """
         query = urlsplit(routing.request_target(head)).query
         domain = (parse_qs(query).get("domain") or [""])[0].lower().rstrip(".")
-        subdomain = self._match_subdomain(domain)
+        wildcard = self._match_subdomain(domain)  # covered by our wildcard cert already
+        subdomain = wildcard
         if subdomain is None and domain:
             subdomain = await self._custom_subdomain(domain)
         ok = bool(subdomain and subdomain in self.tunnels)
+        if ok and wildcard is None:
+            # A live custom domain that needs its own on-demand cert: kick off
+            # issuance now so the first real visitor doesn't wait on the ACME hop.
+            self._maybe_prewarm(domain)
         status = "200 OK" if ok else "404 Not Found"
         reply = f"HTTP/1.1 {status}\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
         with contextlib.suppress(ConnectionError):
             writer.write(reply.encode())
             await writer.drain()
         writer.close()
+
+    def _maybe_prewarm(self, domain: str) -> None:
+        """Schedule a one-off cert pre-warm for *domain*, deduped per window."""
+        now = asyncio.get_running_loop().time()
+        expiry = self._prewarmed.get(domain)
+        if expiry is not None and expiry > now:
+            return
+        if len(self._prewarmed) > 4096:  # bound against random-Host floods
+            self._prewarmed = {d: t for d, t in self._prewarmed.items() if t > now}
+        self._prewarmed[domain] = now + PREWARM_TTL
+        task = asyncio.create_task(self._prewarm_cert(domain))
+        self._bg_tasks.add(task)
+        task.add_done_callback(self._bg_tasks.discard)
+
+    async def _prewarm_cert(self, domain: str) -> None:
+        """Open one throwaway TLS handshake to the local Caddy for *domain*.
+
+        Caddy issues on-demand certs during the handshake, and locks per name, so
+        this drives issuance to completion from a stable in-process client instead
+        of leaving it to whichever visitor arrives first (who would otherwise eat
+        the multi-second ACME round-trip, or abort and leave it half done).
+        """
+        ctx = ssl.create_default_context()
+        ctx.check_hostname = False  # we only want to trigger issuance, not verify
+        ctx.verify_mode = ssl.CERT_NONE
+        try:
+            async with asyncio.timeout(PREWARM_TIMEOUT):
+                _, writer = await asyncio.open_connection(
+                    *CADDY_TLS_ADDR, ssl=ctx, server_hostname=domain
+                )
+                writer.close()
+                with contextlib.suppress(ConnectionError, ssl.SSLError):
+                    await writer.wait_closed()
+        except (OSError, ssl.SSLError, TimeoutError) as exc:
+            log.debug("prewarm failed domain=%s err=%s", domain, exc)
+        else:
+            log.info("prewarmed cert domain=%s", domain)
 
     async def _respond(
         self,

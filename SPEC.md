@@ -73,6 +73,11 @@ the user's DNS.
   200 only when the domain resolves to a live tunnel, so it is not an open cert
   mill. Issuance uses HTTP-01, which only succeeds if the domain already points
   at the droplet, so you can only serve domains whose DNS you control.
+- **Cert pre-warm.** The first time the ask endpoint sees a live custom domain,
+  viaductd opens one throwaway TLS handshake to the local Caddy for it (deduped
+  per domain for a short window). Caddy locks issuance per name, so this drives
+  the ACME round-trip to completion from a stable in-process client, and the
+  first real visitor gets a ready cert instead of eating the multi-second wait.
 - **Still no state.** The binding is the user's CNAME plus the live in-memory
   tunnel; nothing is persisted, and a removed CNAME simply stops resolving.
 
