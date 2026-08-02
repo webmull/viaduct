@@ -226,7 +226,11 @@
 
     var screen = document.getElementById('screen');
     if (!screen) return;
-    var HOST = 'sunny-otter.viaduct.sh';
+    var SCENARIOS = [
+      { cmd: 'viaduct http 8080',              host: 'sunny-otter.viaduct.sh',        note: 'a fresh random URL each run' },
+      { cmd: 'viaduct http 8080 --pin',        host: 'amber-stoat-9f3ac4.viaduct.sh', note: 'same URL every reconnect' },
+      { cmd: 'viaduct http 8080 --region syd', host: 'rapid-finch.syd.viaduct.sh',    note: 'served from Sydney' }
+    ];
     var SPIN = ['⠋','⠙','⠹','⠸','⠼','⠴','⠦','⠧','⠇','⠏'];
     var sleep = function (ms) { return new Promise(function (r) { setTimeout(r, ms); }); };
     var token = 0;
@@ -251,36 +255,33 @@
       el.innerHTML = promptHTML + esc(text);
     }
 
-    async function run() {
-      var my = ++token;
+    async function tunnel(sc, my) {
       screen.innerHTML = '';
-
       var cmd = line();
-      await type(cmd, 'viaduct http 8080', my);
+      await type(cmd, sc.cmd, my);
       if (my !== token) return;
-      await sleep(300);
+      await sleep(320);
 
       var spin = line();
-      for (var t = 0; t < 16; t++) {
+      for (var t = 0; t < 14; t++) {
         if (my !== token) return;
         spin.innerHTML = '<span class="c-prompt">' + SPIN[t % SPIN.length] + '</span> establishing tunnel…';
         await sleep(80);
       }
       spin.innerHTML = '<span class="c-ok">✓</span> tunnel live';
       line(' ');
-      line('  <span class="c-url">https://' + HOST + '</span>');
+      line('  <span class="c-url">https://' + sc.host + '</span>');
       line('  <span class="c-dim">→ http://localhost:8080</span>');
-      line(' ');
-      await sleep(900);
+      if (sc.note) line('  <span class="c-dim">↳ ' + sc.note + '</span>');
+      await sleep(2600);
+    }
 
-      var c2 = line();
-      await type(c2, 'curl -sI https://' + HOST, my);
-      if (my !== token) return;
-      await sleep(420);
-      line('<span class="c-ok">HTTP/2 200</span>');
-      line(promptHTML + '<span class="cursor"></span>');
-
-      await sleep(4600);
+    async function run() {
+      var my = ++token;
+      for (var s = 0; s < SCENARIOS.length; s++) {
+        if (my !== token) return;
+        await tunnel(SCENARIOS[s], my);
+      }
       if (my === token) run();
     }
 
