@@ -86,7 +86,7 @@ tunnel, and serves `502` until your app comes up.
 | Option | Default | Description |
 | --- | --- | --- |
 | `--server host:port` | `viaduct.sh:4443` | The `viaductd` server to dial |
-| `--region lon\|nyc\|sg\|syd` | none | Pick a server region (shortcut for `--server`) |
+| `--region lon\|nyc\|sg\|syd\|blr` | none | Pick a server region (shortcut for `--server`) |
 | `--tls` / `--no-tls` | on, off for localhost | TLS to the tunnel port |
 | `--tls-ca PATH` | none | Extra CA bundle to trust (for a self-signed server) |
 | `--pool-size N` | 40 | Idle data connections kept ready for incoming requests |

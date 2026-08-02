@@ -11,7 +11,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/styles.css" />
   <title>The viaduct network: regions we operate</title>
-  <meta name="description" content="viaduct.sh operates tunnel nodes in four regions: London, New York, Singapore, and Sydney. Pick the one nearest your traffic with --region." />
+  <meta name="description" content="viaduct.sh operates tunnel nodes in five regions: London, New York, Singapore, Sydney, and Bangalore. Pick the one nearest your traffic with --region." />
   <style>
     .netpanel {
       border: 1px solid var(--border-strong); border-radius: 1rem;
@@ -74,7 +74,7 @@
         <p class="eyebrow">Network</p>
         <h1>The viaduct network</h1>
         <p>
-          viaduct.sh operates tunnel nodes in four regions. Run your tunnel on the
+          viaduct.sh operates tunnel nodes in five regions. Run your tunnel on the
           one nearest your traffic; a tunnel always terminates at your machine, so
           pick the node closest to you and your visitors.
         </p>
@@ -85,12 +85,12 @@
       <div class="netpanel">
         <div class="globe-wrap">
           <canvas id="globe" class="globe" role="img"
-            aria-label="Rotating globe showing viaduct regions in New York, London, Singapore, and Sydney."></canvas>
+            aria-label="Rotating globe showing viaduct regions in New York, London, Singapore, Sydney, and Bangalore."></canvas>
         </div>
       </div>
 
       <div class="table-scroll">
-        <table class="reg-table"><thead><tr><th>Region</th><th>Endpoint</th><th>Status</th></tr></thead><tbody><tr><td><img class="flag" src="/flags/gb.svg" alt="" width="18" height="14" /> London <span class="reg-def">default</span></td><td><code>viaduct.sh</code></td><td class="reg-status" data-host="viaduct.sh"><span class="dot"></span>checking</td></tr><tr><td><img class="flag" src="/flags/us.svg" alt="" width="18" height="14" /> New York</td><td><code>nyc.viaduct.sh</code></td><td class="reg-status" data-host="nyc.viaduct.sh"><span class="dot"></span>checking</td></tr><tr><td><img class="flag" src="/flags/sg.svg" alt="" width="18" height="14" /> Singapore</td><td><code>sg.viaduct.sh</code></td><td class="reg-status" data-host="sg.viaduct.sh"><span class="dot"></span>checking</td></tr><tr><td><img class="flag" src="/flags/au.svg" alt="" width="18" height="14" /> Sydney</td><td><code>syd.viaduct.sh</code></td><td class="reg-status" data-host="syd.viaduct.sh"><span class="dot"></span>checking</td></tr></tbody></table>
+        <table class="reg-table"><thead><tr><th>Region</th><th>Endpoint</th><th>Status</th></tr></thead><tbody><tr><td><img class="flag" src="/flags/gb.svg" alt="" width="18" height="14" /> London <span class="reg-def">default</span></td><td><code>viaduct.sh</code></td><td class="reg-status" data-host="viaduct.sh"><span class="dot"></span>checking</td></tr><tr><td><img class="flag" src="/flags/us.svg" alt="" width="18" height="14" /> New York</td><td><code>nyc.viaduct.sh</code></td><td class="reg-status" data-host="nyc.viaduct.sh"><span class="dot"></span>checking</td></tr><tr><td><img class="flag" src="/flags/sg.svg" alt="" width="18" height="14" /> Singapore</td><td><code>sg.viaduct.sh</code></td><td class="reg-status" data-host="sg.viaduct.sh"><span class="dot"></span>checking</td></tr><tr><td><img class="flag" src="/flags/au.svg" alt="" width="18" height="14" /> Sydney</td><td><code>syd.viaduct.sh</code></td><td class="reg-status" data-host="syd.viaduct.sh"><span class="dot"></span>checking</td></tr><tr><td><img class="flag" src="/flags/in.svg" alt="" width="18" height="14" /> Bangalore</td><td><code>blr.viaduct.sh</code></td><td class="reg-status" data-host="blr.viaduct.sh"><span class="dot"></span>checking</td></tr></tbody></table>
       </div>
 
       <div style="border-top:1px solid var(--border);margin-top:1.25rem;padding-top:1.1rem">
@@ -130,7 +130,8 @@
       { city: "New York", lat: 40.68, lon: -74.16 },
       { city: "London",   lat: 51.48, lon: 0 },
       { city: "Singapore",lat: 1.44,  lon: 103.68 },
-      { city: "Sydney",   lat: -33.84,lon: 151.2 }
+      { city: "Sydney",   lat: -33.84,lon: 151.2 },
+      { city: "Bangalore",lat: 12.97, lon: 77.59 }
     ];
     var RAD = Math.PI / 180, COS = Math.cos, SIN = Math.sin, TAU = 6.2831853;
     var reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
