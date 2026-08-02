@@ -37,6 +37,14 @@
     .reg-status.down { color:#f0836b; }
     .reg-status.down .dot { background:#f85149; }
     .reg-def { color:var(--muted-foreground); font-size:0.82em; }
+    @media (max-width: 560px) {
+      /* fit the three columns on a phone instead of forcing a scrollbar */
+      .reg-table { font-size:0.8rem; }
+      .reg-table th, .reg-table td { padding:0.5rem 0.4rem; }
+      .reg-table code { font-size:0.82em; padding:0.05rem 0.3rem; }
+      .table-scroll { scrollbar-width:none; }
+      .table-scroll::-webkit-scrollbar { display:none; }
+    }
   </style>
 </head>
 <body>

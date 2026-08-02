@@ -303,6 +303,15 @@ main > section:nth-child(even) { background: var(--surface); }
   .deploy-logo img { width: 9rem; }
   .terminal-title { display: none; }        /* free up the narrow terminal bar */
   .cta .wrap { padding: 1.75rem 1.15rem; }
+  /* keep the footer links on one line: centered when they fit, and a quiet
+     horizontal scroll (not a wrap) on the narrowest phones */
+  .footer-links {
+    flex-wrap: nowrap; gap: 0.85rem; font-size: 0.82rem;
+    width: max-content; max-width: 100%; margin: 0 auto;
+    overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch;
+  }
+  .footer-links::-webkit-scrollbar { display: none; }
+  .footer-links a { white-space: nowrap; }
 }
 
 @media (prefers-reduced-motion: reduce) {
