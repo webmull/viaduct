@@ -10,8 +10,20 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/styles.css" />
-  <title>Terms and fair use: viaduct.sh</title>
-  <meta name="description" content="Fair use terms for the free hosted viaduct.sh service: provided as-is, no guarantees of performance or stability, and no malicious use." />
+  <title>News: viaduct.sh</title>
+  <meta name="description" content="Updates and notes from the viaduct project." />
+  <link rel="canonical" href="https://viaduct.sh/news/" />
+  <link rel="alternate" type="application/rss+xml" title="viaduct.sh news" href="/news/feed.xml" />
+  <style>
+    .news-list { max-width: 46rem; margin: 0 auto; padding-bottom: 3rem; display: flex; flex-direction: column; }
+    .post { display: block; text-decoration: none; color: inherit; padding: 1.5rem 0; border-top: 1px solid var(--border); }
+    .post:first-child { border-top: 0; }
+    .post .date { color: var(--muted-foreground); font: 500 0.78rem var(--font-mono); letter-spacing: 0.03em; }
+    .post h2 { font-family: var(--font-display); font-size: 1.4rem; margin: 0.35rem 0 0.4rem; letter-spacing: -0.01em; transition: color 0.15s ease; }
+    .post:hover h2 { color: var(--primary); }
+    .post p { margin: 0; color: var(--muted-foreground); font-size: 0.98rem; line-height: 1.6; }
+    .post .more { display: inline-block; margin-top: 0.6rem; color: var(--primary); font-size: 0.9rem; }
+  </style>
 </head>
 <body>
   <header class="site-header">
@@ -36,69 +48,18 @@
   <main>
     <section class="docs-hero">
       <div class="wrap">
-        <p class="eyebrow">Fair use</p>
-        <h1>Terms and fair use</h1>
-        <p>
-          These terms cover the free, hosted viaduct.sh service. The software
-          itself is open source under the MIT License; if you run your own, the
-          license governs that, not this page. Last updated 2 August 2026.
-        </p>
+        <h1>News</h1>
+        <p class="lede">Updates and notes from the viaduct project.</p>
       </div>
     </section>
 
-    <div class="wrap" style="max-width:47rem;padding-bottom:3rem">
-      <section class="doc-section" id="fair-use">
-        <h2>Fair use</h2>
-        <p>
-          viaduct.sh is a free, shared service run in good faith. Please use it
-          reasonably. Do not monopolise capacity, push sustained high-volume or
-          heavy commercial production traffic through it, or otherwise abuse the
-          shared resources that keep it free for everyone. We may rate-limit, cap,
-          or refuse traffic to keep the service healthy.
-        </p>
-      </section>
-
-      <section class="doc-section" id="no-guarantees">
-        <h2>No guarantees</h2>
-        <p>
-          The hosted service is provided as-is and as-available, with no warranty
-          of any kind. Tunnels and connections can be disrupted, throttled, or
-          terminated at any time, with or without notice, for any reason. We make
-          no guarantee of uptime, performance, availability, or stability while you
-          use the platform. Do not rely on it for anything critical, or anything
-          you cannot afford to lose.
-        </p>
-      </section>
-
-      <section class="doc-section" id="acceptable-use">
-        <h2>Acceptable use</h2>
-        <p>
-          The platform must not be used for malicious, illegal, or harmful intent.
-          That includes, without limitation: phishing or impersonation,
-          distributing malware, fraud, attacking or probing systems you do not own,
-          spam, harassment, or anything unlawful. We may act to keep the service
-          safe, and we will terminate any tunnel that violates this, without notice.
-        </p>
-      </section>
-
-      <section class="doc-section" id="run-your-own">
-        <h2>Want guarantees? Run your own</h2>
-        <p>
-          viaduct is completely open source, so if you want full control, no shared
-          limits, and no dependence on our service, you can spin up your own in a
-          few minutes. See the
-          <a href="https://github.com/webmull/viaduct/blob/main/deploy/setup.md" target="_blank" rel="noreferrer">deployment guide</a>.
-          The hosted viaduct.sh is a convenience, not a commitment.
-        </p>
-      </section>
-
-      <section class="doc-section" id="changes">
-        <h2>Changes</h2>
-        <p>
-          These terms may change at any time. Continued use of the hosted service
-          means you accept the current version.
-        </p>
-      </section>
+    <div class="wrap news-list">
+      <a class="post" href="/news/welcome-to-viaduct/">
+        <span class="date">2 August 2026</span>
+        <h2>Welcome to viaduct.sh</h2>
+        <p>viaduct.sh is a free, open-source reverse tunnel: one command gives a service on your machine a public HTTPS URL, no inbound ports or NAT configuration required.</p>
+        <span class="more">Read more &rarr;</span>
+      </a>
     </div>
   </main>
 

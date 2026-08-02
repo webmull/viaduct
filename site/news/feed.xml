@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>viaduct.sh news</title>
+    <link>https://viaduct.sh/news/</link>
+    <atom:link href="https://viaduct.sh/news/feed.xml" rel="self" type="application/rss+xml" />
+    <description>Updates and notes from the viaduct project.</description>
+    <language>en</language>
+    <item>
+      <title>Welcome to viaduct.sh</title>
+      <link>https://viaduct.sh/news/welcome-to-viaduct/</link>
+      <guid>https://viaduct.sh/news/welcome-to-viaduct/</guid>
+      <pubDate>Sun, 02 Aug 2026 09:00:00 GMT</pubDate>
+      <description>viaduct.sh is a free, open-source reverse tunnel: one command gives a service on your machine a public HTTPS URL, no inbound ports or NAT configuration required.</description>
+    </item>
+  </channel>
+</rss>

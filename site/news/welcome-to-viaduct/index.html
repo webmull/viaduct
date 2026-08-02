@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="mask-icon" href="/favicon.svg" color="#f5b544" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/styles.css" />
+  <title>Welcome to viaduct.sh: simple, open-source tunneling</title>
+  <meta name="description" content="viaduct.sh is a free, open-source reverse tunnel. One command gives a service on your machine a public HTTPS URL." />
+  <link rel="canonical" href="https://viaduct.sh/news/welcome-to-viaduct/" />
+  <meta property="og:type" content="article" />
+  <meta property="og:title" content="Welcome to viaduct.sh" />
+  <meta property="og:description" content="Simple, open-source tunneling: one command gives a service on your machine a public HTTPS URL." />
+  <meta property="og:url" content="https://viaduct.sh/news/welcome-to-viaduct/" />
+  <meta property="og:image" content="https://viaduct.sh/news/welcome-to-viaduct/og.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Welcome to viaduct.sh" />
+  <meta name="twitter:description" content="Simple, open-source tunneling: one command gives a service on your machine a public HTTPS URL." />
+  <meta name="twitter:image" content="https://viaduct.sh/news/welcome-to-viaduct/og.png" />
+  <link rel="alternate" type="application/rss+xml" title="viaduct.sh news" href="/news/feed.xml" />
+  <style>
+    .article { max-width: 44rem; margin: 0 auto; }
+    .byline { display: flex; align-items: center; justify-content: center; gap: 0.7rem; margin: 1.4rem 0 0; color: var(--muted-foreground); font-size: 0.9rem; }
+    .byline img { width: 2.4rem; height: 2.4rem; border-radius: 999px; border: 1px solid var(--border-strong); }
+    .byline b { color: var(--foreground); font-weight: 600; }
+    .byline .dot { opacity: 0.5; }
+    .prose { margin-top: 2.2rem; color: var(--foreground); font-size: 1.02rem; line-height: 1.7; }
+    .prose > p { margin: 0 0 1.15rem; color: #cdd3de; }
+    .prose h2 { font-family: var(--font-display); font-size: 1.35rem; margin: 2.2rem 0 0.7rem; letter-spacing: -0.01em; }
+    .prose a { color: var(--primary); text-decoration: none; }
+    .prose a:hover { text-decoration: underline; }
+    .prose pre { background: var(--surface); border: 1px solid var(--border); border-radius: 0.6rem;
+      padding: 0.9rem 1rem; overflow-x: auto; font-family: var(--font-mono); font-size: 0.86rem; line-height: 1.6; margin: 0 0 1.15rem; }
+    .prose pre .p { color: var(--primary); }
+    .prose code { font-family: var(--font-mono); font-size: 0.86em; background: var(--secondary); padding: 0.1rem 0.35rem; border-radius: 0.3rem; }
+    .prose ul { margin: 0 0 1.15rem; padding-left: 1.2rem; color: #cdd3de; }
+    .prose li { margin: 0 0 0.55rem; line-height: 1.65; }
+    .prose b { color: var(--foreground); font-weight: 600; }
+    .back { display: inline-block; margin-top: 2.4rem; color: var(--muted-foreground); text-decoration: none; font-size: 0.92rem; }
+    .back:hover { color: var(--foreground); }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap header-inner">
+      <a class="brand" href="/">
+        <img src="/viaduct-mark.png" alt="" />
+        <span>viaduct<span class="tld">.sh</span></span>
+      </a>
+      <nav class="site-nav">
+        <a class="nav-desktop" href="/#how">How it works</a>
+        <a class="nav-desktop" href="/network/">Network</a>
+        <a class="nav-desktop" href="/docs/">Docs</a>
+        <a class="nav-desktop" href="/news/">News</a>
+        <a class="gh-pill" href="https://github.com/webmull/viaduct" target="_blank" rel="noreferrer">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.419 2.865 8.17 6.839 9.49.5.092.682-.218.682-.486 0-.236-.009-.866-.014-1.7-2.782.605-3.369-1.343-3.369-1.343-.454-1.156-1.11-1.464-1.11-1.464-.908-.62.069-.608.069-.608 1.004.07 1.532 1.03 1.532 1.03.892 1.529 2.341 1.087 2.91.831.092-.646.35-1.086.636-1.337-2.22-.251-4.555-1.111-4.555-4.943 0-1.091.39-1.984 1.03-2.683-.103-.253-.447-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0 1 12 6.836c.85.004 1.705.115 2.504.337 1.909-1.294 2.747-1.025 2.747-1.025.547 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.167 22 16.418 22 12c0-5.523-4.477-10-10-10z"/></svg>
+          GitHub
+        </a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="docs-hero">
+      <div class="wrap article">
+        <p class="eyebrow">News</p>
+        <h1>Welcome to viaduct.sh</h1>
+        <p class="lede">Simple, open-source tunneling: one command gives a service on your machine a public HTTPS URL.</p>
+        <div class="byline">
+          <img src="/adam.png" alt="Adam Davis" />
+          <span>By <b>Adam Davis</b></span>
+          <span class="dot">&middot;</span>
+          <span>2 August 2026</span>
+        </div>
+      </div>
+    </section>
+
+    <div class="wrap article" style="padding-bottom:4rem">
+      <div class="prose">
+        <p>
+          viaduct.sh is a free, open-source reverse tunnel. Run one command and a
+          service on your laptop gets a public HTTPS URL, with no inbound ports, no
+          port forwarding, and no NAT configuration to wrestle with.
+        </p>
+        <pre><span class="p">$</span> pipx install viaduct-sh
+<span class="p">$</span> viaduct http 8080
+  Forwarding  https://sunny-otter.viaduct.sh  →  http://127.0.0.1:8080</pre>
+        <p>
+          That prints a fresh URL and forwards traffic straight to your local port
+          until you stop it. It is handy for sharing work in progress, testing a
+          webhook, or showing something on a phone without deploying anything first.
+        </p>
+
+        <h2>Free to use, and yours to run</h2>
+        <p>
+          The hosted viaduct.sh service is free, with no accounts and no signup. It
+          is also completely open source, so if you want full control you can spin up
+          your own in a few minutes on one small VPS. The client points at the hosted
+          server by default; a single flag points it at your own.
+        </p>
+
+        <h2>Small on purpose</h2>
+        <p>
+          viaduct is a deliberately small alternative to ngrok and frp: standard
+          library Python with only <code>typer</code> and <code>rich</code> as
+          runtime dependencies, no database, and no dashboards. The whole client and
+          server are plain asyncio you can read in an afternoon, so if it ever does
+          something surprising, you can go find out exactly why.
+        </p>
+
+        <h2>Pick a region</h2>
+        <p>
+          The hosted service runs nodes in four regions (London, New York, Singapore,
+          and Sydney). Add <code>--region</code> to run your tunnel through the one
+          nearest your traffic:
+        </p>
+        <pre><span class="p">$</span> viaduct http 8080 --region nyc</pre>
+
+        <h2>Stable URLs and your own domain</h2>
+        <p>
+          Need the same URL every time, for a webhook or a long-lived demo? Add
+          <code>--pin</code> and the subdomain sticks across reconnects. Want your own
+          domain? Point a CNAME at your pinned tunnel and viaduct serves it with an
+          automatic certificate.
+        </p>
+
+        <h2>Coming from localtunnel?</h2>
+        <p>
+          localtunnel is a lovely, dead-simple way to grab a quick public URL, and
+          viaduct owes a lot to that idea. viaduct aims a bit higher on features
+          while staying just as quick to start:
+        </p>
+        <ul>
+          <li><b>Self-host the whole thing.</b> Run your own server on your own
+            domain, or use the free hosted service. The code is the same either way,
+            and open source.</li>
+          <li><b>Stable URLs.</b> <code>--pin</code> keeps the same subdomain across
+            reconnects, and you can point your own custom domain at it.</li>
+          <li><b>Pick a region.</b> The hosted service runs nodes in four regions, so
+            you can route through the one nearest your traffic.</li>
+          <li><b>Built to stay up.</b> Automatic HTTPS, WebSocket support, a graceful
+            drain on server restart, and automatic client reconnect with backoff.</li>
+          <li><b>Read the whole thing.</b> A couple thousand lines of standard-library
+            Python, on PyPI as <code>viaduct-sh</code>, with no database or dashboards.</li>
+        </ul>
+
+        <h2>Try it</h2>
+        <p>
+          Install it, expose something, and send someone the link:
+        </p>
+        <pre><span class="p">$</span> pipx install viaduct-sh
+<span class="p">$</span> python3 -m http.server 8080
+<span class="p">$</span> viaduct http 8080</pre>
+        <p>
+          It is on PyPI as <code>viaduct-sh</code>, and the source is on
+          <a href="https://github.com/webmull/viaduct" target="_blank" rel="noreferrer">GitHub</a>.
+          Read it, fork it, or run your own. Full setup is in the
+          <a href="/docs/">docs</a>.
+        </p>
+
+        <a class="back" href="/news/">&larr; All news</a>
+      </div>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap footer-inner">
+      <a href="https://adamdavis.co.uk" target="_blank" rel="noreferrer"
+         style="display:flex;align-items:center;gap:0.6rem;text-decoration:none;color:inherit">
+        <img src="/adam.png" alt="Adam Davis" width="34" height="34" style="border-radius:999px;border:1px solid var(--border-strong)" />
+        <span>Built by <strong style="color:var(--foreground);font-weight:600">Adam Davis</strong></span>
+      </a>
+      <div class="footer-links">
+        <a href="https://github.com/webmull/viaduct" target="_blank" rel="noreferrer">GitHub</a>
+        <a href="/network/">Network</a>
+        <a href="/docs/">Docs</a>
+        <a href="/news/">News</a>
+        <a href="/terms/">Fair use</a>
+        <a href="https://github.com/webmull/viaduct/blob/main/LICENSE" target="_blank" rel="noreferrer">MIT License</a>
+      </div>
+    </div>
+  </footer>
+  <script src="/to-top.js" defer></script>
+</body>
+</html>
