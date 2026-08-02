@@ -117,9 +117,17 @@ do_caddyfile() {
   # BASE_DOMAIN may be comma-separated (primary + aliases): primary names the
   # tunnels and the site; apex/wild expand to all names for one multi-SAN cert.
   local primary="${BASE_DOMAIN%%,*}"
-  local apex wild
+  local canonical="${CANONICAL_DOMAIN:-$primary}"
+  local apex wild redirect_rule
   apex=$(printf '%s' "$BASE_DOMAIN" | sed 's/,/, /g')
   wild=$(printf '%s' "$BASE_DOMAIN" | awk -F, '{for(i=1;i<=NF;i++) printf (i>1?", ":"") "*." $i}')
+  # One canonical site: the canonical host serves it and redirects its own
+  # aliases; every other (region) node redirects all but the health probe to it.
+  if [ "$primary" = "$canonical" ]; then
+    redirect_rule=$(printf '\t@offcanonical {\n\t\tnot host %s\n\t\tnot path /_viaduct/health\n\t}\n\tredir @offcanonical https://%s{uri} permanent' "$canonical" "$canonical")
+  else
+    redirect_rule=$(printf '\t@site not path /_viaduct/health\n\tredir @site https://%s{uri} permanent' "$canonical")
+  fi
   if [ "$TLS_MODE" = letsencrypt ]; then
     cat > /etc/caddy/Caddyfile <<EOF
 {
@@ -133,6 +141,7 @@ ${apex} {
 		dns digitalocean {env.DO_API_TOKEN}
 	}
 	reverse_proxy /_viaduct/health 127.0.0.1:8080
+${redirect_rule}
 	root * /var/www/viaduct-site
 	header Cache-Control "no-cache"
 	file_server
@@ -147,7 +156,7 @@ www.${primary} {
 	tls {
 		dns digitalocean {env.DO_API_TOKEN}
 	}
-	redir https://${primary}{uri} permanent
+	redir https://${canonical}{uri} permanent
 }
 ${wild} {
 	tls {
@@ -170,6 +179,7 @@ EOF
 ${BASE_DOMAIN} {
 	tls internal
 	reverse_proxy /_viaduct/health 127.0.0.1:8080
+${redirect_rule}
 	root * /var/www/viaduct-site
 	header Cache-Control "no-cache"
 	file_server
