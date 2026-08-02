@@ -114,6 +114,41 @@ and reject a request whose `Host` is the public tunnel URL with an error like
 app see the request as if it arrived on `localhost`, so it stops rejecting them,
 while visitors still use the public URL.
 
+## From your code
+
+Open a tunnel without the CLI. Handy for tests that need a real public URL
+(webhooks) and for scripts.
+
+```python
+import viaduct
+
+async with viaduct.tunnel(8080) as t:      # async
+    print(t.url)                           # https://funny-otter.viaduct.sh
+
+with viaduct.tunnel_sync(8080) as t:       # sync (scripts, notebooks)
+    print(t.url)
+```
+
+Installing `viaduct-sh` also registers a **pytest fixture**, `viaduct_tunnel`,
+that gives a test a real public URL and tears it down afterwards:
+
+```python
+def test_stripe_webhook(viaduct_tunnel):
+    url = viaduct_tunnel(8000)             # your local test server is now public
+    stripe.WebhookEndpoint.create(url=url + "/hook")
+    ...                                    # torn down automatically
+```
+
+There is a **Node client** too (zero dependencies), published as `viaduct-sh` on
+npm and living in [`node/`](node/):
+
+```js
+import { tunnel } from "viaduct-sh";
+const t = await tunnel(3000);
+console.log(t.url);
+// or, no install:  npx viaduct-sh 3000
+```
+
 ## Run your own server
 
 The client defaults to the hosted `viaduct.sh`, but the point of viaduct is that

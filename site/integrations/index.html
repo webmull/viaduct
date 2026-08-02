@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="mask-icon" href="/favicon.svg" color="#f5b544" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/styles.css" />
+  <title>Integrations: viaduct.sh</title>
+  <meta name="description" content="Ways to use viaduct: from the command line, embedded in Python, as a pytest fixture, or from Node." />
+  <style>
+    .int-wrap { max-width: 44rem; margin: 0 auto; padding-bottom: 3.5rem; }
+    .int-item { padding: 2.1rem 0; border-top: 1px solid var(--border); }
+    .int-item:first-child { border-top: 0; padding-top: 1rem; }
+    .int-item .kind { color: var(--primary); font: 600 0.68rem var(--font-mono);
+      text-transform: uppercase; letter-spacing: 0.12em; margin: 0 0 0.35rem; }
+    .int-item h2 { font-family: var(--font-display); font-size: 1.35rem; letter-spacing: -0.01em; margin: 0 0 0.4rem; }
+    .int-item > p { color: var(--muted-foreground); font-size: 1rem; line-height: 1.6; margin: 0 0 1rem; }
+    .int-item > p code { font-family: var(--font-mono); font-size: 0.85em; background: var(--secondary); padding: 0.1rem 0.35rem; border-radius: 0.3rem; color: var(--foreground); }
+    .int-item .go { color: var(--primary); text-decoration: none; font-weight: 500; font-size: 0.92rem; }
+    .int-item .go:hover { text-decoration: underline; }
+
+    .int-item .terminal { margin: 0 0 0.9rem; max-width: none; width: 100%; }
+    .int-code { font-family: var(--font-mono); font-size: 0.82rem; line-height: 1.75;
+      color: #e9ebef; white-space: pre; margin: 0; }
+    .int-code .p { color: var(--primary); }
+    .int-code .k { color: #8fdcff; }
+    .int-code .s { color: #7ee2b8; }
+    .int-code .n { color: #f0a35e; }
+    .int-code .c { color: #6b7280; }
+    .int-out { color: var(--muted-foreground); }
+
+    .int-more { border-top: 1px solid var(--border); margin-top: 1.5rem; padding-top: 1.5rem;
+      color: var(--muted-foreground); font-size: 0.95rem; line-height: 1.6; }
+    .int-more a { color: var(--primary); text-decoration: none; }
+
+    @media (max-width: 560px) {
+      .int-item h2 { font-size: 1.2rem; }
+      .int-code { font-size: 0.76rem; }
+      .terminal-body { padding: 0.85rem 0.9rem 1rem; }
+    }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap header-inner">
+      <a class="brand" href="/">
+        <img src="/viaduct-mark.png" alt="" />
+        <span>viaduct<span class="tld">.sh</span></span>
+      </a>
+      <nav class="site-nav">
+        <a class="nav-desktop" href="/#how">How it works</a>
+        <a class="nav-desktop" href="/network/">Network</a>
+        <a class="nav-desktop" href="/docs/">Docs</a>
+        <a class="nav-desktop" href="/integrations/">Integrations</a>
+        <a class="nav-desktop" href="/news/">News</a>
+        <a class="gh-pill" href="https://github.com/webmull/viaduct" target="_blank" rel="noreferrer">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.419 2.865 8.17 6.839 9.49.5.092.682-.218.682-.486 0-.236-.009-.866-.014-1.7-2.782.605-3.369-1.343-3.369-1.343-.454-1.156-1.11-1.464-1.11-1.464-.908-.62.069-.608.069-.608 1.004.07 1.532 1.03 1.532 1.03.892 1.529 2.341 1.087 2.91.831.092-.646.35-1.086.636-1.337-2.22-.251-4.555-1.111-4.555-4.943 0-1.091.39-1.984 1.03-2.683-.103-.253-.447-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0 1 12 6.836c.85.004 1.705.115 2.504.337 1.909-1.294 2.747-1.025 2.747-1.025.547 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.167 22 16.418 22 12c0-5.523-4.477-10-10-10z"/></svg>
+          GitHub
+        </a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="docs-hero">
+      <div class="wrap">
+        <p class="eyebrow">Integrations</p>
+        <h1>Ways to use viaduct</h1>
+        <p class="lede">
+          Reach for viaduct from the terminal, from your own code, from your tests,
+          or from Node. Four ways to give a local port a public URL.
+        </p>
+      </div>
+    </section>
+
+    <div class="wrap int-wrap">
+
+      <div class="int-item">
+        <p class="kind">Command line</p>
+        <h2>Share a running app</h2>
+        <p>
+          Point viaduct at any local port and hand the URL to a client, a teammate,
+          or your phone. Automatic HTTPS, no accounts, nothing to deploy.
+        </p>
+        <div class="terminal">
+          <div class="terminal-bar">
+            <span class="dot dot-red"></span><span class="dot dot-amber"></span><span class="dot dot-teal"></span>
+            <span class="terminal-title">bash</span>
+          </div>
+          <div class="terminal-body">
+<pre class="int-code"><span class="p">$</span> viaduct http 8080
+
+  Forwarding  <span class="p">https://funny-otter.viaduct.sh</span>  &rarr;  :8080
+  <span class="int-out">Ctrl+C to stop</span></pre>
+          </div>
+        </div>
+        <a class="go" href="/docs/">Read the docs &rarr;</a>
+      </div>
+
+      <div class="int-item">
+        <p class="kind">Python</p>
+        <h2>Open a tunnel from your code</h2>
+        <p>
+          <code>pip install viaduct-sh</code> and open a tunnel with a context
+          manager, no CLI. Async, with a sync version for scripts and notebooks.
+        </p>
+        <div class="terminal">
+          <div class="terminal-bar">
+            <span class="dot dot-red"></span><span class="dot dot-amber"></span><span class="dot dot-teal"></span>
+            <span class="terminal-title">demo.py</span>
+          </div>
+          <div class="terminal-body">
+<pre class="int-code"><span class="k">import</span> viaduct
+
+<span class="k">async with</span> viaduct.tunnel(<span class="n">8080</span>) <span class="k">as</span> t:
+    print(t.url)   <span class="c"># https://funny-otter.viaduct.sh</span></pre>
+          </div>
+        </div>
+        <a class="go" href="/docs/">Read the docs &rarr;</a>
+      </div>
+
+      <div class="int-item">
+        <p class="kind">pytest</p>
+        <h2>A public URL in your tests</h2>
+        <p>
+          The <code>viaduct_tunnel</code> fixture gives a test a real public URL, and
+          tears it down after. Ideal for exercising inbound webhooks (Stripe, GitHub)
+          in CI.
+        </p>
+        <div class="terminal">
+          <div class="terminal-bar">
+            <span class="dot dot-red"></span><span class="dot dot-amber"></span><span class="dot dot-teal"></span>
+            <span class="terminal-title">test_webhooks.py</span>
+          </div>
+          <div class="terminal-body">
+<pre class="int-code"><span class="k">def</span> test_stripe(viaduct_tunnel):
+    url = viaduct_tunnel(<span class="n">8000</span>)
+    stripe.webhook.create(url=url)
+    <span class="c"># ... assert your handler ran; tunnel closed automatically</span></pre>
+          </div>
+        </div>
+        <a class="go" href="/docs/">Read the docs &rarr;</a>
+      </div>
+
+      <div class="int-item">
+        <p class="kind">Node.js</p>
+        <h2>Native in Node</h2>
+        <p>
+          <code>npm install viaduct-sh</code> (or <code>npx viaduct-sh 3000</code>) and
+          open a tunnel with an import. Zero dependencies, built on <code>net</code>/<code>tls</code>.
+        </p>
+        <div class="terminal">
+          <div class="terminal-bar">
+            <span class="dot dot-red"></span><span class="dot dot-amber"></span><span class="dot dot-teal"></span>
+            <span class="terminal-title">app.mjs</span>
+          </div>
+          <div class="terminal-body">
+<pre class="int-code"><span class="k">import</span> { tunnel } <span class="k">from</span> <span class="s">"viaduct-sh"</span>;
+
+<span class="k">const</span> t = <span class="k">await</span> tunnel(<span class="n">3000</span>);
+console.log(t.url);   <span class="c"># https://funny-otter.viaduct.sh</span></pre>
+          </div>
+        </div>
+        <a class="go" href="https://github.com/webmull/viaduct/tree/main/node" target="_blank" rel="noreferrer">Node client on GitHub &rarr;</a>
+      </div>
+
+      <p class="int-more">
+        Got a workflow you'd want viaduct to slot into?
+        <a href="https://github.com/webmull/viaduct" target="_blank" rel="noreferrer">Open an issue</a>.
+      </p>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap footer-inner">
+      <a href="https://adamdavis.co.uk" target="_blank" rel="noreferrer"
+         style="display:flex;align-items:center;gap:0.6rem;text-decoration:none;color:inherit">
+        <img src="/adam.png" alt="Adam Davis" width="34" height="34" style="border-radius:999px;border:1px solid var(--border-strong)" />
+        <span>Built by <strong style="color:var(--foreground);font-weight:600">Adam Davis</strong></span>
+      </a>
+      <div class="footer-links">
+        <a href="https://github.com/webmull/viaduct" target="_blank" rel="noreferrer">GitHub</a>
+        <a href="/network/">Network</a>
+        <a href="/docs/">Docs</a>
+        <a href="/integrations/">Integrations</a>
+        <a href="/news/">News</a>
+        <a href="/terms/">Fair use</a>
+        <a href="https://github.com/webmull/viaduct/blob/main/LICENSE" target="_blank" rel="noreferrer">MIT License</a>
+      </div>
+    </div>
+  </footer>
+  <script src="/to-top.js" defer></script>
+</body>
+</html>
