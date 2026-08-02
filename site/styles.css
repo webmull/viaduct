@@ -375,7 +375,7 @@ main > section:nth-child(even) { background: var(--surface); }
 }
 
 /* static terminal output sample */
-.doc-term { margin: 1rem 0; }
+.doc-term { margin: 1rem 0; max-width: none; }
 .doc-screen {
   font-family: var(--font-mono); font-size: clamp(0.74rem, 2.6vw, 0.86rem); line-height: 1.7;
   color: var(--foreground); white-space: pre; margin: 0; overflow-x: auto;
