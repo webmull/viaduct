@@ -41,7 +41,10 @@ _LOCAL_HOSTS = frozenset({"localhost", "127.0.0.1", "::1"})
 #: Region nodes: code -> (display name, server host:port). --region is a friendly
 #: alias over --server, so `--region nyc` == `--server nyc.viaduct.sh:4443`.
 REGIONS: dict[str, tuple[str, str]] = {
-    "lon": ("London", "lon.viaduct.sh:4443"),
+    # London is the default region, so its endpoint is the apex viaduct.sh (whose
+    # cert is served on the tunnel port); tunnels there are also reachable at the
+    # lon.viaduct.sh alias. Other regions have their own endpoint + cert.
+    "lon": ("London", "viaduct.sh:4443"),
     "nyc": ("New York", "nyc.viaduct.sh:4443"),
     "sg": ("Singapore", "sg.viaduct.sh:4443"),
 }
