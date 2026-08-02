@@ -397,6 +397,7 @@ main > section:nth-child(even) { background: var(--surface); }
 .opt-table th { color: var(--muted-foreground); font-weight: 600; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; }
 .opt-table tr:last-child td { border-bottom: 0; }
 .opt-table td:first-child code { white-space: nowrap; }
+.flag { display: inline-block; width: 1.15rem; height: auto; margin-right: 0.5rem; vertical-align: -0.18em; border-radius: 2px; box-shadow: 0 0 0 1px rgba(255,255,255,0.09); }
 
 .hero-docs-link { margin-top: 0.9rem; font-size: 0.9rem; }
 .hero-docs-link a { color: var(--primary); text-decoration: none; font-weight: 500; }
@@ -420,6 +421,7 @@ main > section:nth-child(even) { background: var(--surface); }
   .opt-table td:first-child { margin-bottom: 0.5rem; }
   .opt-table td:nth-child(2) { font-size: 0.85rem; color: var(--muted-foreground); margin-bottom: 0.4rem; }
   .opt-table td:nth-child(2)::before { content: "Default: "; }
+  .region-table td:nth-child(2)::before { content: "--region "; }
   .opt-table td:last-child { font-size: 0.93rem; color: var(--muted-foreground); }
 }
 
