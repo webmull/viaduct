@@ -3,12 +3,17 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex" />
+  <meta name="theme-color" content="#14171f" />
   <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <link rel="icon" sizes="32x32" href="/favicon-32.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500;600&display=swap" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500;600&display=swap" media="print" onload="this.media='all'" />
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500;600&display=swap" /></noscript>
   <link rel="stylesheet" href="styles.css" />
-  <title>Error pages — viaduct.sh</title>
+  <title>Error pages: viaduct.sh</title>
   <meta name="description" content="The pages a visitor sees when a viaduct tunnel is missing, down, or busy." />
   <style>
     /* --- error-page look (self-contained; mirrors what viaductd serves) --- */
@@ -18,13 +23,13 @@
         #14171f;
       color: #e8e8ea; min-height: 22rem;
       display: grid; place-items: center; text-align: center; padding: 3rem 1.5rem;
-      font-family: var(--font-sans);
+      font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     }
-    .errpage .ep-mark { font-family: var(--font-display); font-weight: 600; font-size: 0.95rem; letter-spacing: -0.01em; color: #cfd3da; }
+    .errpage .ep-mark { font-weight: 600; font-size: 0.95rem; letter-spacing: -0.01em; color: #cfd3da; }
     .errpage .ep-mark b { color: #f5b544; font-weight: 600; }
-    .errpage .ep-code { font-family: var(--font-display); font-weight: 700; font-size: 3.5rem; line-height: 1; color: #f5b544; margin-top: 1.75rem; font-variant-numeric: tabular-nums; }
-    .errpage h2 { font-family: var(--font-display); font-size: 1.35rem; font-weight: 600; margin: 0.6rem 0 0; color: #e8e8ea; }
-    .errpage p { color: #8b929e; margin: 0.6rem auto 0; max-width: 26rem; line-height: 1.6; font-size: 0.95rem; }
+    .errpage .ep-code { font-weight: 800; font-size: 3.5rem; line-height: 1; color: #f5b544; margin-top: 1.75rem; font-variant-numeric: tabular-nums; }
+    .errpage h2 { font-size: 1.35rem; font-weight: 650; margin: 0.6rem 0 0; color: #e8e8ea; }
+    .errpage p { color: #8b929e; margin: 0.6rem auto 0; max-width: 24rem; line-height: 1.6; font-size: 0.95rem; }
     .errpage .ep-link { display: inline-block; margin-top: 1.75rem; color: #8b929e; text-decoration: none; font-size: 0.85rem; border: 1px solid rgba(255,255,255,0.14); padding: 0.5rem 1rem; border-radius: 0.55rem; }
     .errpage .ep-actions { margin-top: 1.6rem; display: flex; gap: 0.75rem; justify-content: center; align-items: center; flex-wrap: wrap; }
     .errpage .ep-actions .ep-link { margin-top: 0; }

@@ -3,15 +3,27 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#14171f" />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="icon" sizes="32x32" href="/favicon-32.png" />
   <link rel="mask-icon" href="/favicon.svg" color="#f5b544" />
   <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500;600&display=swap" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500;600&display=swap" media="print" onload="this.media='all'" />
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500;600&display=swap" /></noscript>
   <link rel="stylesheet" href="/styles.css" />
+  <link rel="canonical" href="https://viaduct.sh/network/" />
   <title>The viaduct network: regions we operate</title>
   <meta name="description" content="viaduct.sh operates tunnel nodes in five regions: London, New York, Singapore, Sydney, and Bangalore. Pick the one nearest your traffic with --region." />
+  <meta property="og:title" content="The viaduct network: regions we operate" />
+  <meta property="og:description" content="viaduct.sh operates tunnel nodes in five regions: London, New York, Singapore, Sydney, and Bangalore. Pick the one nearest your traffic with --region." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://viaduct.sh/network/" />
+  <meta property="og:image" content="https://viaduct.sh/og.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:image" content="https://viaduct.sh/og.png" />
   <style>
     .netpanel {
       border: 1px solid var(--border-strong); border-radius: 1rem;
@@ -57,7 +69,7 @@
       </a>
       <nav class="site-nav">
         <a class="nav-desktop" href="/#how">How it works</a>
-        <a class="nav-desktop" href="/network/">Network</a>
+        <a class="nav-desktop" href="/network/" aria-current="page">Network</a>
         <a class="nav-desktop" href="/docs/">Docs</a>
         <a class="nav-desktop" href="/news/">News</a>
         <a class="gh-pill" href="https://github.com/webmull/viaduct" target="_blank" rel="noreferrer">
@@ -90,7 +102,7 @@
       </div>
 
       <div class="table-scroll">
-        <table class="reg-table"><thead><tr><th>Region</th><th>Endpoint</th><th>Status</th></tr></thead><tbody><tr><td><img class="flag" src="/flags/gb.svg" alt="" width="18" height="14" /> London <span class="reg-def">default</span></td><td><code>viaduct.sh</code></td><td class="reg-status" data-host="viaduct.sh"><span class="dot"></span>checking</td></tr><tr><td><img class="flag" src="/flags/us.svg" alt="" width="18" height="14" /> New York</td><td><code>nyc.viaduct.sh</code></td><td class="reg-status" data-host="nyc.viaduct.sh"><span class="dot"></span>checking</td></tr><tr><td><img class="flag" src="/flags/sg.svg" alt="" width="18" height="14" /> Singapore</td><td><code>sg.viaduct.sh</code></td><td class="reg-status" data-host="sg.viaduct.sh"><span class="dot"></span>checking</td></tr><tr><td><img class="flag" src="/flags/au.svg" alt="" width="18" height="14" /> Sydney</td><td><code>syd.viaduct.sh</code></td><td class="reg-status" data-host="syd.viaduct.sh"><span class="dot"></span>checking</td></tr><tr><td><img class="flag" src="/flags/in.svg" alt="" width="18" height="14" /> Bangalore</td><td><code>blr.viaduct.sh</code></td><td class="reg-status" data-host="blr.viaduct.sh"><span class="dot"></span>checking</td></tr></tbody></table>
+        <table class="reg-table"><thead><tr><th>Region</th><th>Endpoint</th><th>Status</th></tr></thead><tbody><tr><td><img class="flag" src="/flags/gb.svg" alt="" width="18" height="14" /> London <span class="reg-def">default</span></td><td><code>viaduct.sh</code></td><td class="reg-status" aria-live="polite" data-host="viaduct.sh"><span class="dot"></span>checking</td></tr><tr><td><img class="flag" src="/flags/us.svg" alt="" width="18" height="14" /> New York</td><td><code>nyc.viaduct.sh</code></td><td class="reg-status" aria-live="polite" data-host="nyc.viaduct.sh"><span class="dot"></span>checking</td></tr><tr><td><img class="flag" src="/flags/sg.svg" alt="" width="18" height="14" /> Singapore</td><td><code>sg.viaduct.sh</code></td><td class="reg-status" aria-live="polite" data-host="sg.viaduct.sh"><span class="dot"></span>checking</td></tr><tr><td><img class="flag" src="/flags/au.svg" alt="" width="18" height="14" /> Sydney</td><td><code>syd.viaduct.sh</code></td><td class="reg-status" aria-live="polite" data-host="syd.viaduct.sh"><span class="dot"></span>checking</td></tr><tr><td><img class="flag" src="/flags/in.svg" alt="" width="18" height="14" /> Bangalore</td><td><code>blr.viaduct.sh</code></td><td class="reg-status" aria-live="polite" data-host="blr.viaduct.sh"><span class="dot"></span>checking</td></tr></tbody></table>
       </div>
 
       <div style="border-top:1px solid var(--border);margin-top:1.25rem;padding-top:1.1rem">

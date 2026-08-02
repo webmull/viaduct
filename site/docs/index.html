@@ -3,13 +3,18 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#14171f" />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="icon" sizes="32x32" href="/favicon-32.png" />
   <link rel="mask-icon" href="/favicon.svg" color="#f5b544" />
   <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500;600&display=swap" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500;600&display=swap" media="print" onload="this.media='all'" />
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500;600&display=swap" /></noscript>
   <link rel="stylesheet" href="/styles.css" />
+  <link rel="canonical" href="https://viaduct.sh/docs/" />
   <title>Docs: getting started with viaduct.sh</title>
   <meta name="description" content="Get started with viaduct: install, start a tunnel, keep the same URL with --pin, and inspect requests live with --inspect. Every option, with copy-paste commands." />
   <meta property="og:title" content="viaduct.sh docs: getting started" />
@@ -26,7 +31,7 @@
       <nav class="site-nav">
         <a class="nav-desktop" href="/#how">How it works</a>
         <a class="nav-desktop" href="/network/">Network</a>
-        <a class="nav-desktop" href="/docs/">Docs</a>
+        <a class="nav-desktop" href="/docs/" aria-current="page">Docs</a>
         <a class="nav-desktop" href="/integrations/">Integrations</a>
         <a class="nav-desktop" href="/news/">News</a>
         <a class="gh-pill" href="https://github.com/webmull/viaduct" target="_blank" rel="noreferrer">
@@ -63,6 +68,7 @@
           <li><a href="#regions">Regions</a></li>
           <li><a href="#options">All options</a></li>
           <li><a href="#stop">Stop and update</a></li>
+          <li><a href="#code">From your code</a></li>
           <li><a href="#server">Run your own server</a></li>
         </ul>
       </aside>
@@ -154,7 +160,7 @@
             <div class="terminal-body">
 <pre class="doc-screen"><span class="c-ok">✓</span> tunnel live
 
-  <span class="c-url">https://amber-stoat-cfb1.viaduct.sh</span>
+  <span class="c-url">https://amber-stoat-9f3ac41b2c7d.viaduct.sh</span>
   <span class="c-dim">→ http://localhost:8080</span>
   <span class="c-dim">press q to stop</span></pre>
             </div>
@@ -319,10 +325,68 @@ tls    = true'>Copy</button>
             <button class="copy-btn" type="button" data-copy="viaduct upgrade">Copy</button>
           </div>
           <p>
-            <code>viaduct upgrade</code> follows the <code>stable</code> release
-            channel. On an interactive terminal the client also shows a one-line
-            notice, at most once a day, when a newer release exists.
+            <code>viaduct upgrade</code> reinstalls the latest release from PyPI.
+            On an interactive terminal the client also shows a one-line notice, at
+            most once a day, when a newer release exists.
           </p>
+        </section>
+
+        <section class="doc-section" id="code">
+          <h2>From your code</h2>
+          <p>
+            You do not need the CLI. Install <code>viaduct-sh</code> and open a
+            tunnel straight from Python, handy for scripts and for tests that need
+            a real public URL (webhooks).
+          </p>
+          <div class="code-block">
+            <pre>import viaduct
+
+async with viaduct.tunnel(8080) as t:      # async
+    print(t.url)                           # https://funny-otter.viaduct.sh
+
+with viaduct.tunnel_sync(8080) as t:       # sync (scripts, notebooks)
+    print(t.url)</pre>
+            <button class="copy-btn" type="button" data-copy="import viaduct
+
+async with viaduct.tunnel(8080) as t:
+    print(t.url)
+
+with viaduct.tunnel_sync(8080) as t:
+    print(t.url)">Copy</button>
+          </div>
+
+          <h3 style="margin:1.75rem 0 0.4rem;font-size:1.05rem">A public URL in your tests</h3>
+          <p>
+            Installing <code>viaduct-sh</code> also registers a pytest fixture,
+            <code>viaduct_tunnel</code>, that hands a test a real public URL and
+            tears it down afterwards. Ideal for exercising inbound webhooks in CI.
+          </p>
+          <div class="code-block">
+            <pre>def test_stripe_webhook(viaduct_tunnel):
+    url = viaduct_tunnel(8000)             # your local test server is now public
+    stripe.WebhookEndpoint.create(url=url + "/hook")
+    ...                                    # torn down automatically</pre>
+            <button class="copy-btn" type="button" data-copy='def test_stripe_webhook(viaduct_tunnel):
+    url = viaduct_tunnel(8000)
+    stripe.WebhookEndpoint.create(url=url + "/hook")
+    ...'>Copy</button>
+          </div>
+
+          <h3 style="margin:1.75rem 0 0.4rem;font-size:1.05rem">Node</h3>
+          <p>
+            There is a zero-dependency Node client too, published as
+            <code>viaduct-sh</code> on npm and living in the
+            <a href="https://github.com/webmull/viaduct/tree/main/node" target="_blank" rel="noreferrer">repo</a>.
+          </p>
+          <div class="code-block">
+            <pre>import { tunnel } from "viaduct-sh";
+
+const t = await tunnel(3000);
+console.log(t.url);   // or, no install:  npx viaduct-sh 3000</pre>
+            <button class="copy-btn" type="button" data-copy='import { tunnel } from "viaduct-sh";
+const t = await tunnel(3000);
+console.log(t.url);'>Copy</button>
+          </div>
         </section>
 
         <section class="doc-section" id="server">
@@ -368,15 +432,27 @@ tls    = true'>Copy</button>
   <script>
   (function () {
     document.querySelectorAll('.copy-btn').forEach(function (btn) {
+      var label = btn.textContent;
+      btn.setAttribute('aria-live', 'polite');
       btn.addEventListener('click', function () {
         var text = btn.getAttribute('data-copy');
-        if (!navigator.clipboard) return;
-        navigator.clipboard.writeText(text).then(function () {
-          var old = btn.textContent;
-          btn.textContent = 'Copied';
+        function flash(msg) {
+          btn.textContent = msg;
           btn.classList.add('copied');
-          setTimeout(function () { btn.textContent = old; btn.classList.remove('copied'); }, 1400);
-        });
+          setTimeout(function () { btn.textContent = label; btn.classList.remove('copied'); }, 1400);
+        }
+        function fallback() {
+          var ta = document.createElement('textarea');
+          ta.value = text; ta.setAttribute('readonly', ''); ta.style.position = 'fixed'; ta.style.left = '-9999px';
+          document.body.appendChild(ta); ta.select();
+          try { document.execCommand('copy'); flash('Copied'); } catch (e) { flash('Press Ctrl+C'); }
+          document.body.removeChild(ta);
+        }
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(function () { flash('Copied'); }, fallback);
+        } else {
+          fallback();
+        }
       });
     });
   })();

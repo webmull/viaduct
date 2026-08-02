@@ -1,4 +1,4 @@
-/* viaduct.sh — open-source site. Design system carried over from the brand kit
+/* viaduct.sh: open-source site. Design system carried over from the brand kit
    (Space Grotesk / DM Sans / JetBrains Mono, dark oklch palette). Dark by intent:
    a developer tool that lives in the terminal. */
 
@@ -171,7 +171,7 @@ main > section:nth-child(even) { background: var(--surface); }
 .section-head p:not(.eyebrow) { margin: 0.9rem auto 0; max-width: 34rem; color: var(--muted-foreground); }
 
 /* ---------- How it works (clean numbered steps, no boxes) ---------- */
-/* mobile: compact rows — badge beside the title, description tucked under it */
+/* mobile: compact rows, badge beside the title, description tucked under it */
 .steps { list-style: none; margin: 0 auto; padding: 0; max-width: 30rem; display: grid; gap: 1.15rem; text-align: left; }
 .steps li { display: grid; grid-template-columns: auto 1fr; column-gap: 0.75rem; row-gap: 0.2rem; }
 .step-n {
