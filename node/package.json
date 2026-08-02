@@ -1,6 +1,6 @@
 {
   "name": "viaduct-sh",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Open a viaduct tunnel from Node: give a local port a public HTTPS URL. Zero dependencies.",
   "type": "module",
   "main": "index.js",
