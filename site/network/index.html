@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="mask-icon" href="/favicon.svg" color="#f5b544" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/styles.css" />
+  <title>The viaduct network: regions we operate</title>
+  <meta name="description" content="viaduct.sh operates tunnel nodes in four regions: London, New York, Singapore, and Sydney. Pick the one nearest your traffic with --region." />
+  <style>
+    .netpanel {
+      border: 1px solid var(--border-strong); border-radius: 1rem;
+      padding: clamp(1rem, 3vw, 2rem);
+      background:
+        radial-gradient(70% 90% at 50% 0%, color-mix(in oklab, var(--primary) 9%, transparent), transparent 65%),
+        var(--surface);
+      margin: 1.5rem 0;
+    }
+    .netmap { width: 100%; height: auto; display: block; }
+    .netmap .label { fill: #c3c9d4; font: 500 15px "DM Sans", sans-serif; }
+    .netmap .sub { fill: var(--muted-foreground); font: 500 11px "JetBrains Mono", monospace; letter-spacing: 0.04em; }
+    .netmap .ping { transform-origin: center; animation: netping 2.8s ease-out infinite; }
+    .netmap .node:nth-child(2) .ping { animation-delay: 0.7s; }
+    .netmap .node:nth-child(3) .ping { animation-delay: 1.4s; }
+    .netmap .node:nth-child(4) .ping { animation-delay: 2.1s; }
+    @keyframes netping { 0% { r: 6px; opacity: 0.55; } 70%, 100% { r: 20px; opacity: 0; } }
+    @media (prefers-reduced-motion: reduce) { .netmap .ping { animation: none; opacity: 0; } }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="docs-hero">
+      <div class="wrap">
+        <p class="eyebrow">Network</p>
+        <h1>The viaduct network</h1>
+        <p>
+          viaduct.sh operates tunnel nodes in four regions. Run your tunnel on the
+          one nearest your traffic; a tunnel always terminates at your machine, so
+          pick the node closest to you and your visitors.
+        </p>
+      </div>
+    </section>
+
+    <div class="wrap" style="max-width:60rem;padding-bottom:2.5rem">
+      <div class="netpanel">
+        <svg class="netmap" viewBox="0 0 1000 420" role="img"
+             aria-label="World map with viaduct nodes in New York, London, Singapore, and Sydney">
+          <defs>
+            <linearGradient id="arc" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#f5b544" stop-opacity="0.45" />
+              <stop offset="1" stop-color="#5cc9c9" stop-opacity="0.4" />
+            </linearGradient>
+            <radialGradient id="glow">
+              <stop offset="0" stop-color="#f5b544" stop-opacity="0.5" />
+              <stop offset="1" stop-color="#f5b544" stop-opacity="0" />
+            </radialGradient>
+          </defs>
+
+          <g stroke="rgba(255,255,255,0.05)" stroke-width="1">
+            <line x1="0" y1="70" x2="1000" y2="70" /><line x1="0" y1="140" x2="1000" y2="140" />
+            <line x1="0" y1="210" x2="1000" y2="210" /><line x1="0" y1="280" x2="1000" y2="280" />
+            <line x1="0" y1="350" x2="1000" y2="350" />
+            <line x1="130" y1="0" x2="130" y2="420" /><line x1="290" y1="0" x2="290" y2="420" />
+            <line x1="450" y1="0" x2="450" y2="420" /><line x1="610" y1="0" x2="610" y2="420" />
+            <line x1="770" y1="0" x2="770" y2="420" /><line x1="910" y1="0" x2="910" y2="420" />
+          </g>
+
+          <g fill="none" stroke="url(#arc)" stroke-width="1.6" stroke-linecap="round">
+            <path d="M116,103 Q246,40 377,68" />
+            <path d="M377,68 Q560,48 742,230" />
+            <path d="M742,230 Q835,205 909,344" />
+          </g>
+
+          <g>
+            <g class="node" transform="translate(116,103)">
+              <circle class="glow" r="26" fill="url(#glow)" />
+              <circle class="ping" r="6" fill="none" stroke="#f5b544" stroke-width="1.5" />
+              <circle r="5.5" fill="#f5b544" /><circle r="2" fill="#14171f" />
+              <text class="label" x="0" y="-16" text-anchor="middle">New York</text>
+              <text class="sub" x="0" y="24" text-anchor="middle">nyc</text>
+            </g>
+            <g class="node" transform="translate(377,68)">
+              <circle class="glow" r="26" fill="url(#glow)" />
+              <circle class="ping" r="6" fill="none" stroke="#f5b544" stroke-width="1.5" />
+              <circle r="5.5" fill="#f5b544" /><circle r="2" fill="#14171f" />
+              <text class="label" x="0" y="-16" text-anchor="middle">London</text>
+              <text class="sub" x="0" y="24" text-anchor="middle">lon &middot; default</text>
+            </g>
+            <g class="node" transform="translate(742,230)">
+              <circle class="glow" r="26" fill="url(#glow)" />
+              <circle class="ping" r="6" fill="none" stroke="#f5b544" stroke-width="1.5" />
+              <circle r="5.5" fill="#f5b544" /><circle r="2" fill="#14171f" />
+              <text class="label" x="0" y="-16" text-anchor="middle">Singapore</text>
+              <text class="sub" x="0" y="24" text-anchor="middle">sg</text>
+            </g>
+            <g class="node" transform="translate(909,344)">
+              <circle class="glow" r="26" fill="url(#glow)" />
+              <circle class="ping" r="6" fill="none" stroke="#f5b544" stroke-width="1.5" />
+              <circle r="5.5" fill="#f5b544" /><circle r="2" fill="#14171f" />
+              <text class="label" x="0" y="-16" text-anchor="end">Sydney</text>
+              <text class="sub" x="0" y="24" text-anchor="end">syd</text>
+            </g>
+          </g>
+        </svg>
+      </div>
+
+      <div class="table-scroll">
+        <table class="opt-table">
+          <thead>
+            <tr><th>Region</th><th>Code</th><th>Location</th><th>Endpoint</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>London <span style="color:var(--muted-foreground)">(default)</span></td><td><code>lon</code></td><td>London, UK</td><td><code>viaduct.sh:4443</code></td></tr>
+            <tr><td>New York</td><td><code>nyc</code></td><td>New York, US</td><td><code>nyc.viaduct.sh:4443</code></td></tr>
+            <tr><td>Singapore</td><td><code>sg</code></td><td>Singapore</td><td><code>sg.viaduct.sh:4443</code></td></tr>
+            <tr><td>Sydney</td><td><code>syd</code></td><td>Sydney, AU</td><td><code>syd.viaduct.sh:4443</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="doc-section" style="border-top:1px solid var(--border);padding-top:1.5rem">
+        <p style="color:var(--muted-foreground)">
+          Pick a region with <code style="font-family:var(--font-mono);font-size:0.86em;background:var(--secondary);padding:0.1rem 0.35rem;border-radius:0.3rem">viaduct http 8080 --region nyc</code>,
+          or run <code style="font-family:var(--font-mono);font-size:0.86em;background:var(--secondary);padding:0.1rem 0.35rem;border-radius:0.3rem">viaduct regions</code> to list them.
+          Full details in the <a href="/docs/#regions" style="color:var(--primary);text-decoration:none">regions docs</a>.
+        </p>
+      </div>
+    </div>
+  </main>
+</body>
+</html>
