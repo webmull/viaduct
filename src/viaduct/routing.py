@@ -8,6 +8,7 @@ Bodies are never parsed or buffered; WebSocket upgrades pass through untouched.
 from __future__ import annotations
 
 import asyncio
+import ipaddress
 
 #: Cap on request-line + headers. Enforced by passing this as the StreamReader
 #: ``limit`` on the public listener — ``readuntil`` fails beyond it.
@@ -39,6 +40,30 @@ def extract_host(head: bytes) -> str | None:
             host = _strip_port(value.strip().decode("latin-1").lower()).rstrip(".")
             return host or None
     return None
+
+
+def header_value(head: bytes, name: bytes) -> bytes | None:
+    """Return a request header's value (case-insensitive), or None."""
+    want = name.lower()
+    for line in head.split(b"\r\n")[1:]:
+        n, sep, v = line.partition(b":")
+        if sep and n.strip().lower() == want:
+            return v.strip()
+    return None
+
+
+def forwarded_for_ip(head: bytes) -> ipaddress.IPv4Address | ipaddress.IPv6Address | None:
+    """Visitor IP from the last X-Forwarded-For hop (the one the trusted front set)."""
+    xff = header_value(head, b"x-forwarded-for")
+    if not xff:
+        return None
+    parts = [p.strip() for p in xff.split(b",") if p.strip()]
+    if not parts:
+        return None
+    try:
+        return ipaddress.ip_address(parts[-1].decode("ascii", "ignore"))
+    except ValueError:
+        return None
 
 
 def request_target(head: bytes) -> str:
@@ -109,7 +134,13 @@ _ERROR_CSS = (
 )
 
 
-def error_response(status: str, title: str, detail: str, retry_after: int | None = None) -> bytes:
+def error_response(
+    status: str,
+    title: str,
+    detail: str,
+    retry_after: int | None = None,
+    extra_headers: dict[str, str] | None = None,
+) -> bytes:
     """A branded HTML error page (see site/errors.html). Args are trusted constants.
 
     When *retry_after* is set (503), the page auto-refreshes and sends a
@@ -146,5 +177,7 @@ def error_response(status: str, title: str, detail: str, retry_after: int | None
     ]
     if retry_after:
         lines.append(f"Retry-After: {retry_after}")
+    for _name, _value in (extra_headers or {}).items():
+        lines.append(f"{_name}: {_value}")
     lines.append("Connection: close")
     return ("\r\n".join(lines) + "\r\n\r\n").encode("ascii") + payload

@@ -76,6 +76,15 @@ viaductd --bind 0.0.0.0 --base-domain your-domain.com \
 `--bind 0.0.0.0` is needed so the tunnel listener is reachable. If binding both
 to all interfaces bothers you, front 8080 with a localhost-only rule in ufw, it is already not exposed since ufw only opens 80/443/4443.)
 
+Because the public port sits behind Caddy, the visitor's real address arrives in
+the `X-Forwarded-For` header Caddy appends, and that last hop is what a tunnel's
+`--allow-ip` allowlist trusts. This is the setup that makes the allowlist
+spoof-resistant, so no extra flag is needed here. If you ever run viaductd with
+its public port exposed directly, with no trusted front adding that header, start
+it with `--trust-peer-ip` so the allowlist reads the direct socket address
+instead. Only enable that when nothing untrusted can reach the public port, since
+a direct client could otherwise claim any address.
+
 Let's Encrypt rotates certs roughly every 60 days. viaductd loads the cert at
 startup, so restart it after renewal, M5 adds a monthly systemd restart timer.
 A stale cert shows up client-side as a certificate-expired error.

@@ -93,6 +93,12 @@ tunnel, and serves `502` until your app comes up.
 | `--inspect` | off | Log each request: method, path, status, and time |
 | `--pin` | off | Keep the same public URL across reconnects (stable subdomain) |
 | `--host-header HOST` | off | Rewrite the `Host` header your app sees (e.g. `localhost`), for dev servers that reject unknown hosts |
+| `--basic-auth USER:PASS` | off | Require HTTP Basic auth. Omit `:PASS` to be prompted for the password |
+| `--bearer TOKEN` | off | Require an `Authorization: Bearer TOKEN` header |
+| `--allow-ip CIDR` | off | Only allow these addresses. Single IPs or CIDRs; repeat the flag or comma-separate |
+| `--auth-message TEXT` | default | Message shown on the 401 page when credentials are missing or wrong |
+| `--deny-message TEXT` | default | Message shown on the 403 page when an address is not on the allowlist |
+| `--auth-realm NAME` | `viaduct` | Realm shown in the browser's Basic-auth prompt |
 
 By default every reconnect gets a fresh random URL. `--pin` keeps the same URL
 for a given local port across reconnects, which is handy for a webhook endpoint
@@ -113,6 +119,41 @@ and reject a request whose `Host` is the public tunnel URL with an error like
 "Invalid Host header" or "Blocked request". `--host-header localhost` makes your
 app see the request as if it arrived on `localhost`, so it stops rejecting them,
 while visitors still use the public URL.
+
+### Protecting a tunnel
+
+By default a tunnel is public: anyone with the URL can reach your local app. Put
+a gate in front of it with one or more of `--basic-auth`, `--bearer`, and
+`--allow-ip`:
+
+```sh
+viaduct http 3000 --basic-auth alice:secret   # HTTP Basic prompt in the browser
+viaduct http 3000 --basic-auth alice           # omit :PASS and you're prompted for it
+viaduct http 3000 --bearer $TOKEN              # for APIs and webhooks
+viaduct http 3000 --allow-ip 203.0.113.4 --allow-ip 10.0.0.0/8
+```
+
+Checks run on the server, at the edge: an unauthorised request is answered with a
+branded 401/403 and never reaches your machine. Only hashes of the password and
+token leave your machine (in the opening handshake), never the plaintext, so you
+can also keep them out of your shell history:
+
+```sh
+export VIADUCT_BASIC_AUTH=alice:secret     # or VIADUCT_BEARER=…
+viaduct http 3000                          # picks them up automatically
+```
+
+or put `basic_auth = "alice:secret"` in `~/.config/viaduct/config.toml`.
+
+Customise the pages visitors see with `--auth-message` (401) and `--deny-message`
+(403), and the browser prompt's realm with `--auth-realm`.
+
+**What this is, and isn't.** It's access control for sharing, so the right people
+get in and everyone else gets a clean "no", not a DDoS shield. The IP allowlist
+reads the real visitor address from the trusted front (Caddy) in front of
+viaductd. If you run your own server with no such front, pass `--trust-peer-ip` to
+`viaductd` so it reads the direct socket address instead; on the hosted
+`viaduct.sh` servers this is already handled for you.
 
 ### Managing tunnels
 

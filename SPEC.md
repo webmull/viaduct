@@ -81,6 +81,43 @@ the user's DNS.
 - **Still no state.** The binding is the user's CNAME plus the live in-memory
   tunnel; nothing is persisted, and a removed CNAME simply stops resolving.
 
+## Amendment (2026-08-04): opt-in per-tunnel access control (Basic / Bearer / IP)
+
+Adds optional access control that a tunnel owner puts on their own tunnel. This
+does **not** revive the original "auth token is always required" non-goal:
+tunnels are still anonymous and public by default. This is a gate the owner
+chooses to add to a shared link, not a login to the service. Still no accounts,
+no `token create`, no database.
+
+- **Flags on `viaduct http`:** `--basic-auth USER:PASS` (HTTP Basic), `--bearer
+  TOKEN` (Authorization: Bearer), and `--allow-ip CIDR` (repeatable IP/CIDR
+  allowlist). They compose; any combination gates the tunnel. Also
+  `--auth-message` / `--deny-message` (custom 401 / 403 body copy) and
+  `--auth-realm`. Credentials can come from the flag, `VIADUCT_BASIC_AUTH` /
+  `VIADUCT_BEARER`, or `~/.config/viaduct/config.toml`; `--basic-auth USER` with
+  no password prompts for it rather than putting it in argv.
+- **Enforced server-side, at the edge.** viaductd checks each request in
+  `_handle_public` *before* it acquires a data connection, so an unauthorised
+  request is answered with a branded 401/403 and never reaches the owner's
+  machine. The check reuses the head viaductd already parses to route by Host, so
+  the data path is untouched (no cost once authorised).
+- **Only hashes travel; nothing is persisted.** The client puts an opaque `auth`
+  dict in the hello frame carrying `sha256` of the Basic/Bearer credential (never
+  plaintext) plus the allowlist and messages. viaductd reconstructs a
+  `TunnelAuth` held only on the live in-memory tunnel; it stores no secret and
+  writes nothing to disk. Compares are constant-time (`hmac.compare_digest`).
+- **Version-skew safety.** The `ok` frame echoes `auth_enforced: true` when a
+  tunnel is actually gated; a client that requested auth but does not see the
+  echo raises `auth_unsupported` and refuses to run, so a new client can never
+  sit unprotected in front of an old server.
+- **IP allowlist and the trusted front.** The visitor address is the last
+  `X-Forwarded-For` hop set by Caddy (spoof-resistant behind the front). With no
+  XFF it fails closed. An operator self-hosting viaductd with no trusted front
+  passes `viaductd --trust-peer-ip` to use the direct socket address instead.
+- **Extras:** owner-supplied messages are HTML-escaped into the branded error
+  page; a light per-IP failed-auth throttle (429) slows brute force. All of this
+  lives in `auth.py`; there is still no database and no user accounts.
+
 ---
 
 ## Task

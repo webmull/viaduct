@@ -22,7 +22,7 @@ from urllib.parse import parse_qs, urlsplit
 
 import typer
 
-from viaduct import dns, names, protocol, routing
+from viaduct import auth, dns, names, protocol, routing
 from viaduct.relay import splice
 
 log = logging.getLogger("viaduct.server")
@@ -48,11 +48,15 @@ PREWARM_TIMEOUT = 30.0
 class Tunnel:
     """One connected client: its subdomain and idle pool of data connections."""
 
-    def __init__(self, subdomain: str, token: str) -> None:
+    def __init__(
+        self, subdomain: str, token: str, tunnel_auth: auth.TunnelAuth | None = None
+    ) -> None:
         self.subdomain = subdomain
         #: per-tunnel capability: a data connection must present this exact token
         #: (sent to the owning client over the TLS control channel) to attach.
         self.token = token
+        #: server-side auth for this tunnel (Basic/Bearer/IP allowlist), or None.
+        self.auth = tunnel_auth
         self.pool: asyncio.Queue[Conn] = asyncio.Queue()
         #: pooled + in-flight data connections, bounded by --max-conns-per-tunnel
         self.data_conns = 0
@@ -100,6 +104,7 @@ class TunnelServer:
         idle_timeout: float | None = 300.0,
         pool_wait: float = 10.0,
         max_tunnels_per_ip: int = 4,
+        trust_peer_ip: bool = False,
     ) -> None:
         self.bind = bind
         #: the plaintext public listener only ever needs to be reached by Caddy
@@ -121,6 +126,9 @@ class TunnelServer:
         #: source IP. Data connections don't count — only tunnels (control
         #: connections). ``_ip_tunnels`` maps source IP -> live tunnel count.
         self.max_tunnels_per_ip = max_tunnels_per_ip
+        #: self-host without a trusted front: use the direct peer IP for
+        #: --allow-ip when there is no X-Forwarded-For. Off by default.
+        self.trust_peer_ip = trust_peer_ip
         self._ip_tunnels: dict[str, int] = {}
         self.tunnels: dict[str, Tunnel] = {}
         #: custom domain -> tunnel subdomain (or None), resolved via CNAME, cached
@@ -181,6 +189,10 @@ class TunnelServer:
     async def _handle_tunnel(
         self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter
     ) -> None:
+        # Keep idle pooled data connections (and the control link) from being
+        # silently reaped by a NAT/firewall idle timeout; also lets a dead peer
+        # be detected instead of black-holing a request spliced into it.
+        protocol.enable_keepalive(writer)
         try:
             async with asyncio.timeout(protocol.HANDSHAKE_TIMEOUT):
                 frame = await protocol.read_frame(reader)
@@ -217,14 +229,19 @@ class TunnelServer:
         else:
             subdomain = names.unique_name(self.tunnels)
         token = secrets.token_hex(16)  # capability binding data conns to this client
-        tunnel = Tunnel(subdomain, token)
+        auth_payload = frame.get("auth")
+        tunnel_auth = auth.TunnelAuth(auth_payload) if isinstance(auth_payload, dict) else None
+        tunnel = Tunnel(subdomain, token, tunnel_auth=tunnel_auth)
         self.tunnels[subdomain] = tunnel
         self._ip_tunnels[ip] = self._ip_tunnels.get(ip, 0) + 1
         hostname = f"{subdomain}.{self.base_domain}"
         unanswered = [0]  # our pings not yet ponged; shared with the ping loop
         ping_task = asyncio.create_task(self._ping_loop(writer, unanswered))
         try:
-            await protocol.write_frame(writer, protocol.ok(hostname=hostname, token=token))
+            ok_fields: dict[str, object] = {"hostname": hostname, "token": token}
+            if tunnel_auth is not None and tunnel_auth.enforced():
+                ok_fields["auth_enforced"] = True
+            await protocol.write_frame(writer, protocol.ok(**ok_fields))
             log.info("tunnel registered subdomain=%s hostname=%s", subdomain, hostname)
             while True:
                 async with asyncio.timeout(protocol.DEAD_PEER_TIMEOUT):
@@ -331,6 +348,15 @@ class TunnelServer:
                 "It may have closed, or the link is out of date.",
             )
             return
+        if tunnel.auth is not None:
+            peer = writer.get_extra_info("peername")
+            ip = auth.resolve_ip(head, peer[0] if peer else None, self.trust_peer_ip)
+            blocked = tunnel.auth.check(head, ip)
+            if blocked is not None:
+                status, title, detail, extra = blocked
+                log.info("auth blocked subdomain=%s status=%s", subdomain, status.split(" ", 1)[0])
+                await self._respond(writer, status, title, detail, extra_headers=extra)
+                return
         conn = await tunnel.acquire(wait=self.pool_wait)
         if conn is None:
             log.warning("pool starved subdomain=%s waited=%.0fs", subdomain, self.pool_wait)
@@ -492,9 +518,10 @@ class TunnelServer:
         title: str,
         detail: str,
         retry_after: int | None = None,
+        extra_headers: dict[str, str] | None = None,
     ) -> None:
         with contextlib.suppress(ConnectionError):
-            writer.write(routing.error_response(status, title, detail, retry_after))
+            writer.write(routing.error_response(status, title, detail, retry_after, extra_headers))
             await writer.drain()
         writer.close()
 
@@ -527,6 +554,14 @@ def _cli(
     max_tunnels_per_ip: Annotated[
         int, typer.Option(help="Max concurrent tunnels allowed from one source IP")
     ] = 4,
+    trust_peer_ip: Annotated[
+        bool,
+        typer.Option(
+            "--trust-peer-ip",
+            help="For --allow-ip without a trusted front: use the direct peer IP "
+            "when there is no X-Forwarded-For (only safe if not behind a proxy)",
+        ),
+    ] = False,
 ) -> None:
     """Run the tunnel server."""
     if ctx.invoked_subcommand is not None:
@@ -550,6 +585,7 @@ def _cli(
                 max_conns_per_tunnel,
                 idle_timeout if idle_timeout > 0 else None,
                 max_tunnels_per_ip,
+                trust_peer_ip,
             )
         )
 
@@ -564,6 +600,7 @@ async def _serve(
     max_conns_per_tunnel: int,
     idle_timeout: float | None,
     max_tunnels_per_ip: int,
+    trust_peer_ip: bool = False,
 ) -> None:
     server = TunnelServer(
         bind=bind,
@@ -575,6 +612,7 @@ async def _serve(
         max_conns_per_tunnel=max_conns_per_tunnel,
         idle_timeout=idle_timeout,
         max_tunnels_per_ip=max_tunnels_per_ip,
+        trust_peer_ip=trust_peer_ip,
     )
     await server.start()
     stop = asyncio.Event()

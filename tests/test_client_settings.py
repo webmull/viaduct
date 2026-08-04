@@ -6,7 +6,8 @@ from pathlib import Path
 
 import pytest
 
-from viaduct.client import _connection_settings
+from viaduct import auth
+from viaduct.client import _auth_summary, _connection_settings, _expand_allow_ips
 
 
 @pytest.fixture(autouse=True)
@@ -52,3 +53,35 @@ def test_config_server_used_when_no_flag(tmp_path: Path) -> None:
     host, port, ssl_ctx = _connection_settings(None, None, None)
     assert (host, port) == ("example.com", 9000)
     assert ssl_ctx is not None  # real host -> TLS on
+
+
+def _summary(**kwargs: object) -> str | None:
+    return _auth_summary(auth.client_payload(**kwargs))
+
+
+def test_auth_summary_labels_the_banner() -> None:
+    assert _summary(basic_auth="a:b") == "Basic auth"
+    assert _summary(bearer="t") == "bearer token"
+    assert _summary(allow_ips=["1.2.3.4"]) == "IP allowlist (1 rule)"
+    assert _summary(allow_ips=["1.2.3.4", "10.0.0.0/8"]) == "IP allowlist (2 rules)"
+    assert _summary(basic_auth="a:b", allow_ips=["1.2.3.4"]) == "Basic auth + IP allowlist (1 rule)"
+
+
+def test_auth_summary_none_when_nothing_gates() -> None:
+    # a message with no actual gate must not claim the tunnel is protected
+    assert _summary(auth_message="hi") is None
+    assert _summary() is None
+    assert _auth_summary(None) is None
+
+
+def test_expand_allow_ips_accepts_repeats_and_commas() -> None:
+    assert _expand_allow_ips(None) == []
+    assert _expand_allow_ips(["1.2.3.4"]) == ["1.2.3.4"]
+    assert _expand_allow_ips(["1.2.3.4", "5.6.7.8"]) == ["1.2.3.4", "5.6.7.8"]  # repeated flag
+    assert _expand_allow_ips(["1.2.3.4,5.6.7.8"]) == ["1.2.3.4", "5.6.7.8"]  # comma-separated
+    # a mix, with stray whitespace and empty parts
+    assert _expand_allow_ips(["1.2.3.4, 10.0.0.0/8", "", "9.9.9.9 ,"]) == [
+        "1.2.3.4",
+        "10.0.0.0/8",
+        "9.9.9.9",
+    ]

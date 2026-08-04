@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import socket
 import struct
 from typing import Any
 
@@ -13,6 +14,43 @@ from viaduct import protocol
 
 def run(coro: Any) -> Any:
     return asyncio.run(coro)
+
+
+class _SockWriter:
+    """Minimal StreamWriter stand-in exposing a real socket via get_extra_info."""
+
+    def __init__(self, sock: socket.socket | None) -> None:
+        self._sock = sock
+
+    def get_extra_info(self, name: str) -> Any:
+        return self._sock if name == "socket" else None
+
+
+def test_enable_keepalive_sets_socket_options() -> None:
+    srv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    srv.bind(("127.0.0.1", 0))
+    srv.listen(1)
+    client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    client.connect(srv.getsockname())
+    accepted, _ = srv.accept()
+    try:
+        protocol.enable_keepalive(_SockWriter(client))
+        # enabled reads back non-zero (1 on Linux, the option bit 8 on macOS)
+        assert client.getsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE) != 0
+        # whichever name this platform uses for the idle time must be set
+        idle_opt = getattr(socket, "TCP_KEEPIDLE", None) or getattr(socket, "TCP_KEEPALIVE", None)
+        if idle_opt is not None:
+            assert client.getsockopt(socket.IPPROTO_TCP, idle_opt) == protocol.KEEPALIVE_IDLE
+    finally:
+        client.close()
+        accepted.close()
+        srv.close()
+
+
+def test_enable_keepalive_no_socket_is_noop() -> None:
+    # a transport with no underlying socket (e.g. some SSL/pipe transports) must
+    # not raise; the pool still works, just without the tuning
+    protocol.enable_keepalive(_SockWriter(None))
 
 
 async def read_from(data: bytes) -> protocol.Frame:

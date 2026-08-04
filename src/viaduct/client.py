@@ -10,7 +10,11 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import getpass
+import ipaddress
 import logging
+import os
+import random
 import signal
 import ssl
 import sys
@@ -24,7 +28,7 @@ from rich.console import Console
 from rich.markup import escape
 from rich.table import Table
 
-from viaduct import config, protocol, registry, update
+from viaduct import auth, config, protocol, registry, update
 from viaduct.relay import CHUNK, splice
 from viaduct.routing import error_response
 
@@ -58,6 +62,14 @@ _REGION_HINT = ", ".join(f"{code} ({name})" for code, (name, _host) in REGIONS.i
 #: so the pool drains back to the baseline after a burst subsides.
 SURGE_IDLE_TIMEOUT = 20.0
 
+#: Backstop to TCP keepalive: a baseline (permanent) idle connection is recycled
+#: after roughly this long unused. Replacing it *while the path is still live*
+#: means the graceful close reaches the server, so a connection silently dropped
+#: by a NAT/firewall never lingers in either pool to black-hole a request. The
+#: jitter spreads recycles so the whole pool never reconnects in lockstep.
+POOL_IDLE_RECYCLE = 45.0
+POOL_IDLE_JITTER = 15.0
+
 
 class TunnelError(Exception):
     """The server refused the tunnel."""
@@ -76,6 +88,7 @@ class TunnelClient:
         inspect: bool = False,
         pin_seed: str | None = None,
         host_header: str | None = None,
+        auth: dict | None = None,
     ) -> None:
         self._server_host = server_host
         self._server_port = server_port
@@ -89,6 +102,9 @@ class TunnelClient:
         #: when set, each request's Host header is rewritten to this before the
         #: local app sees it (fixes dev servers that reject "unknown" hosts)
         self._host_header = host_header.encode("latin-1") if host_header else None
+        #: opaque auth payload (credential hashes + allowlist + messages),
+        #: enforced by the server at the edge; None when no auth was requested.
+        self._auth = auth
         #: per-tunnel capability token from the server's ok frame; sent on each
         #: data connection so the server binds it to this tunnel
         self._token: str | None = None
@@ -116,13 +132,20 @@ class TunnelClient:
         reader, writer = await asyncio.open_connection(
             self._server_host, self._server_port, ssl=self._ssl_ctx
         )
+        protocol.enable_keepalive(writer)
         try:
-            await protocol.write_frame(writer, protocol.hello(self._local_port, self._pin_seed))
+            await protocol.write_frame(
+                writer, protocol.hello(self._local_port, self._pin_seed, self._auth)
+            )
             resp = await protocol.read_frame(reader)
             if resp["type"] == "error":
                 raise TunnelError(protocol.require_str(resp, "reason"))
             if resp["type"] != "ok":
                 raise TunnelError(f"unexpected reply type {resp['type']!r}")
+            if self._auth is not None and not resp.get("auth_enforced"):
+                # The server took the tunnel but did not confirm it applied our
+                # auth: it is too old. Refuse rather than serve unprotected.
+                raise TunnelError("auth_unsupported")
             self.hostname = protocol.require_str(resp, "hostname")
             token = resp.get("token")  # absent only against a pre-token server
             self._token = token if isinstance(token, str) else None
@@ -233,6 +256,11 @@ class TunnelClient:
         ``_max_pool`` total); they serve one request and exit, so the pool
         shrinks back to the baseline on its own once demand falls. Connect
         failures back off exponentially; a temporary worker gives up instead.
+
+        A permanent worker also recycles its idle connection after
+        ~``POOL_IDLE_RECYCLE`` seconds (a backstop to TCP keepalive): the
+        still-live connection is closed and re-established, so one silently
+        dropped by a NAT/firewall is replaced before a request black-holes on it.
         """
         backoff = 1.0
         while not self._stopping and not self._closed.is_set():
@@ -240,6 +268,7 @@ class TunnelClient:
                 reader, writer = await asyncio.open_connection(
                     self._server_host, self._server_port, ssl=self._ssl_ctx
                 )
+                protocol.enable_keepalive(writer)
             except OSError:
                 if not permanent:
                     return
@@ -253,13 +282,17 @@ class TunnelClient:
                 )
                 self._idle += 1
                 try:
-                    if permanent:
+                    # A timeout here (surge retire, or baseline recycle) raises
+                    # TimeoutError, an OSError, so it lands in the handler below
+                    # as "no data" and the worker reconnects (permanent) or exits
+                    # (surge). A real assignment returns bytes and breaks out.
+                    idle_cap = (
+                        POOL_IDLE_RECYCLE + random.uniform(0, POOL_IDLE_JITTER)
+                        if permanent
+                        else SURGE_IDLE_TIMEOUT
+                    )
+                    async with asyncio.timeout(idle_cap):
                         first = await reader.read(CHUNK)
-                    else:
-                        # retire a surge worker that sits unused (TimeoutError is
-                        # an OSError, so it lands in the handler below as no data)
-                        async with asyncio.timeout(SURGE_IDLE_TIMEOUT):
-                            first = await reader.read(CHUNK)
                 finally:
                     self._idle -= 1
             except (protocol.ProtocolError, OSError):
@@ -517,6 +550,45 @@ def http(
             "dev servers that reject unknown hosts",
         ),
     ] = None,
+    basic_auth: Annotated[
+        str | None,
+        typer.Option(
+            "--basic-auth",
+            metavar="USER:PASS",
+            help="Protect the public URL with HTTP Basic auth (user:password)",
+        ),
+    ] = None,
+    allow_ip: Annotated[
+        list[str] | None,
+        typer.Option(
+            "--allow-ip",
+            help="Only allow requests from these IPs/CIDRs (repeatable, or "
+            "comma-separated); uses the X-Forwarded-For the Caddy front sets",
+        ),
+    ] = None,
+    auth_message: Annotated[
+        str | None,
+        typer.Option(
+            "--auth-message",
+            help="Custom line on the 401 (password) page (e.g. how to request access)",
+        ),
+    ] = None,
+    deny_message: Annotated[
+        str | None,
+        typer.Option("--deny-message", help="Custom line on the 403 (IP not allowed) page"),
+    ] = None,
+    bearer: Annotated[
+        str | None,
+        typer.Option(
+            "--bearer",
+            metavar="TOKEN",
+            help="Require this bearer token (Authorization: Bearer ...) on the public URL",
+        ),
+    ] = None,
+    auth_realm: Annotated[
+        str | None,
+        typer.Option("--auth-realm", help="Realm shown in the browser's Basic-auth prompt"),
+    ] = None,
 ) -> None:
     """Open a tunnel exposing local PORT. The server assigns a random public URL.
 
@@ -534,6 +606,28 @@ def http(
         )
     host, srv_port, ssl_ctx = _connection_settings(server, tls, tls_ca, region)
     host_header = host_header or _cfg_str(config.load(), "host_header")
+    cfg = config.load()
+    basic_auth = basic_auth or os.environ.get("VIADUCT_BASIC_AUTH") or _cfg_str(cfg, "basic_auth")
+    bearer = bearer or os.environ.get("VIADUCT_BEARER") or _cfg_str(cfg, "bearer")
+    if basic_auth and ":" not in basic_auth:
+        # a username with no ":" means "prompt me for the password" (keeps it out
+        # of argv and shell history)
+        basic_auth = f"{basic_auth}:{getpass.getpass(f'Password for {basic_auth}: ')}"
+    # accept both --allow-ip A --allow-ip B and --allow-ip A,B (and any mix)
+    allow_ips = _expand_allow_ips(allow_ip)
+    for _ip in allow_ips:
+        try:
+            ipaddress.ip_network(_ip, strict=False)
+        except ValueError:
+            console.print(f"[bold red]viaduct: --allow-ip {_ip!r} is not a valid IP or CIDR[/]")
+            raise typer.Exit(2) from None
+    if auth_message and not basic_auth:
+        console.print("[yellow]viaduct: --auth-message has no effect without --basic-auth[/]")
+    if deny_message and not allow_ips:
+        console.print("[yellow]viaduct: --deny-message has no effect without --allow-ip[/]")
+    auth_payload = auth.client_payload(
+        basic_auth, bearer, allow_ips, auth_message, deny_message, auth_realm
+    )
     try:
         pin_seed = config.pin_seed(port) if pin else None
     except config.ConfigError as exc:
@@ -541,7 +635,10 @@ def http(
         raise typer.Exit(1) from exc
     try:
         asyncio.run(
-            _run_http(host, srv_port, port, pool_size, ssl_ctx, inspect, pin_seed, host_header)
+            _run_http(
+                host, srv_port, port, pool_size, ssl_ctx, inspect, pin_seed,
+                host_header, auth_payload,
+            )
         )
     except KeyboardInterrupt:
         console.print("[yellow]viaduct: interrupted[/]")
@@ -550,6 +647,9 @@ def http(
             "ip_tunnel_limit": "too many tunnels already open from this address (server limit)",
             "pin_in_use": "that pinned URL is already in use by another live tunnel "
             "(is the same --pin tunnel already open elsewhere?)",
+            "auth_unsupported": "the server did not confirm it applied your auth "
+            "(--basic-auth/--bearer/--allow-ip); it is likely too old. Upgrade the "
+            "server or drop the auth flags. Refusing to serve unprotected.",
         }
         msg = messages.get(str(exc), f"server refused tunnel: {exc}")
         console.print(f"[bold red]viaduct: {msg}[/]")
@@ -630,16 +730,44 @@ def _cfg_str(cfg: dict[str, str | bool], key: str) -> str | None:
 
 
 #: Refusal reasons the client should not retry; it reports them and exits.
-FATAL_REASONS = ("ip_tunnel_limit", "pin_in_use")
+FATAL_REASONS = ("ip_tunnel_limit", "pin_in_use", "auth_unsupported")
+
+
+def _expand_allow_ips(values: list[str] | None) -> list[str]:
+    """Flatten --allow-ip so repeated flags and comma-separated values both work:
+    --allow-ip A --allow-ip B, --allow-ip A,B, and any mix all give [A, B]."""
+    return [part.strip() for entry in (values or []) for part in entry.split(",") if part.strip()]
+
+
+def _auth_summary(payload: dict | None) -> str | None:
+    """A short 'what gates this tunnel' label for the startup banner, or None if
+    nothing actually gates it (a message-only payload does not count)."""
+    if not payload:
+        return None
+    parts: list[str] = []
+    if payload.get("basic"):
+        parts.append("Basic auth")
+    if payload.get("bearer"):
+        parts.append("bearer token")
+    allow = payload.get("allow_ips")
+    if allow:
+        parts.append(f"IP allowlist ({len(allow)} rule{'s' if len(allow) != 1 else ''})")
+    return " + ".join(parts) or None
 
 
 def _print_tunnel_up(
-    hostname: str, local_port: int, quit_hint: bool = False, inspecting: bool = False
+    hostname: str,
+    local_port: int,
+    quit_hint: bool = False,
+    inspecting: bool = False,
+    protected: str | None = None,
 ) -> None:
     console.print("[green]✓[/] tunnel live", highlight=False)
     console.print()
     console.print(f"  [bold green]https://{hostname}[/]", highlight=False)
     console.print(f"  [dim]→ http://localhost:{local_port}[/]", highlight=False)
+    if protected:
+        console.print(f"  [#f5b544]● protected[/][dim] · {protected}[/]", highlight=False)
     if quit_hint:
         console.print()
         if inspecting:
@@ -766,6 +894,7 @@ async def _run_http(
     inspect: bool = False,
     pin_seed: str | None = None,
     host_header: str | None = None,
+    auth: dict | None = None,
 ) -> None:
     """Keep the tunnel up: reconnect on drop with 1s→30s exponential backoff."""
     stop = asyncio.Event()
@@ -821,6 +950,7 @@ async def _run_http(
                 inspect=inspect_state["on"],
                 pin_seed=pin_seed,
                 host_header=host_header,
+                auth=auth,
             )
             inspect_state["client"] = client
             connecting = (
@@ -854,10 +984,20 @@ async def _run_http(
 
             first = False
             delay = 1.0
+            protected = _auth_summary(auth)
             if fancy:
-                _print_tunnel_up(hostname, local_port, q_active, inspecting=inspect_state["on"])
+                _print_tunnel_up(
+                    hostname,
+                    local_port,
+                    q_active,
+                    inspecting=inspect_state["on"],
+                    protected=protected,
+                )
             else:
-                console.print(f"[bold green]tunnel up[/] {hostname} → 127.0.0.1:{local_port}")
+                suffix = f" (protected: {protected})" if protected else ""
+                console.print(
+                    f"[bold green]tunnel up[/] {hostname} → 127.0.0.1:{local_port}{suffix}"
+                )
             registry.register(
                 port=local_port,
                 subdomain=hostname.split(".", 1)[0],

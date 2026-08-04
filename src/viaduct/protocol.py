@@ -30,7 +30,9 @@ Read timeouts are the caller's concern (wrap calls in ``asyncio.timeout``).
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
+import socket
 import struct
 from typing import Any, Final
 
@@ -62,7 +64,42 @@ HEARTBEAT_MAX_MISSED: Final = 2
 #: Bounds slowloris: an idle connection that never speaks is closed, not parked.
 HANDSHAKE_TIMEOUT: Final = 10.0
 
+#: TCP keepalive for pooled data connections. An idle data connection carries no
+#: application traffic, so a stateful middlebox (NAT, conntrack, cloud firewall)
+#: can silently evict its mapping after a few minutes; the socket is then
+#: half-open and a request spliced into it black-holes. Probes keep the mapping
+#: warm and turn a genuinely dead peer into a detectable reset. Idle is set below
+#: common NAT idle timeouts (~1-5 min).
+KEEPALIVE_IDLE: Final = 20  # seconds idle before the first probe (below common NAT idle)
+KEEPALIVE_INTVL: Final = 10  # seconds between probes
+KEEPALIVE_COUNT: Final = 3  # unanswered probes before the socket is reset
+
 _HEADER = struct.Struct(">I")
+
+
+def enable_keepalive(writer: asyncio.StreamWriter) -> None:
+    """Turn on TCP keepalive with a sub-NAT-timeout idle on a stream's socket.
+
+    Best-effort: a socket-less transport is a no-op, and per-connection options
+    the platform does not expose are skipped. The idle/interval/count knobs are
+    named differently per OS (Linux: ``TCP_KEEPIDLE``; macOS: ``TCP_KEEPALIVE``),
+    so we set whichever exist. ``SO_KEEPALIVE`` alone still helps where they do
+    not, using the system defaults.
+    """
+    sock = writer.get_extra_info("socket")
+    if sock is None:
+        return
+    with contextlib.suppress(OSError):
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
+    idle_opt = getattr(socket, "TCP_KEEPIDLE", None) or getattr(socket, "TCP_KEEPALIVE", None)
+    for opt, value in (
+        (idle_opt, KEEPALIVE_IDLE),
+        (getattr(socket, "TCP_KEEPINTVL", None), KEEPALIVE_INTVL),
+        (getattr(socket, "TCP_KEEPCNT", None), KEEPALIVE_COUNT),
+    ):
+        if opt is not None:
+            with contextlib.suppress(OSError):
+                sock.setsockopt(socket.IPPROTO_TCP, opt, value)
 
 
 class ProtocolError(Exception):
@@ -111,10 +148,12 @@ async def read_frame(reader: asyncio.StreamReader) -> Frame:
     return msg
 
 
-def hello(local_port: int, pin: str | None = None) -> Frame:
+def hello(local_port: int, pin: str | None = None, auth: dict | None = None) -> Frame:
     frame: Frame = {"type": "hello", "local_port": local_port}
     if pin:
         frame["pin"] = pin  # opaque --pin seed; the server derives a stable name
+    if auth:
+        frame["auth"] = auth  # opaque auth payload: credential hashes + allowlist + messages
     return frame
 
 
