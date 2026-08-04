@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#14171f" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="icon" sizes="32x32" href="/favicon-32.png" />
+  <link rel="mask-icon" href="/favicon.svg" color="#f5b544" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500;600&display=swap" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500;600&display=swap" media="print" onload="this.media='all'" />
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500;600&display=swap" /></noscript>
+  <link rel="stylesheet" href="/styles.css" />
+  <title>Idle tunnels stay ready: viaduct.sh</title>
+  <meta name="description" content="A tunnel left open but unused could go quiet behind networks that drop idle connections. viaduct now keeps its connections warm so the first request after a lull loads straight away." />
+  <link rel="canonical" href="https://viaduct.sh/news/idle-tunnels-stay-ready/" />
+  <meta property="og:type" content="article" />
+  <meta property="og:title" content="Idle tunnels stay ready" />
+  <meta property="og:description" content="viaduct now keeps its tunnel connections warm, so a tunnel left running is ready the moment traffic comes back." />
+  <meta property="og:url" content="https://viaduct.sh/news/idle-tunnels-stay-ready/" />
+  <meta property="og:image" content="https://viaduct.sh/og.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Idle tunnels stay ready" />
+  <meta name="twitter:description" content="viaduct now keeps its tunnel connections warm, so a tunnel left running is ready the moment traffic comes back." />
+  <meta name="twitter:image" content="https://viaduct.sh/og.png" />
+  <link rel="alternate" type="application/rss+xml" title="viaduct.sh news" href="/news/feed.xml" />
+  <style>
+    .article { max-width: 44rem; margin: 0 auto; }
+    .byline { display: flex; align-items: center; justify-content: center; gap: 0.7rem; margin: 1.4rem 0 0; color: var(--muted-foreground); font-size: 0.9rem; }
+    .byline img { width: 2.4rem; height: 2.4rem; border-radius: 999px; border: 1px solid var(--border-strong); }
+    .byline b { color: var(--foreground); font-weight: 600; }
+    .byline .dot { opacity: 0.5; }
+    .prose { margin-top: 2.2rem; color: var(--foreground); font-size: 1.02rem; line-height: 1.7; }
+    .prose > p { margin: 0 0 1.15rem; color: #cdd3de; }
+    .prose h2 { font-family: var(--font-display); font-size: 1.35rem; margin: 2.2rem 0 0.7rem; letter-spacing: -0.01em; }
+    .prose a { color: var(--primary); text-decoration: none; }
+    .prose a:hover { text-decoration: underline; }
+    .prose code { font-family: var(--font-mono); font-size: 0.86em; background: var(--secondary); padding: 0.1rem 0.35rem; border-radius: 0.3rem; }
+    .prose b { color: var(--foreground); font-weight: 600; }
+    .back { display: inline-block; margin-top: 2.4rem; color: var(--muted-foreground); text-decoration: none; font-size: 0.92rem; }
+    .back:hover { color: var(--foreground); }
+  </style>
+</head>
+<body>
+  <div id="site-header"></div>
+  <script src="/header.js?v=2"></script>
+
+  <main>
+    <section class="docs-hero">
+      <div class="wrap article">
+        <p class="eyebrow">News</p>
+        <h1>Idle tunnels stay ready</h1>
+        <p class="lede">A tunnel you leave open but unused now stays live, so the first request after a quiet spell loads straight away instead of hanging.</p>
+        <div class="byline">
+          <img src="/adam.png" alt="Adam Davis" />
+          <span>By <b>Adam Davis</b></span>
+          <span class="dot">&middot;</span>
+          <span>August 2026</span>
+        </div>
+      </div>
+    </section>
+
+    <div class="wrap article" style="padding-bottom:4rem">
+      <div class="prose">
+        <p>
+          A viaduct tunnel keeps a small set of connections open to the server,
+          ready to carry the next request the instant it arrives. That is what
+          makes a tunnel feel immediate. The catch showed up when a tunnel sat
+          unused for a while.
+        </p>
+        <p>
+          Plenty of home and office networks, and some hosting networks, silently
+          drop a connection that has been idle for a few minutes. They do it
+          without telling either end, so both sides still believe the connection
+          is fine. The next request would then be handed to a connection that had
+          quietly gone nowhere, and it would hang until it timed out rather than
+          load. Annoying precisely when you came back to a tunnel you had left
+          running for a demo or a webhook.
+        </p>
+
+        <h2>Kept warm, and refreshed before they can go stale</h2>
+        <p>
+          Two things change. viaduct now sends a small keepalive on its tunnel
+          connections every few seconds, which keeps the network from treating
+          them as idle in the first place, and also surfaces a genuinely dead
+          connection quickly instead of letting it linger. On top of that, it
+          quietly retires and re-opens each idle connection on a rolling basis,
+          so none of them is ever old enough to be dropped out from under you.
+        </p>
+        <p>
+          The result is simple: a tunnel you left open is ready the moment traffic
+          comes back, with no reconnect, no changed URL, and nothing for you to do.
+          It matters most for the exact cases viaduct is good at, a webhook
+          endpoint you leave up, or a demo link you share and return to later.
+        </p>
+
+        <p style="color:var(--muted-foreground);font-size:0.92rem;border-top:1px solid var(--border);padding-top:1.2rem;margin-top:1.6rem">
+          Available in viaduct <b>1.4.0</b>. Already installed? Run <code>viaduct upgrade</code> to get it.
+        </p>
+
+        <a class="back" href="/news/">&larr; All news</a>
+      </div>
+    </div>
+  </main>
+
+  <div id="site-footer"></div>
+  <script src="/footer.js?v=2"></script>
+  <script src="/nav-toggle.js" defer></script>
+  <script src="/to-top.js" defer></script>
+</body>
+</html>

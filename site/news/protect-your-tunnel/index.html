@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#14171f" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="icon" sizes="32x32" href="/favicon-32.png" />
+  <link rel="mask-icon" href="/favicon.svg" color="#f5b544" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500;600&display=swap" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500;600&display=swap" media="print" onload="this.media='all'" />
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500;600&display=swap" /></noscript>
+  <link rel="stylesheet" href="/styles.css" />
+  <title>Protect a tunnel with a password, token, or IP allowlist: viaduct.sh</title>
+  <meta name="description" content="viaduct tunnels can now sit behind HTTP Basic auth, a bearer token, or an IP allowlist, checked at the edge so unauthorised requests never reach your machine." />
+  <link rel="canonical" href="https://viaduct.sh/news/protect-your-tunnel/" />
+  <meta property="og:type" content="article" />
+  <meta property="og:title" content="Protect a tunnel with a password, token, or IP allowlist" />
+  <meta property="og:description" content="Tunnels can now sit behind Basic auth, a bearer token, or an IP allowlist, checked at the edge so unauthorised requests never reach your machine." />
+  <meta property="og:url" content="https://viaduct.sh/news/protect-your-tunnel/" />
+  <meta property="og:image" content="https://viaduct.sh/og.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Protect a tunnel with a password, token, or IP allowlist" />
+  <meta name="twitter:description" content="Tunnels can now sit behind Basic auth, a bearer token, or an IP allowlist, checked at the edge so unauthorised requests never reach your machine." />
+  <meta name="twitter:image" content="https://viaduct.sh/og.png" />
+  <link rel="alternate" type="application/rss+xml" title="viaduct.sh news" href="/news/feed.xml" />
+  <style>
+    .article { max-width: 44rem; margin: 0 auto; }
+    .byline { display: flex; align-items: center; justify-content: center; gap: 0.7rem; margin: 1.4rem 0 0; color: var(--muted-foreground); font-size: 0.9rem; }
+    .byline img { width: 2.4rem; height: 2.4rem; border-radius: 999px; border: 1px solid var(--border-strong); }
+    .byline b { color: var(--foreground); font-weight: 600; }
+    .byline .dot { opacity: 0.5; }
+    .prose { margin-top: 2.2rem; color: var(--foreground); font-size: 1.02rem; line-height: 1.7; }
+    .prose > p { margin: 0 0 1.15rem; color: #cdd3de; }
+    .prose h2 { font-family: var(--font-display); font-size: 1.35rem; margin: 2.2rem 0 0.7rem; letter-spacing: -0.01em; }
+    .prose a { color: var(--primary); text-decoration: none; }
+    .prose a:hover { text-decoration: underline; }
+    .prose code { font-family: var(--font-mono); font-size: 0.86em; background: var(--secondary); padding: 0.1rem 0.35rem; border-radius: 0.3rem; }
+    .prose b { color: var(--foreground); font-weight: 600; }
+    .back { display: inline-block; margin-top: 2.4rem; color: var(--muted-foreground); text-decoration: none; font-size: 0.92rem; }
+    .back:hover { color: var(--foreground); }
+
+    /* like-for-like terminal window */
+    .tw { max-width: none; margin: 1.6rem 0 1.4rem; }
+    .tw pre { font-family: var(--font-mono); font-size: 0.8rem; line-height: 1.75;
+      color: #e9ebef; white-space: pre; margin: 0; overflow-x: auto; }
+    .tw .g { color: #3fb950; }
+    .tw .url { color: #7ee2b8; }
+    .tw .dim { color: #6b7280; }
+    .tw .s2 { color: #3fb950; }
+    .tw .s4 { color: #e3b341; }
+    .tw .lock { color: #f5b544; }
+    .tw .prompt { color: #6b7280; }
+    .tw b { color: #e6edf3; font-weight: 600; }
+    .cap { color: var(--muted-foreground); font-size: 0.85rem; margin: 0 0 1.6rem; text-align: center; }
+    @media (max-width: 560px) { .tw pre { font-size: 0.7rem; } }
+  </style>
+</head>
+<body>
+  <div id="site-header"></div>
+  <script src="/header.js?v=2"></script>
+
+  <main>
+    <section class="docs-hero">
+      <div class="wrap article">
+        <p class="eyebrow">News</p>
+        <h1>Protect a tunnel with a password, a token, or an IP allowlist</h1>
+        <p class="lede">Tunnels are public by default. Now you can put a gate in front of one, and it is checked at the edge, so an unwanted request never reaches your machine.</p>
+        <div class="byline">
+          <img src="/adam.png" alt="Adam Davis" />
+          <span>By <b>Adam Davis</b></span>
+          <span class="dot">&middot;</span>
+          <span>August 2026</span>
+        </div>
+      </div>
+    </section>
+
+    <div class="wrap article" style="padding-bottom:4rem">
+      <div class="prose">
+        <p>
+          A viaduct tunnel gives a service on your machine a public HTTPS URL, and
+          until now that URL was open: anyone who had it could reach your app. That
+          is fine for a quick share, but not when you are demoing something private,
+          testing a webhook you would rather strangers not hit, or leaving a tunnel
+          up for a while. So a tunnel can now carry its own access control.
+        </p>
+        <p>
+          Add <code>--basic-auth</code> for a username and password, and visitors
+          get the browser's login prompt:
+        </p>
+
+        <div class="terminal tw">
+          <div class="terminal-bar">
+            <span class="dot dot-red"></span><span class="dot dot-amber"></span><span class="dot dot-teal"></span>
+            <span class="terminal-title">viaduct http 3000 --basic-auth alice:secret</span>
+          </div>
+          <div class="terminal-body">
+<pre><span class="g">✓</span> tunnel live
+
+  <span class="url">https://funny-otter.viaduct.sh</span>
+  <span class="dim">→ http://localhost:3000</span>
+  <span class="lock">● protected</span><span class="dim"> · Basic auth</span>
+
+<span class="dim"># a visitor with no credentials is turned away at the server</span>
+<span class="prompt">$ </span>curl -s -o /dev/null -w <b>'%{http_code}\n'</b> https://funny-otter.viaduct.sh
+<span class="s4">401</span>
+
+<span class="dim"># with the right credentials, the request reaches your app</span>
+<span class="prompt">$ </span>curl -s -u <b>alice:secret</b> https://funny-otter.viaduct.sh
+<span class="dim">&lt;h1&gt;your app&lt;/h1&gt;</span></pre>
+          </div>
+        </div>
+        <p class="cap">The 401 is answered by the server. Your app only ever sees the authorised request.</p>
+
+        <p>
+          Prefer a token for an API or a webhook? Use <code>--bearer</code> and the
+          request must carry <code>Authorization: Bearer &lt;token&gt;</code>. Want to
+          restrict by address instead, or as well? <code>--allow-ip</code> takes a
+          single IP or a CIDR range, and you can list several by repeating the
+          flag or comma-separating them:
+        </p>
+        <p>
+          <code>viaduct http 3000 --allow-ip 203.0.113.4 --allow-ip 10.0.0.0/8</code>
+        </p>
+        <p>
+          The three compose. Require a password <b>and</b> pin it to your office
+          range if you like; a request has to clear every gate you set.
+        </p>
+
+        <h2>Checked at the edge, not on your machine</h2>
+        <p>
+          This is the part that matters. The check runs on the server, the moment a
+          request arrives, <b>before</b> viaductd opens a connection back to you. An
+          unauthorised visitor gets a clean, branded 401 or 403 and their request is
+          dropped there. It never travels down the tunnel, so it never touches your
+          app. Access control that only kicked in after the request reached your
+          machine would not be worth much; this happens at the door.
+        </p>
+        <p>
+          Your credentials stay on your machine, too. The client sends only a
+          <b>hash</b> of the password or token in the opening handshake, never the
+          plaintext, and the server keeps nothing on disk. To keep secrets out of
+          your shell history, set <code>VIADUCT_BASIC_AUTH</code> (or
+          <code>VIADUCT_BEARER</code>), or put <code>basic_auth</code> in
+          <code>~/.config/viaduct/config.toml</code>, and pass
+          <code>--basic-auth alice</code> with no password to be prompted for it.
+        </p>
+
+        <h2>What it is, and what it is not</h2>
+        <p>
+          This is access control for sharing a link with the right people: the
+          right ones get in, everyone else gets a tidy "no". You can change the
+          page they see with <code>--auth-message</code> and
+          <code>--deny-message</code>, and the browser prompt's label with
+          <code>--auth-realm</code>. It is not a shield against denial-of-service
+          floods; that is a job for the network in front, not a tunnel flag. Being
+          honest about the boundary is the point.
+        </p>
+
+        <h2>Using it</h2>
+        <p>
+          Pick whichever gate fits, and start the tunnel as usual:
+        </p>
+        <p>
+          <code>viaduct http 3000 --basic-auth alice:secret</code>
+        </p>
+        <p>
+          There is more in the <a href="/docs/#protect">docs</a>, including the
+          config-file and environment-variable options and a note for anyone
+          running their own server without a trusted front.
+        </p>
+        <p style="color:var(--muted-foreground);font-size:0.92rem;border-top:1px solid var(--border);padding-top:1.2rem;margin-top:1.6rem">
+          Available in viaduct <b>1.4.0</b>. Already installed? Run <code>viaduct upgrade</code> to get it.
+        </p>
+
+        <a class="back" href="/news/">&larr; All news</a>
+      </div>
+    </div>
+  </main>
+
+  <div id="site-footer"></div>
+  <script src="/footer.js?v=2"></script>
+  <script src="/nav-toggle.js" defer></script>
+  <script src="/to-top.js" defer></script>
+</body>
+</html>

@@ -53,10 +53,30 @@ h1, h2, h3 { font-family: var(--font-display); letter-spacing: -0.02em; margin: 
 .header-inner {
   height: 4rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem;
 }
-.brand { display: flex; align-items: center; gap: 0.6rem; text-decoration: none; }
-.brand img { height: 2.5rem; width: 2.5rem; }
-.brand span { font-family: var(--font-display); font-size: 1.45rem; font-weight: 600; }
+.brand { display: flex; align-items: center; gap: 0.7rem; text-decoration: none; }
+.brand img { height: 3.25rem; width: 3.25rem; }
+.brand span { font-family: var(--font-display); font-size: 1.85rem; font-weight: 600; }
 .brand .tld { color: var(--primary); }
+
+/* Preview of the branded page a blocked visitor sees (mirrors the real
+   error_response output): dark ground, orange numeral, viaduct.sh wordmark. */
+.error-preview {
+  position: relative; border: 1px solid var(--border); border-radius: 0.9rem; overflow: hidden;
+  background: radial-gradient(60% 60% at 50% 0%, rgba(245, 181, 68, 0.13), transparent 70%), #14171f;
+  padding: 2.6rem 1.5rem; text-align: center;
+}
+.error-preview .wm { font-weight: 600; letter-spacing: -0.01em; font-size: 0.9rem; color: #cfd3da; }
+.error-preview .wm b { color: var(--primary); font-weight: 600; }
+.error-preview .code {
+  font-size: 3rem; font-weight: 800; line-height: 1; color: var(--primary);
+  margin-top: 1.2rem; font-variant-numeric: tabular-nums;
+}
+.error-preview h3 {
+  font-family: var(--font-display); font-size: 1.2rem; font-weight: 650;
+  margin: 0.5rem 0 0; color: #e8e8ea;
+}
+.error-preview p { color: #8b929e; margin: 0.5rem auto 0; max-width: 22rem; font-size: 0.9rem; line-height: 1.6; }
+.error-preview + .cap { text-align: center; color: var(--muted-foreground); font-size: 0.85rem; margin: 0.55rem 0 0; }
 .site-nav { display: flex; align-items: center; gap: 1.35rem; }
 .site-nav a {
   font-size: 0.9rem; font-weight: 500; text-decoration: none;
@@ -458,10 +478,10 @@ main > section:nth-child(even) { background: var(--surface); }
   display: none;
   align-items: center; justify-content: center;
   width: 2.5rem; height: 2.5rem; padding: 0;
-  background: transparent; border: 1px solid var(--border-strong);
-  border-radius: 0.6rem; color: var(--foreground); cursor: pointer;
+  background: transparent; border: 0;
+  color: var(--foreground); cursor: pointer;
 }
-.nav-toggle svg { width: 1.2rem; height: 1.2rem; }
+.nav-toggle svg { width: 2rem; height: 2rem; }
 .nav-toggle .ico-close { display: none; }
 
 .site-header.has-menu .nav-toggle { display: inline-flex; }

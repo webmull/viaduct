@@ -27,9 +27,10 @@
   <link rel="alternate" type="application/rss+xml" title="viaduct.sh news" href="/news/feed.xml" />
   <style>
     .news-list { max-width: 46rem; margin: 0 auto; padding-bottom: 3rem; display: flex; flex-direction: column; }
+    .news-month { font: 600 0.8rem var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted-foreground); margin: 2.4rem 0 0; }
+    .news-month:first-child { margin-top: 0; }
     .post { display: block; text-decoration: none; color: inherit; padding: 1.5rem 0; border-top: 1px solid var(--border); }
-    .post:first-child { border-top: 0; }
-    .post .date { color: var(--muted-foreground); font: 500 0.78rem var(--font-mono); letter-spacing: 0.03em; }
+    .news-month + .post { border-top: 0; }
     .post h2 { font-family: var(--font-display); font-size: 1.4rem; margin: 0.35rem 0 0.4rem; letter-spacing: -0.01em; transition: color 0.15s ease; }
     .post:hover h2 { color: var(--primary); }
     .post p { margin: 0; color: var(--muted-foreground); font-size: 0.98rem; line-height: 1.6; }
@@ -38,7 +39,7 @@
 </head>
 <body>
   <div id="site-header"></div>
-  <script src="/header.js"></script>
+  <script src="/header.js?v=2"></script>
 
   <main>
     <section class="docs-hero">
@@ -49,14 +50,23 @@
     </section>
 
     <div class="wrap news-list">
+      <h2 class="news-month">August 2026</h2>
+      <a class="post" href="/news/idle-tunnels-stay-ready/">
+        <h2>Idle tunnels stay ready</h2>
+        <p>A tunnel you leave open but unused now stays live, so the first request after a quiet spell loads straight away instead of hanging.</p>
+        <span class="more">Read more &rarr;</span>
+      </a>
+      <a class="post" href="/news/protect-your-tunnel/">
+        <h2>Protect a tunnel with a password, a token, or an IP allowlist</h2>
+        <p>Tunnels are public by default. Now you can gate one with Basic auth, a bearer token, or an IP allowlist, checked at the edge so an unwanted request never reaches your machine.</p>
+        <span class="more">Read more &rarr;</span>
+      </a>
       <a class="post" href="/news/traffic-inspector/">
-        <span class="date">4 August 2026</span>
         <h2>Inspect your traffic live, no restart</h2>
         <p>The traffic inspector now toggles on and off with a single key on a running tunnel, no reconnect and no new URL.</p>
         <span class="more">Read more &rarr;</span>
       </a>
       <a class="post" href="/news/welcome-to-viaduct/">
-        <span class="date">2 August 2026</span>
         <h2>Welcome to viaduct.sh</h2>
         <p>viaduct.sh is a free, open-source reverse tunnel: one command gives a service on your machine a public HTTPS URL, no inbound ports or NAT configuration required.</p>
         <span class="more">Read more &rarr;</span>
@@ -65,7 +75,7 @@
   </main>
 
   <div id="site-footer"></div>
-  <script src="/footer.js"></script>
+  <script src="/footer.js?v=2"></script>
   <script src="/nav-toggle.js" defer></script>
   <script src="/to-top.js" defer></script>
 </body>

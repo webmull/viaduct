@@ -20,6 +20,7 @@
     { href: "/network/", label: "Network", active: startsWith("/network/") },
     { href: "/docs/", label: "Docs", active: startsWith("/docs/") },
     { href: "/news/", label: "News", active: startsWith("/news/") },
+    { href: "/about/", label: "About", active: startsWith("/about/") },
   ];
 
   var githubIcon =
