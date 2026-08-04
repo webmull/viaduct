@@ -161,9 +161,9 @@
         <section class="doc-section" id="inspect">
           <h2>Inspect requests <span style="color:var(--muted-foreground);font-weight:400">(--inspect)</span></h2>
           <p>
-            Add <code>--inspect</code> to print each request as it happens: method,
-            path, status, and timing. Ideal for debugging webhooks without leaving
-            your terminal.
+            The traffic inspector prints each request as it happens: method, path,
+            status, and timing. Ideal for debugging webhooks without leaving your
+            terminal. Start it with <code>--inspect</code>:
           </p>
           <div class="code-block">
             <pre><span class="c-prompt">$ </span><span class="cmd">viaduct http 8080 --inspect</span></pre>
@@ -188,6 +188,12 @@
 <span class="c-dim">14:02:09</span>  <span class="c-req">GET </span> /ws                     <span class="c-local">101</span> <span class="c-dim">3ms</span></pre>
             </div>
           </div>
+          <p>
+            You do not have to decide up front. Press <code>i</code> on a running
+            tunnel to turn the inspector on or off at any time, with no reconnect
+            and no change to your URL. Starting with <code>--inspect</code> just
+            has it on from the first request.
+          </p>
         </section>
 
         <section class="doc-section" id="combine">

@@ -7,6 +7,13 @@
     <description>Updates and notes from the viaduct project.</description>
     <language>en</language>
     <item>
+      <title>Inspect your traffic live, no restart</title>
+      <link>https://viaduct.sh/news/traffic-inspector/</link>
+      <guid>https://viaduct.sh/news/traffic-inspector/</guid>
+      <pubDate>Tue, 04 Aug 2026 09:00:00 GMT</pubDate>
+      <description>The traffic inspector now toggles on and off with a single key on a running tunnel, no reconnect and no new URL.</description>
+    </item>
+    <item>
       <title>Welcome to viaduct.sh</title>
       <link>https://viaduct.sh/news/welcome-to-viaduct/</link>
       <guid>https://viaduct.sh/news/welcome-to-viaduct/</guid>

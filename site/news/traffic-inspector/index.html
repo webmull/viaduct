@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#14171f" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="icon" sizes="32x32" href="/favicon-32.png" />
+  <link rel="mask-icon" href="/favicon.svg" color="#f5b544" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500;600&display=swap" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500;600&display=swap" media="print" onload="this.media='all'" />
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500;600&display=swap" /></noscript>
+  <link rel="stylesheet" href="/styles.css" />
+  <title>Inspect your traffic live, no restart: viaduct.sh</title>
+  <meta name="description" content="viaduct's traffic inspector now toggles on and off with a single key on a running tunnel, no reconnect and no new URL." />
+  <link rel="canonical" href="https://viaduct.sh/news/traffic-inspector/" />
+  <meta property="og:type" content="article" />
+  <meta property="og:title" content="Inspect your traffic live, no restart" />
+  <meta property="og:description" content="The traffic inspector now toggles with a single key on a running tunnel, no reconnect and no new URL." />
+  <meta property="og:url" content="https://viaduct.sh/news/traffic-inspector/" />
+  <meta property="og:image" content="https://viaduct.sh/og.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Inspect your traffic live, no restart" />
+  <meta name="twitter:description" content="The traffic inspector now toggles with a single key on a running tunnel, no reconnect and no new URL." />
+  <meta name="twitter:image" content="https://viaduct.sh/og.png" />
+  <link rel="alternate" type="application/rss+xml" title="viaduct.sh news" href="/news/feed.xml" />
+  <style>
+    .article { max-width: 44rem; margin: 0 auto; }
+    .byline { display: flex; align-items: center; justify-content: center; gap: 0.7rem; margin: 1.4rem 0 0; color: var(--muted-foreground); font-size: 0.9rem; }
+    .byline img { width: 2.4rem; height: 2.4rem; border-radius: 999px; border: 1px solid var(--border-strong); }
+    .byline b { color: var(--foreground); font-weight: 600; }
+    .byline .dot { opacity: 0.5; }
+    .prose { margin-top: 2.2rem; color: var(--foreground); font-size: 1.02rem; line-height: 1.7; }
+    .prose > p { margin: 0 0 1.15rem; color: #cdd3de; }
+    .prose h2 { font-family: var(--font-display); font-size: 1.35rem; margin: 2.2rem 0 0.7rem; letter-spacing: -0.01em; }
+    .prose a { color: var(--primary); text-decoration: none; }
+    .prose a:hover { text-decoration: underline; }
+    .prose code { font-family: var(--font-mono); font-size: 0.86em; background: var(--secondary); padding: 0.1rem 0.35rem; border-radius: 0.3rem; }
+    .prose b { color: var(--foreground); font-weight: 600; }
+    .back { display: inline-block; margin-top: 2.4rem; color: var(--muted-foreground); text-decoration: none; font-size: 0.92rem; }
+    .back:hover { color: var(--foreground); }
+
+    /* like-for-like terminal window */
+    .tw { max-width: none; margin: 1.6rem 0 1.4rem; }
+    .tw pre { font-family: var(--font-mono); font-size: 0.8rem; line-height: 1.75;
+      color: #e9ebef; white-space: pre; margin: 0; overflow-x: auto; }
+    .tw .g { color: #3fb950; }
+    .tw .url { color: #7ee2b8; }
+    .tw .dim { color: #6b7280; }
+    .tw .s2 { color: #3fb950; }
+    .tw .s4 { color: #e3b341; }
+    .tw .s5 { color: #f85149; }
+    .tw b { color: #e6edf3; font-weight: 600; }
+    .cap { color: var(--muted-foreground); font-size: 0.85rem; margin: 0 0 1.6rem; text-align: center; }
+    @media (max-width: 560px) { .tw pre { font-size: 0.7rem; } }
+  </style>
+</head>
+<body>
+  <div id="site-header"></div>
+  <script src="/header.js"></script>
+
+  <main>
+    <section class="docs-hero">
+      <div class="wrap article">
+        <p class="eyebrow">News</p>
+        <h1>Inspect your traffic live, no restart</h1>
+        <p class="lede">The traffic inspector now toggles on and off with a single key on a running tunnel, no reconnect and no new URL.</p>
+        <div class="byline">
+          <img src="/adam.png" alt="Adam Davis" />
+          <span>By <b>Adam Davis</b></span>
+          <span class="dot">&middot;</span>
+          <span>4 August 2026</span>
+        </div>
+      </div>
+    </section>
+
+    <div class="wrap article" style="padding-bottom:4rem">
+      <div class="prose">
+        <p>
+          viaduct has always been able to show you the requests flowing through a
+          tunnel: add <code>--inspect</code> and every request prints with its
+          method, path, status, and timing. The catch was that you had to decide
+          up front. If a tunnel was already running and you wanted to watch it, you
+          had to stop it and start again with the flag.
+        </p>
+        <p>
+          That is a real annoyance, because a plain tunnel gets a random URL, so
+          restarting to add <code>--inspect</code> could hand you a
+          <b>different</b> address and break anything already pointed at it. So now
+          it is a live toggle. Press <code>i</code> on a running tunnel and the
+          <b>traffic inspector</b> flips on; press it again and it goes quiet. Same
+          tunnel, same URL, no reconnect.
+        </p>
+
+        <div class="terminal tw">
+          <div class="terminal-bar">
+            <span class="dot dot-red"></span><span class="dot dot-amber"></span><span class="dot dot-teal"></span>
+            <span class="terminal-title">viaduct http 3000</span>
+          </div>
+          <div class="terminal-body">
+<pre><span class="g">✓</span> tunnel live
+
+  <span class="url">https://sunny-otter.viaduct.sh</span>
+  <span class="dim">→ http://localhost:3000</span>
+
+  <span class="dim">○ traffic inspector off · press i to turn on</span>
+  <span class="dim">press </span><b>q</b><span class="dim"> to quit (this terminates the tunnel)</span>
+
+  <span class="g">● traffic inspector ON</span><span class="dim"> · logging each request · press i to turn off</span>
+<span class="dim">04:17:58</span> <b>GET   </b> /api/hello  <span class="s2">200</span> <span class="dim">3ms</span>
+<span class="dim">04:17:59</span> <b>GET   </b> /health  <span class="s2">200</span> <span class="dim">1ms</span>
+<span class="dim">04:18:01</span> <b>GET   </b> /slow  <span class="s2">200</span> <span class="dim">1503ms</span>
+<span class="dim">04:18:03</span> <b>POST  </b> /submit  <span class="s2">200</span> <span class="dim">2ms</span>
+<span class="dim">04:18:05</span> <b>GET   </b> /missing  <span class="s4">404</span> <span class="dim">0ms</span>
+<span class="dim">04:18:07</span> <b>GET   </b> /boom  <span class="s5">500</span> <span class="dim">1ms</span></pre>
+          </div>
+        </div>
+        <p class="cap">Press <code>i</code> to start watching. Press it again to stop. The URL never changes.</p>
+
+        <h2>It costs nothing when it is off</h2>
+        <p>
+          The tunnel itself is a raw byte splice with no HTTP parsing, and the
+          inspector does not change that. When it is on, it peeks at the first
+          packet of each request and response to read the request line and the
+          status code, once, and prints a line. It never buffers the body and never
+          slows the transfer. When it is off, the code path is identical to running
+          without <code>--inspect</code> at all, so leaving the toggle available
+          adds nothing to a tunnel you are not watching.
+        </p>
+
+        <h2>Using it</h2>
+        <p>
+          Start a tunnel as usual and press <code>i</code> whenever you want to see
+          traffic:
+        </p>
+        <p>
+          <code>viaduct http 8080</code>
+        </p>
+        <p>
+          Prefer it on from the first request? Start with the flag, and you can
+          still toggle it later:
+        </p>
+        <p>
+          <code>viaduct http 8080 --inspect</code>
+        </p>
+        <p>
+          It is ideal for debugging webhooks: point a service at your tunnel, flip
+          the inspector on, and watch the callbacks land in real time. More in the
+          <a href="/docs/#inspect">docs</a>.
+        </p>
+        <p style="color:var(--muted-foreground);font-size:0.92rem;border-top:1px solid var(--border);padding-top:1.2rem;margin-top:1.6rem">
+          Available in viaduct <b>1.3.1</b>. Already installed? Run <code>viaduct upgrade</code> to get it.
+        </p>
+
+        <a class="back" href="/news/">&larr; All news</a>
+      </div>
+    </div>
+  </main>
+
+  <div id="site-footer"></div>
+  <script src="/footer.js"></script>
+  <script src="/nav-toggle.js" defer></script>
+  <script src="/to-top.js" defer></script>
+</body>
+</html>
