@@ -22,10 +22,16 @@ from urllib.parse import parse_qs, urlsplit
 
 import typer
 
-from viaduct import auth, dns, names, protocol, routing
+from viaduct import auth, dns, names, protocol, routing, update
 from viaduct.relay import splice
 
 log = logging.getLogger("viaduct.server")
+
+#: Minimum client version this server will serve. A client that reports an older
+#: version in its hello is rejected with ``client_too_old`` (it then tells the
+#: user to upgrade). Kept low so it is dormant; bump it only when a breaking wire
+#: change lands. Clients too old to report a version at all are not gated here.
+MIN_CLIENT_VERSION = "1.0.0"
 
 Conn = tuple[asyncio.StreamReader, asyncio.StreamWriter]
 
@@ -212,6 +218,11 @@ class TunnelServer:
         protocol.require_int(frame, "local_port")
         peer = writer.get_extra_info("peername")
         ip = peer[0] if peer else "unknown"
+        client_ver = frame.get("client")
+        if isinstance(client_ver, str) and update.is_newer(MIN_CLIENT_VERSION, client_ver):
+            log.info("client too old client=%s min=%s ip=%s", client_ver, MIN_CLIENT_VERSION, ip)
+            await self._reject(writer, "client_too_old", min_client=MIN_CLIENT_VERSION)
+            return
         if self._ip_tunnels.get(ip, 0) >= self.max_tunnels_per_ip:
             log.warning("ip tunnel limit reached ip=%s limit=%s", ip, self.max_tunnels_per_ip)
             await self._reject(writer, "ip_tunnel_limit")
@@ -309,9 +320,9 @@ class TunnelServer:
                 unanswered[0] += 1
                 await protocol.write_frame(writer, protocol.ping())
 
-    async def _reject(self, writer: asyncio.StreamWriter, reason: str) -> None:
+    async def _reject(self, writer: asyncio.StreamWriter, reason: str, **fields: object) -> None:
         with contextlib.suppress(ConnectionError):
-            await protocol.write_frame(writer, protocol.error(reason))
+            await protocol.write_frame(writer, protocol.error(reason, **fields))
         writer.close()
 
     # -- public listener: plaintext HTTP from Caddy (or curl, pre-TLS) ---------

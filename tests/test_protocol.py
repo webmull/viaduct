@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import socket
 import struct
 from typing import Any
 
 import pytest
 
-from viaduct import protocol
+from viaduct import protocol, server
 
 
 def run(coro: Any) -> Any:
@@ -186,3 +187,59 @@ def test_require_int() -> None:
     ):
         with pytest.raises(protocol.ProtocolError):
             protocol.require_int(bad, "local_port")
+
+
+def test_hello_carries_client_version() -> None:
+    assert protocol.hello(3000, client="1.4.0")["client"] == "1.4.0"
+    assert "client" not in protocol.hello(3000)  # omitted when not given
+
+
+def test_error_carries_extra_fields() -> None:
+    assert protocol.error("client_too_old", min_client="1.5.0") == {
+        "type": "error",
+        "reason": "client_too_old",
+        "min_client": "1.5.0",
+    }
+    assert protocol.error("nope") == {"type": "error", "reason": "nope"}
+
+
+class _CaptureWriter:
+    """StreamWriter stand-in that records written bytes; enough for _reject."""
+
+    def __init__(self) -> None:
+        self.buf = bytearray()
+
+    def write(self, b: bytes) -> None:
+        self.buf.extend(b)
+
+    async def drain(self) -> None:
+        pass
+
+    def close(self) -> None:
+        pass
+
+    def get_extra_info(self, key: str) -> Any:
+        return ("1.2.3.4", 0) if key == "peername" else None
+
+
+def _first_frame(buf: bytes) -> dict:
+    (length,) = struct.unpack(">I", buf[:4])
+    return json.loads(bytes(buf[4 : 4 + length]))
+
+
+def test_server_rejects_client_below_min() -> None:
+    srv = server.TunnelServer(base_domain="localhost")
+    w = _CaptureWriter()
+    run(srv._handle_control(protocol.hello(3000, client="0.9.0"), None, w))
+    msg = _first_frame(w.buf)
+    assert msg["type"] == "error"
+    assert msg["reason"] == "client_too_old"
+    assert msg["min_client"] == server.MIN_CLIENT_VERSION
+
+
+def test_min_client_gate_passes_current_version() -> None:
+    # a current client is not "older than" the (dormant) floor, so no gate
+    from viaduct import update
+
+    assert not update.is_newer(server.MIN_CLIENT_VERSION, "1.4.0")
+    assert update.is_newer(server.MIN_CLIENT_VERSION, "0.9.0")  # this one would be gated

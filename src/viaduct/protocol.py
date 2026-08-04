@@ -148,12 +148,19 @@ async def read_frame(reader: asyncio.StreamReader) -> Frame:
     return msg
 
 
-def hello(local_port: int, pin: str | None = None, auth: dict | None = None) -> Frame:
+def hello(
+    local_port: int,
+    pin: str | None = None,
+    auth: dict | None = None,
+    client: str | None = None,
+) -> Frame:
     frame: Frame = {"type": "hello", "local_port": local_port}
     if pin:
         frame["pin"] = pin  # opaque --pin seed; the server derives a stable name
     if auth:
         frame["auth"] = auth  # opaque auth payload: credential hashes + allowlist + messages
+    if client:
+        frame["client"] = client  # client version, for the server's minimum-version check
     return frame
 
 
@@ -168,8 +175,8 @@ def ok(**fields: Any) -> Frame:
     return {"type": "ok", **fields}
 
 
-def error(reason: str) -> Frame:
-    return {"type": "error", "reason": reason}
+def error(reason: str, **fields: Any) -> Frame:
+    return {"type": "error", "reason": reason, **fields}
 
 
 def ping() -> Frame:

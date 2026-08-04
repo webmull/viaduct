@@ -74,6 +74,9 @@ POOL_IDLE_JITTER = 15.0
 class TunnelError(Exception):
     """The server refused the tunnel."""
 
+    #: for client_too_old: the minimum client version the server reported.
+    min_client: str | None = None
+
 
 class TunnelClient:
     def __init__(
@@ -135,11 +138,21 @@ class TunnelClient:
         protocol.enable_keepalive(writer)
         try:
             await protocol.write_frame(
-                writer, protocol.hello(self._local_port, self._pin_seed, self._auth)
+                writer,
+                protocol.hello(
+                    self._local_port,
+                    self._pin_seed,
+                    self._auth,
+                    client=update.installed_version(),
+                ),
             )
             resp = await protocol.read_frame(reader)
             if resp["type"] == "error":
-                raise TunnelError(protocol.require_str(resp, "reason"))
+                reason = protocol.require_str(resp, "reason")
+                exc = TunnelError(reason)
+                if reason == "client_too_old" and isinstance(resp.get("min_client"), str):
+                    exc.min_client = resp["min_client"]
+                raise exc
             if resp["type"] != "ok":
                 raise TunnelError(f"unexpected reply type {resp['type']!r}")
             if self._auth is not None and not resp.get("auth_enforced"):
@@ -643,6 +656,13 @@ def http(
     except KeyboardInterrupt:
         console.print("[yellow]viaduct: interrupted[/]")
     except TunnelError as exc:
+        if str(exc) == "client_too_old":
+            need = f" (needs {exc.min_client} or newer)" if exc.min_client else ""
+            console.print(
+                f"[bold red]viaduct: your client is too old for this server{need}.[/] "
+                "Run [bold]viaduct upgrade[/] and reconnect."
+            )
+            raise typer.Exit(1) from exc
         messages = {
             "ip_tunnel_limit": "too many tunnels already open from this address (server limit)",
             "pin_in_use": "that pinned URL is already in use by another live tunnel "
@@ -730,7 +750,7 @@ def _cfg_str(cfg: dict[str, str | bool], key: str) -> str | None:
 
 
 #: Refusal reasons the client should not retry; it reports them and exits.
-FATAL_REASONS = ("ip_tunnel_limit", "pin_in_use", "auth_unsupported")
+FATAL_REASONS = ("ip_tunnel_limit", "pin_in_use", "auth_unsupported", "client_too_old")
 
 
 def _expand_allow_ips(values: list[str] | None) -> list[str]:
