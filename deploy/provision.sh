@@ -144,6 +144,8 @@ ${apex} {
 ${redirect_rule}
 	root * /var/www/viaduct-site
 	header Cache-Control "no-cache"
+	header Strict-Transport-Security "max-age=31536000; includeSubDomains"
+	encode zstd gzip
 	file_server
 	handle_errors {
 		rewrite * /404.html
@@ -162,6 +164,7 @@ ${wild} {
 	tls {
 		dns digitalocean {env.DO_API_TOKEN}
 	}
+	header Strict-Transport-Security "max-age=31536000; includeSubDomains"
 	reverse_proxy 127.0.0.1:8080
 }
 https:// {
@@ -182,6 +185,8 @@ ${BASE_DOMAIN} {
 ${redirect_rule}
 	root * /var/www/viaduct-site
 	header Cache-Control "no-cache"
+	header Strict-Transport-Security "max-age=31536000; includeSubDomains"
+	encode zstd gzip
 	file_server
 	handle_errors {
 		rewrite * /404.html
@@ -192,6 +197,7 @@ ${redirect_rule}
 }
 *.${BASE_DOMAIN} {
 	tls internal
+	header Strict-Transport-Security "max-age=31536000; includeSubDomains"
 	reverse_proxy 127.0.0.1:8080
 }
 EOF
