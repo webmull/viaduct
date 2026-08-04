@@ -142,6 +142,11 @@ class TunnelClient:
         """Block until the control connection drops."""
         await self._closed.wait()
 
+    def set_inspect(self, on: bool) -> None:
+        """Toggle request logging on the live tunnel; read per request, so it
+        takes effect immediately for subsequent requests with no reconnect."""
+        self._inspect = on
+
     async def stop(self) -> None:
         self._stopping = True
         for task in list(self._tasks):
@@ -187,7 +192,7 @@ class TunnelClient:
                 elif frame["type"] == "pong":
                     self._unanswered_pings = 0  # the server is answering us
         except TimeoutError:
-            log.warning("server went silent — treating connection as dead")
+            log.warning("server went silent; treating connection as dead")
         except (protocol.ProtocolError, ConnectionError):
             pass
         finally:
@@ -198,7 +203,7 @@ class TunnelClient:
             while True:
                 await asyncio.sleep(protocol.HEARTBEAT_INTERVAL)
                 if self._unanswered_pings >= protocol.HEARTBEAT_MAX_MISSED:
-                    log.warning("server not answering heartbeats — treating connection as dead")
+                    log.warning("server not answering heartbeats; treating connection as dead")
                     self._closed.set()
                     writer.close()
                     return
@@ -225,7 +230,7 @@ class TunnelClient:
         There are ``pool_size`` *permanent* workers; each replaces itself on
         assignment, holding the baseline idle pool steady. When the idle pool
         runs low under a burst, *temporary* surge workers are spawned (up to
-        ``_max_pool`` total) — they serve one request and exit, so the pool
+        ``_max_pool`` total); they serve one request and exit, so the pool
         shrinks back to the baseline on its own once demand falls. Connect
         failures back off exponentially; a temporary worker gives up instead.
         """
@@ -330,7 +335,7 @@ class TunnelClient:
 
 
 console = Console()
-app = typer.Typer(help="Viaduct client — expose a local service through a viaduct server.")
+app = typer.Typer(help="Viaduct client: expose a local service through a viaduct server.")
 
 _ServerOpt = Annotated[
     str | None,
@@ -491,7 +496,12 @@ def http(
         int, typer.Option(help="Idle data connections to maintain")
     ] = DEFAULT_POOL_SIZE,
     inspect: Annotated[
-        bool, typer.Option("--inspect", help="Log each request: method, path, status, time")
+        bool,
+        typer.Option(
+            "--inspect",
+            help="Start with the traffic inspector on (log each request: method, "
+            "path, status, time); toggle it live with 'i'",
+        ),
     ] = False,
     pin: Annotated[
         bool,
@@ -619,17 +629,32 @@ def _cfg_str(cfg: dict[str, str | bool], key: str) -> str | None:
     return value if isinstance(value, str) else None
 
 
-#: Refusal reasons the client should not retry — it reports them and exits.
+#: Refusal reasons the client should not retry; it reports them and exits.
 FATAL_REASONS = ("ip_tunnel_limit", "pin_in_use")
 
 
-def _print_tunnel_up(hostname: str, local_port: int, quit_hint: bool = False) -> None:
+def _print_tunnel_up(
+    hostname: str, local_port: int, quit_hint: bool = False, inspecting: bool = False
+) -> None:
     console.print("[green]✓[/] tunnel live", highlight=False)
     console.print()
     console.print(f"  [bold green]https://{hostname}[/]", highlight=False)
     console.print(f"  [dim]→ http://localhost:{local_port}[/]", highlight=False)
     if quit_hint:
-        console.print("  [dim]press q to stop[/]", highlight=False)
+        console.print()
+        if inspecting:
+            console.print(
+                "  [bold green]● traffic inspector ON[/][dim] · press i to turn off[/]",
+                highlight=False,
+            )
+        else:
+            console.print(
+                "  [dim]○ traffic inspector off · press i to turn on[/]", highlight=False
+            )
+        console.print(
+            "  [dim]press [/][bold]q[/][dim] to quit (this terminates the tunnel)[/]",
+            highlight=False,
+        )
     console.print()
 
 
@@ -685,9 +710,13 @@ async def _probe_local(host: str, port: int) -> bool:
 
 @contextlib.contextmanager
 def _quit_on_q(
-    loop: asyncio.AbstractEventLoop, stop: asyncio.Event, enabled: bool
+    loop: asyncio.AbstractEventLoop,
+    stop: asyncio.Event,
+    enabled: bool,
+    on_toggle: Callable[[], None] | None = None,
 ) -> Iterator[bool]:
-    """On an interactive terminal, make 'q' (or Ctrl+C/D) stop the tunnel.
+    """On an interactive terminal, make 'q' (or Ctrl+C/D) stop the tunnel, and
+    'i' call *on_toggle* (used to flip --inspect on the live tunnel).
 
     Yields whether the key handler is active, and always restores the terminal
     mode on exit. On non-Unix or a non-tty it is a no-op (Ctrl+C still works via
@@ -711,8 +740,11 @@ def _quit_on_q(
 
     def _on_key() -> None:
         with contextlib.suppress(OSError, ValueError):
-            if sys.stdin.read(1) in ("q", "Q", "\x03", "\x04"):
+            ch = sys.stdin.read(1)
+            if ch in ("q", "Q", "\x03", "\x04"):
                 stop.set()
+            elif ch in ("i", "I") and on_toggle is not None:
+                on_toggle()
 
     tty.setcbreak(fd)
     loop.add_reader(fd, _on_key)
@@ -761,7 +793,22 @@ async def _run_http(
         )
 
     started = time.time()
-    with _quit_on_q(loop, stop, fancy) as q_active:
+    inspect_state: dict[str, Any] = {"on": inspect, "client": None}
+
+    def toggle_inspect() -> None:
+        inspect_state["on"] = not inspect_state["on"]
+        if inspect_state["client"] is not None:
+            inspect_state["client"].set_inspect(inspect_state["on"])
+        if inspect_state["on"]:
+            console.print(
+                "  [bold green]● traffic inspector ON[/]  "
+                "[dim]· logging each request · press i to turn off[/]",
+                highlight=False,
+            )
+        else:
+            console.print("  [dim]○ traffic inspector off[/]", highlight=False)
+
+    with _quit_on_q(loop, stop, fancy, on_toggle=toggle_inspect) as q_active:
         delay = 1.0
         first = True
         while not stop.is_set():
@@ -771,10 +818,11 @@ async def _run_http(
                 local_port=local_port,
                 pool_size=pool_size,
                 ssl_ctx=ssl_ctx,
-                inspect=inspect,
+                inspect=inspect_state["on"],
                 pin_seed=pin_seed,
                 host_header=host_header,
             )
+            inspect_state["client"] = client
             connecting = (
                 console.status("[bold]establishing tunnel…", spinner="dots")
                 if fancy and first
@@ -787,7 +835,7 @@ async def _run_http(
                 first = False
                 await client.stop()
                 if str(exc) in FATAL_REASONS:
-                    raise  # don't retry — let http() report it and exit
+                    raise  # don't retry; let http() report it and exit
                 console.print(f"[yellow]viaduct: {exc}; retrying in {delay:.0f}s[/]")
                 if await _wait_or_stop(stop, delay):
                     return
@@ -807,7 +855,7 @@ async def _run_http(
             first = False
             delay = 1.0
             if fancy:
-                _print_tunnel_up(hostname, local_port, q_active)
+                _print_tunnel_up(hostname, local_port, q_active, inspecting=inspect_state["on"])
             else:
                 console.print(f"[bold green]tunnel up[/] {hostname} → 127.0.0.1:{local_port}")
             registry.register(
