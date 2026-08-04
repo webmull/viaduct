@@ -40,6 +40,9 @@
     }
     .about-intro { color: #cdd3de; font-size: 1.06rem; line-height: 1.7; }
     .about-intro p { margin: 0 0 1.15rem; }
+    /* the intro sits in a grid cell, so a trailing margin is trapped and can't
+       collapse into .about-prose; drop it so the first heading's gap matches the rest */
+    .about-intro p:last-child { margin-bottom: 0; }
     .about-intro b { color: var(--foreground); font-weight: 600; }
     .about-social { display: flex; justify-content: center; gap: 0.35rem; margin-top: 0.9rem; }
     .about-social a {
