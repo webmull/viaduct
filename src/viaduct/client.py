@@ -638,6 +638,20 @@ def http(
         console.print("[yellow]viaduct: --auth-message has no effect without --basic-auth[/]")
     if deny_message and not allow_ips:
         console.print("[yellow]viaduct: --deny-message has no effect without --allow-ip[/]")
+    # One tunnel per local port on this machine: a new tunnel supersedes any
+    # existing one already mapped to this port (last wins), so a port never ends
+    # up served by more than one URL.
+    for other in registry.active():
+        if (
+            other.get("port") == port
+            and other.get("pid") != os.getpid()
+            and registry.terminate(other["pid"])
+        ):
+            console.print(
+                f"[dim]viaduct: superseding {other.get('subdomain', 'a tunnel')} "
+                f"already on port {port}[/]",
+                highlight=False,
+            )
     auth_payload = auth.client_payload(
         basic_auth, bearer, allow_ips, auth_message, deny_message, auth_realm
     )

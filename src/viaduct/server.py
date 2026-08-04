@@ -31,7 +31,7 @@ log = logging.getLogger("viaduct.server")
 #: version in its hello is rejected with ``client_too_old`` (it then tells the
 #: user to upgrade). Kept low so it is dormant; bump it only when a breaking wire
 #: change lands. Clients too old to report a version at all are not gated here.
-MIN_CLIENT_VERSION = "1.0.0"
+MIN_CLIENT_VERSION = "1.4.2"
 
 Conn = tuple[asyncio.StreamReader, asyncio.StreamWriter]
 
@@ -111,6 +111,7 @@ class TunnelServer:
         pool_wait: float = 10.0,
         max_tunnels_per_ip: int = 4,
         trust_peer_ip: bool = False,
+        min_client_version: str = MIN_CLIENT_VERSION,
     ) -> None:
         self.bind = bind
         #: the plaintext public listener only ever needs to be reached by Caddy
@@ -135,6 +136,9 @@ class TunnelServer:
         #: self-host without a trusted front: use the direct peer IP for
         #: --allow-ip when there is no X-Forwarded-For. Off by default.
         self.trust_peer_ip = trust_peer_ip
+        #: reject clients reporting a version older than this (they get an upgrade
+        #: prompt); the CLI passes MIN_CLIENT_VERSION, tests pass a low floor.
+        self.min_client_version = min_client_version
         self._ip_tunnels: dict[str, int] = {}
         self.tunnels: dict[str, Tunnel] = {}
         #: custom domain -> tunnel subdomain (or None), resolved via CNAME, cached
@@ -219,9 +223,11 @@ class TunnelServer:
         peer = writer.get_extra_info("peername")
         ip = peer[0] if peer else "unknown"
         client_ver = frame.get("client")
-        if isinstance(client_ver, str) and update.is_newer(MIN_CLIENT_VERSION, client_ver):
-            log.info("client too old client=%s min=%s ip=%s", client_ver, MIN_CLIENT_VERSION, ip)
-            await self._reject(writer, "client_too_old", min_client=MIN_CLIENT_VERSION)
+        if isinstance(client_ver, str) and update.is_newer(self.min_client_version, client_ver):
+            log.info(
+                "client too old client=%s min=%s ip=%s", client_ver, self.min_client_version, ip
+            )
+            await self._reject(writer, "client_too_old", min_client=self.min_client_version)
             return
         if self._ip_tunnels.get(ip, 0) >= self.max_tunnels_per_ip:
             log.warning("ip tunnel limit reached ip=%s limit=%s", ip, self.max_tunnels_per_ip)

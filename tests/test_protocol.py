@@ -237,9 +237,10 @@ def test_server_rejects_client_below_min() -> None:
     assert msg["min_client"] == server.MIN_CLIENT_VERSION
 
 
-def test_min_client_gate_passes_current_version() -> None:
-    # a current client is not "older than" the (dormant) floor, so no gate
+def test_min_client_gate() -> None:
+    # a client at (or above) the floor passes; anything below is gated
     from viaduct import update
 
-    assert not update.is_newer(server.MIN_CLIENT_VERSION, "1.4.0")
-    assert update.is_newer(server.MIN_CLIENT_VERSION, "0.9.0")  # this one would be gated
+    assert not update.is_newer(server.MIN_CLIENT_VERSION, server.MIN_CLIENT_VERSION)
+    assert update.is_newer(server.MIN_CLIENT_VERSION, "1.4.0")  # below the floor -> gated
+    assert update.is_newer(server.MIN_CLIENT_VERSION, "0.9.0")

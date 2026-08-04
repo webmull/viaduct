@@ -75,7 +75,9 @@ async def bare_server(
         tunnel_port=0,
         base_domain=BASE_DOMAIN,
         tls=tls,
-        **server_kwargs,
+        # tests use a low floor so the handshake isn't gated by the installed
+        # client version; a test can still override via server_kwargs.
+        **{"min_client_version": "1.0.0", **server_kwargs},
     )
     await server.start()
     try:
