@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#14171f" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="icon" sizes="32x32" href="/favicon-32.png" />
+  <link rel="mask-icon" href="/favicon.svg" color="#f5b544" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500;600&display=swap" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500;600&display=swap" media="print" onload="this.media='all'" />
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500;600&display=swap" /></noscript>
+  <link rel="stylesheet" href="/styles.css" />
+  <title>The part of building a reverse tunnel I didn't expect</title>
+  <meta name="description" content="I used ngrok, localtunnel and Pinggy for years before I built my own reverse tunnel. The tunnelling was the easy part; the connections I could not see taught me the most." />
+  <link rel="canonical" href="https://viaduct.sh/news/built-a-tunnel/" />
+  <meta property="og:type" content="article" />
+  <meta property="og:title" content="The part of building a reverse tunnel I didn't expect" />
+  <meta property="og:description" content="I used ngrok, localtunnel and Pinggy for years before I built my own. The tunnelling was the easy part." />
+  <meta property="og:url" content="https://viaduct.sh/news/built-a-tunnel/" />
+  <meta property="og:image" content="https://viaduct.sh/og.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:image" content="https://viaduct.sh/og.png" />
+  <style>
+    .article { max-width: 44rem; margin: 0 auto; }
+    .article-body { padding-bottom: 4rem; }
+    .cta { margin-top: 1.6rem; }
+    .byline { display: flex; align-items: center; justify-content: center; gap: 0.7rem; margin: 1.4rem 0 0; color: var(--muted-foreground); font-size: 0.9rem; }
+    .byline img { width: 2.4rem; height: 2.4rem; border-radius: 999px; border: 1px solid var(--border-strong); }
+    .byline b { color: var(--foreground); font-weight: 600; }
+    .byline .dot { opacity: 0.5; }
+    .prose { margin-top: 2.2rem; color: #cdd3de; font-size: 1.04rem; line-height: 1.75; }
+    .prose > p { margin: 0 0 1.3rem; }
+    .prose h2 { font-family: var(--font-display); font-size: 1.3rem; margin: 2.4rem 0 0.8rem; letter-spacing: -0.01em; color: var(--foreground); }
+    .prose b, .prose strong { color: var(--foreground); font-weight: 600; }
+    .prose a { color: var(--primary); text-decoration: none; }
+    .prose a:hover { text-decoration: underline; }
+    .prose code { font-family: var(--font-mono); font-size: 0.85em; background: var(--secondary); padding: 0.1rem 0.35rem; border-radius: 0.3rem; }
+
+    .cmp-scroll { overflow-x: auto; margin: 1.4rem 0 0; border: 1px solid var(--border); border-radius: 0.8rem; width: min(56rem, 92vw); position: relative; left: 50%; transform: translateX(-50%); }
+    .cmp { width: 100%; border-collapse: collapse; font-size: 0.88rem; min-width: 44rem; }
+    .cmp th, .cmp td { padding: 0.65rem 0.9rem; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; white-space: nowrap; }
+    .cmp thead th { font-family: var(--font-display); font-weight: 600; font-size: 0.92rem; color: var(--foreground); }
+    .cmp tbody tr:last-child td { border-bottom: 0; }
+    .cmp td:first-child, .cmp th:first-child { color: var(--muted-foreground); font-weight: 500; white-space: normal; }
+    .cmp th.via, .cmp td.viacol { background: color-mix(in oklab, var(--primary) 8%, transparent); }
+    .cmp th.via { color: var(--primary); }
+    .cmp .y { color: #6cc98a; }
+    .cmp .n { color: var(--muted-foreground); }
+    .asof { color: var(--muted-foreground); font-size: 0.82rem; margin: 0.6rem 0 0; }
+    .back { display: inline-block; margin-top: 2.4rem; color: var(--muted-foreground); text-decoration: none; font-size: 0.92rem; }
+    .back:hover { color: var(--foreground); }
+  </style>
+</head>
+<body>
+  <div id="site-header"></div>
+  <script src="/header.js?v=2"></script>
+
+  <main>
+    <section class="docs-hero">
+      <div class="wrap article">
+        <p class="eyebrow">News</p>
+        <h1>The part of building a reverse tunnel I didn't expect</h1>
+        <p class="lede">ngrok was my default for years, with localtunnel and Pinggy alongside it. I built my own anyway, and the tunnelling turned out to be the easy part.</p>
+        <div class="byline">
+          <img src="/adam.png" alt="Adam Davis" />
+          <span>By <b>Adam Davis</b></span>
+          <span class="dot">&middot;</span>
+          <span>August 2026</span>
+        </div>
+      </div>
+    </section>
+
+    <div class="wrap article article-body">
+      <div class="prose">
+        <p>
+          I've kept a reverse tunnel within reach for years. When I want to show
+          someone a site running on my laptop, or point a webhook at something
+          half-written, it's the quickest way to give a local port a public URL
+          without touching my router. ngrok was my default, and I get why it's most
+          people's: polished, a genuinely useful request inspector, and it mostly
+          just works. What wore on me was everything around the tunnel. An account
+          and an auth token before I could start, a warning page in front of anyone
+          I sent a link to, and the parts I wanted most behind a paid plan. All
+          reasonable for a business. It just meant a URL for a port came wrapped in
+          more than I wanted to carry.
+        </p>
+        <p>
+          So I looked around. localtunnel is the simplest version there is: open
+          source, a free server, one command, no account. But it's bare, no way to
+          password-protect a tunnel and no view of the traffic, so the moment I
+          wanted to hand a link to one person and know only they could open it, I was
+          on my own again. Pinggy fixes that cleverly. It runs over plain SSH, so
+          there is nothing to install, and it does raw TCP and TLS on top of HTTP.
+          The catch was that I was routing traffic through a service I couldn't see
+          inside or run myself, with the parts I wanted most behind the paid tier. I
+          kept wishing I could just read the thing.
+        </p>
+        <p>
+          That wish is what led me to build viaduct. I wanted something in the gap:
+          small enough to read in an afternoon, simple enough to run on one cheap
+          server, honest enough to trust with my own traffic. So I wrote one, a few
+          thousand lines of Python, with a free hosted version and no accounts,
+          mostly so I'd actually reach for it.
+        </p>
+        <p>
+          Here's the part I didn't expect. I assumed the tunnelling would be the hard
+          bit, splicing bytes from a public URL back to my laptop. It was the easy
+          half. The half that taught me something was the connections I couldn't see.
+          A tunnel keeps a pool of connections open and idle, waiting for the next
+          request, and I kept hitting a failure where a tunnel left running would go
+          quiet, hang, then recover on its own. It took me too long to work out they
+          weren't dying cleanly. Something in the middle, a NAT or a firewall, was
+          quietly dropping them while both ends still believed they were fine.
+        </p>
+        <p>
+          What surprised me was how ordinary and how invisible that is. Every tunnel
+          has some version of it. The only reason I could find and fix it was that I
+          could open the code and watch what the connections were doing, instead of
+          filing a ticket and hoping. That's when it clicked: the thing I valued most
+          about building my own wasn't a feature I could put in a table. It was being
+          able to look inside when something behaved in a way I didn't understand.
+        </p>
+        <p>
+          viaduct isn't the right choice for everyone. If you need a database port
+          tunnelled, or nothing installed at all, the others fit better, and the
+          table below shows where each wins. But building it left me wondering how
+          many tools we treat as black boxes out of habit, and how differently we'd
+          use them if reading the source was the first step instead of the last. For
+          a reverse tunnel, that turned out to be the whole point.
+        </p>
+
+        <h2>Side by side</h2>
+        <p>
+          Same story as a table. ngrok for the polished hosted default if you don't
+          mind an account, localtunnel for the simplest open tunnel, Pinggy for
+          zero-install and raw protocols, viaduct to read, run, and gate it yourself.
+        </p>
+        <div class="cmp-scroll">
+          <table class="cmp">
+            <thead>
+              <tr><th>Feature</th><th>ngrok</th><th>localtunnel</th><th>Pinggy</th><th class="via">viaduct</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Open source</td><td class="n">No</td><td class="y">Yes (MIT)</td><td class="n">No</td><td class="viacol y">Yes (MIT)</td></tr>
+              <tr><td>Free hosted service</td><td>Yes (account)</td><td class="y">Yes</td><td class="y">Yes (free tier)</td><td class="viacol y">Yes, no account</td></tr>
+              <tr><td>Self-hostable</td><td class="n">No</td><td class="y">Yes</td><td class="n">No</td><td class="viacol y">Yes, one droplet</td></tr>
+              <tr><td>Install</td><td>Binary + authtoken</td><td>npm (Node)</td><td>None (uses ssh)</td><td class="viacol">pipx / npm</td></tr>
+              <tr><td>Stable / reserved URL</td><td>Paid</td><td>Best-effort</td><td>Paid</td><td class="viacol y">Yes (--pin)</td></tr>
+              <tr><td>Custom domain</td><td>Paid</td><td class="n">Self-host only</td><td>Paid</td><td class="viacol y">Yes (CNAME)</td></tr>
+              <tr><td>Session time limit</td><td class="y">None</td><td class="y">None</td><td>Free tier is timed</td><td class="viacol y">None</td></tr>
+              <tr><td>Raw TCP / TLS</td><td>Yes (paid)</td><td class="n">No</td><td class="y">Yes</td><td class="viacol n">HTTP/WS only</td></tr>
+              <tr><td>Password / token / IP gate</td><td>Paid</td><td class="n">No</td><td class="y">Yes</td><td class="viacol y">Yes, at the edge</td></tr>
+              <tr><td>Live request inspection</td><td class="y">Yes (:4040)</td><td class="n">No</td><td class="y">Yes</td><td class="viacol y">Yes (--inspect)</td></tr>
+              <tr><td>Multi-region</td><td class="y">Yes</td><td class="n">No</td><td class="y">Yes</td><td class="viacol y">Yes (5 regions)</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="asof">Compared August 2026. Free tiers, paid features, and regions move around, so check each provider's current plans before you lean on a row.</p>
+
+        <p class="cta">
+          If reading it and running it yourself is the part you want, viaduct is
+          <a href="https://github.com/webmull/viaduct">open source on GitHub</a>, and
+          the <a href="/docs/">docs</a> get you started in two commands.
+        </p>
+
+        <a class="back" href="/news/">&larr; All news</a>
+      </div>
+    </div>
+  </main>
+
+  <div id="site-footer"></div>
+  <script src="/footer.js?v=2"></script>
+  <script src="/nav-toggle.js" defer></script>
+  <script src="/to-top.js" defer></script>
+</body>
+</html>

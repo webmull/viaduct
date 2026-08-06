@@ -7,6 +7,13 @@
     <description>Updates and notes from the viaduct project.</description>
     <language>en</language>
     <item>
+      <title>The part of building a reverse tunnel I didn't expect</title>
+      <link>https://viaduct.sh/news/built-a-tunnel/</link>
+      <guid>https://viaduct.sh/news/built-a-tunnel/</guid>
+      <pubDate>Thu, 06 Aug 2026 09:00:00 GMT</pubDate>
+      <description>ngrok was my default for years, with localtunnel and Pinggy alongside it. I built my own anyway, and the tunnelling turned out to be the easy part.</description>
+    </item>
+    <item>
       <title>Idle tunnels stay ready</title>
       <link>https://viaduct.sh/news/idle-tunnels-stay-ready/</link>
       <guid>https://viaduct.sh/news/idle-tunnels-stay-ready/</guid>
