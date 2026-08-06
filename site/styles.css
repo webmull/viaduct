@@ -103,7 +103,7 @@ h1, h2, h3 { font-family: var(--font-display); letter-spacing: -0.02em; margin: 
 .reg-foot p { color: var(--muted-foreground); margin: 0; }
 .errors-hero { padding-bottom: 1.5rem; }
 .errors-title { font-size: clamp(1.9rem, 5vw, 2.8rem); }
-.errors-body { padding-top: 1rem; }
+.errors-body { padding-top: 1rem; padding-bottom: 4rem; }
 .site-nav { display: flex; align-items: center; gap: 1.35rem; }
 .site-nav a {
   font-size: 0.9rem; font-weight: 500; text-decoration: none;
