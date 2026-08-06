@@ -343,9 +343,12 @@ main > section:nth-child(even) { background: var(--surface); }
 @media (max-width: 560px) {
   .wrap { padding: 0 1.35rem; }
   section { padding: 1.6rem 0; }
-  /* article / prose pages (about, docs, news posts) have no section padding at
-     the foot, so give them a little extra air above the footer on phones */
+  /* prose-ending pages (about, docs) have no section padding at the foot, so
+     give them extra air above the footer on phones */
   .article-body { padding-bottom: 6rem; }
+  /* news posts end in a "back" link, not prose: 6rem left it floating in a void
+     that read as a second footer, so keep the tighter spacing it has on desktop */
+  .article.article-body { padding-bottom: 4rem; }
   .hero { padding-top: 1.5rem; }
   .hero-mark { height: 4.75rem; width: 4.75rem; }
   .section-head { margin-bottom: 1rem; }
