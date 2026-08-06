@@ -32,6 +32,9 @@ beyond the milestones.
   copy, layout, or plain text instead.
 - **No em dashes (—) in any copy or written content.** Use commas, parentheses,
   or separate sentences instead.
+- **Never use inline styles** (`style="..."` attributes) in any markup. All
+  styling goes through classes in `site/styles.css` or a scoped `<style>` block
+  on the page. If you find yourself reaching for `style="..."`, add a class.
 - **Error pages must always match the error brand.** `site/errors.html` is the
   visual reference for every viaductd error page (404, 502, 503, etc.). Any change
   to `error_response` in `src/viaduct/routing.py` and the reference must stay in

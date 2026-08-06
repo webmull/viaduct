@@ -125,7 +125,7 @@
         </section>
 
         <section class="doc-section" id="pin">
-          <h2>Keep the same URL <span style="color:var(--muted-foreground);font-weight:400">(--pin)</span></h2>
+          <h2>Keep the same URL <span class="h-flag">(--pin)</span></h2>
           <p>
             Add <code>--pin</code> to keep the same public URL for a given port
             across reconnects and restarts. Useful for a webhook endpoint you
@@ -160,7 +160,7 @@
         </section>
 
         <section class="doc-section" id="inspect">
-          <h2>Inspect requests <span style="color:var(--muted-foreground);font-weight:400">(--inspect)</span></h2>
+          <h2>Inspect requests <span class="h-flag">(--inspect)</span></h2>
           <p>
             The traffic inspector prints each request as it happens: method, path,
             status, and timing. Ideal for debugging webhooks without leaving your
@@ -213,7 +213,7 @@
         </section>
 
         <section class="doc-section" id="protect">
-          <h2>Protect a tunnel <span style="color:var(--muted-foreground);font-weight:400">(--basic-auth, --allow-ip)</span></h2>
+          <h2>Protect a tunnel <span class="h-flag">(--basic-auth, --allow-ip)</span></h2>
           <p>
             A tunnel is public by default: anyone with the URL reaches your local
             app. Put a gate in front of it with a password, a bearer token, an IP
@@ -244,7 +244,7 @@
             see with <code>--auth-message</code> (401) and <code>--deny-message</code>
             (403), and the browser prompt's label with <code>--auth-realm</code>.
           </p>
-          <figure class="error-preview" style="max-width:34rem;margin:2rem auto 0" aria-hidden="true">
+          <figure class="error-preview ec-sized" aria-hidden="true">
             <div class="wm">viaduct<b>.sh</b></div>
             <div class="code">401</div>
             <h3>Password required</h3>
@@ -263,7 +263,7 @@
         </section>
 
         <section class="doc-section" id="domains">
-          <h2>Custom domains <span style="color:var(--muted-foreground);font-weight:400">(bring your own)</span></h2>
+          <h2>Custom domains <span class="h-flag">(bring your own)</span></h2>
           <p>
             Serve a tunnel on your own domain with a single CNAME. There's no extra
             flag, the mapping lives in your DNS.
@@ -437,7 +437,7 @@ with viaduct.tunnel_sync(8080) as t:
     print(t.url)">Copy</button>
           </div>
 
-          <h3 style="margin:1.75rem 0 0.4rem;font-size:1.05rem">A public URL in your tests</h3>
+          <h3 class="docs-subhead">A public URL in your tests</h3>
           <p>
             Installing <code>viaduct-sh</code> also registers a pytest fixture,
             <code>viaduct_tunnel</code>, that hands a test a real public URL and
@@ -454,7 +454,7 @@ with viaduct.tunnel_sync(8080) as t:
     ...'>Copy</button>
           </div>
 
-          <h3 style="margin:1.75rem 0 0.4rem;font-size:1.05rem">Node</h3>
+          <h3 class="docs-subhead">Node</h3>
           <p>
             There is a zero-dependency Node client too, published as
             <code>viaduct-sh</code> on npm and living in the
@@ -492,7 +492,7 @@ console.log(t.url);'>Copy</button>
             instead. Only turn that on when a front you control is not adding the
             forwarded-for header, otherwise a client could spoof its own address.
           </div>
-          <div class="actions" style="justify-content:flex-start;margin-top:1.2rem">
+          <div class="actions actions-start">
             <a class="btn btn-primary" href="https://github.com/webmull/viaduct/blob/main/deploy/setup.md" target="_blank" rel="noreferrer">Deployment guide</a>
             <a class="btn btn-outline" href="https://github.com/webmull/viaduct#readme" target="_blank" rel="noreferrer">Full README</a>
           </div>

@@ -77,6 +77,33 @@ h1, h2, h3 { font-family: var(--font-display); letter-spacing: -0.02em; margin: 
 }
 .error-preview p { color: #8b929e; margin: 0.5rem auto 0; max-width: 22rem; font-size: 0.9rem; line-height: 1.6; }
 .error-preview + .cap { text-align: center; color: var(--muted-foreground); font-size: 0.85rem; margin: 0.55rem 0 0; }
+
+/* Utility and one-off classes (replacing former inline styles) */
+.accent-link { color: var(--primary); text-decoration: none; }
+.accent-link:hover { text-decoration: underline; }
+.accent-link.strong { font-weight: 500; }
+.article-body { padding-bottom: 4rem; }
+.release-note { color: var(--muted-foreground); font-size: 0.92rem; border-top: 1px solid var(--border); padding-top: 1.2rem; margin-top: 1.6rem; }
+.h-flag { color: var(--muted-foreground); font-weight: 400; }
+.code-chip { font-family: var(--font-mono); font-size: 0.86em; background: var(--secondary); padding: 0.1rem 0.35rem; border-radius: 0.3rem; }
+.terminal-narrow { max-width: 44rem; }
+.ec-sized { max-width: 34rem; margin: 2rem auto 0; }
+.actions-center { justify-content: center; }
+.actions-start { justify-content: flex-start; margin-top: 1.2rem; }
+.actions-flush { margin-top: 0; }
+.lede-sm { font-size: 0.9rem; margin-top: 1rem; }
+.code-block-narrow { max-width: 32rem; width: 100%; }
+.wrap-60 { max-width: 60rem; padding-bottom: 2.5rem; }
+.wrap-47 { max-width: 47rem; padding-bottom: 3rem; }
+.hero-404 { min-height: 58vh; display: grid; place-items: center; }
+.code-404 { font-family: var(--font-display); font-weight: 700; font-size: clamp(4.5rem, 16vw, 8rem); line-height: 1; color: var(--primary); font-variant-numeric: tabular-nums; }
+.title-404 { font-size: clamp(1.6rem, 4vw, 2.4rem); margin-top: 0.6rem; }
+.docs-subhead { margin: 1.75rem 0 0.4rem; font-size: 1.05rem; }
+.reg-foot { border-top: 1px solid var(--border); margin-top: 1.25rem; padding-top: 1.1rem; }
+.reg-foot p { color: var(--muted-foreground); margin: 0; }
+.errors-hero { padding-bottom: 1.5rem; }
+.errors-title { font-size: clamp(1.9rem, 5vw, 2.8rem); }
+.errors-body { padding-top: 1rem; }
 .site-nav { display: flex; align-items: center; gap: 1.35rem; }
 .site-nav a {
   font-size: 0.9rem; font-weight: 500; text-decoration: none;
