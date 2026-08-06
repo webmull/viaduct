@@ -47,6 +47,11 @@ h1, h2, h3 { font-family: var(--font-display); letter-spacing: -0.02em; margin: 
 .wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 1.5rem; }
 
 /* ---------- Header ---------- */
+/* Reserve the header's height on the empty mount before header.js fills it.
+   Without this the header appears after first paint, shoves all content down
+   65px and breaks scroll restoration, so a reload flashed the page to the top
+   and then snapped back to where you were. */
+#site-header { display: block; height: 65px; }
 .site-header {
   position: sticky; top: 0; z-index: 50;
   border-bottom: 1px solid var(--border);
@@ -86,6 +91,9 @@ h1, h2, h3 { font-family: var(--font-display); letter-spacing: -0.02em; margin: 
 .accent-link:hover { text-decoration: underline; }
 .accent-link.strong { font-weight: 500; }
 .article-body { padding-bottom: 4rem; }
+/* byline author name links to the About page */
+.byline a { text-decoration: none; color: inherit; }
+.byline a:hover b { color: var(--primary); }
 /* a left-accent note, not a full-width hairline: a top border here mirrored the
    footer's and read as a second footer stacked above the real one */
 .release-note { color: var(--muted-foreground); font-size: 0.92rem; margin-top: 2rem; padding: 0.2rem 0 0.2rem 1rem; border-left: 2px solid var(--primary); }

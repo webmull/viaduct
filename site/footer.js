@@ -6,7 +6,7 @@
   if (!mount) return;
   mount.outerHTML =
     '<footer class="site-footer"><div class="wrap footer-inner">' +
-    '<a href="https://adamdavis.co.uk" target="_blank" rel="noreferrer" style="display:flex;align-items:center;gap:0.6rem;text-decoration:none;color:inherit">' +
+    '<a href="/about/" style="display:flex;align-items:center;gap:0.6rem;text-decoration:none;color:inherit">' +
     '<img src="/adam.png" alt="Adam Davis" width="34" height="34" style="border-radius:999px;border:1px solid var(--border-strong)" />' +
     "<span>Built by <strong style=\"color:var(--foreground);font-weight:600\">Adam Davis</strong></span>" +
     "</a>" +
