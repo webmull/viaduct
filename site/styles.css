@@ -83,6 +83,10 @@ h1, h2, h3 { font-family: var(--font-display); letter-spacing: -0.02em; margin: 
 .accent-link:hover { text-decoration: underline; }
 .accent-link.strong { font-weight: 500; }
 .article-body { padding-bottom: 4rem; }
+/* keep the "back" link attached to the end of the article (paragraph rhythm)
+   rather than stranded in the bottom padding, where it read as a second footer.
+   Overrides each post's scoped .back margin-top. */
+.article .back { margin-top: 1.75rem; }
 /* a left-accent note, not a full-width hairline: a top border here mirrored the
    footer's and read as a second footer stacked above the real one */
 .release-note { color: var(--muted-foreground); font-size: 0.92rem; margin-top: 2rem; padding: 0.2rem 0 0.2rem 1rem; border-left: 2px solid var(--primary); }
@@ -343,12 +347,9 @@ main > section:nth-child(even) { background: var(--surface); }
 @media (max-width: 560px) {
   .wrap { padding: 0 1.35rem; }
   section { padding: 1.6rem 0; }
-  /* prose-ending pages (about, docs) have no section padding at the foot, so
-     give them extra air above the footer on phones */
+  /* prose / article pages (about, docs, news posts) have no section padding at
+     the foot, so give them extra air above the footer on phones */
   .article-body { padding-bottom: 6rem; }
-  /* news posts end in a "back" link, not prose: 6rem left it floating in a void
-     that read as a second footer, so keep the tighter spacing it has on desktop */
-  .article.article-body { padding-bottom: 4rem; }
   .hero { padding-top: 1.5rem; }
   .hero-mark { height: 4.75rem; width: 4.75rem; }
   .section-head { margin-bottom: 1rem; }
