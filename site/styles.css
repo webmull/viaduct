@@ -31,7 +31,7 @@
 *, *::before, *::after { box-sizing: border-box; }
 html {
   font-family: var(--font-sans); font-size: 1rem; line-height: 1.6;
-  -webkit-font-smoothing: antialiased; scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
   scroll-padding-top: 5rem;
   /* set the ground on the root too: without it the browser paints a white
      first frame before <body> renders, which reads as a flash on load */
