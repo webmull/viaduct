@@ -33,6 +33,9 @@ html {
   font-family: var(--font-sans); font-size: 1rem; line-height: 1.6;
   -webkit-font-smoothing: antialiased; scroll-behavior: smooth;
   scroll-padding-top: 5rem;
+  /* set the ground on the root too: without it the browser paints a white
+     first frame before <body> renders, which reads as a flash on load */
+  background: var(--background);
 }
 body { margin: 0; background: var(--background); color: var(--foreground); overflow-x: hidden; }
 a { color: inherit; }
@@ -350,6 +353,10 @@ main > *:last-child section:last-child { padding-bottom: 0; }
   .wrap { padding: 0 1.35rem; }
   section { padding: 1.6rem 0; }
   .hero { padding-top: 1.5rem; }
+  /* tighter top and bottom on news articles on phones */
+  .docs-hero:has(.byline) { padding-top: 1.1rem; }
+  .article .prose { margin-top: 1.5rem; }
+  .article .back { margin-top: 1.5rem; }
   .hero-mark { height: 4.75rem; width: 4.75rem; }
   .section-head { margin-bottom: 1rem; }
   .actions { width: 100%; }
