@@ -83,7 +83,9 @@ h1, h2, h3 { font-family: var(--font-display); letter-spacing: -0.02em; margin: 
 .accent-link:hover { text-decoration: underline; }
 .accent-link.strong { font-weight: 500; }
 .article-body { padding-bottom: 4rem; }
-.release-note { color: var(--muted-foreground); font-size: 0.92rem; border-top: 1px solid var(--border); padding-top: 1.2rem; margin-top: 1.6rem; }
+/* a left-accent note, not a full-width hairline: a top border here mirrored the
+   footer's and read as a second footer stacked above the real one */
+.release-note { color: var(--muted-foreground); font-size: 0.92rem; margin-top: 2rem; padding: 0.2rem 0 0.2rem 1rem; border-left: 2px solid var(--primary); }
 .h-flag { color: var(--muted-foreground); font-weight: 400; }
 .code-chip { font-family: var(--font-mono); font-size: 0.86em; background: var(--secondary); padding: 0.1rem 0.35rem; border-radius: 0.3rem; }
 .terminal-narrow { max-width: 44rem; }
