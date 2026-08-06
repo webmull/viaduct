@@ -4,6 +4,14 @@
 // the nav stays identical on every page. The current page is marked with
 // aria-current based on the path.
 (function () {
+  // Turn off the browser's automatic scroll restoration. On iOS Safari it
+  // paints the page at the top on reload and then jumps to the saved position
+  // once layout settles, which reads as a flash. With this off, a reload just
+  // stays at the top: nothing to jump to.
+  if ("scrollRestoration" in history) {
+    try { history.scrollRestoration = "manual"; } catch (e) {}
+  }
+
   var mount = document.getElementById("site-header");
   if (!mount) return;
 
