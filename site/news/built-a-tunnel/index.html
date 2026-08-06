@@ -45,12 +45,19 @@
     .cmp th, .cmp td { padding: 0.65rem 0.9rem; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; white-space: nowrap; }
     .cmp thead th { font-family: var(--font-display); font-weight: 600; font-size: 0.92rem; color: var(--foreground); }
     .cmp tbody tr:last-child td { border-bottom: 0; }
-    .cmp td:first-child, .cmp th:first-child { color: var(--muted-foreground); font-weight: 500; white-space: normal; }
+    .cmp td:first-child, .cmp th:first-child { color: var(--muted-foreground); font-weight: 500; white-space: normal; position: sticky; left: 0; background: #14171f; }
     .cmp th.via, .cmp td.viacol { background: color-mix(in oklab, var(--primary) 8%, transparent); }
     .cmp th.via { color: var(--primary); }
     .cmp .y { color: #6cc98a; }
     .cmp .n { color: var(--muted-foreground); }
     .asof { color: var(--muted-foreground); font-size: 0.82rem; margin: 0.6rem 0 0; }
+    @media (max-width: 640px) {
+      /* no desktop break-out on mobile, so the pinned first column can stick */
+      .cmp-scroll { width: auto; left: auto; transform: none; }
+      .cmp { font-size: 0.8rem; }
+      .cmp th, .cmp td { padding: 0.5rem 0.55rem; }
+      .cmp td:first-child, .cmp th:first-child { box-shadow: 1px 0 0 var(--border); }
+    }
     .back { display: inline-block; margin-top: 2.4rem; color: var(--muted-foreground); text-decoration: none; font-size: 0.92rem; }
     .back:hover { color: var(--foreground); }
   </style>
