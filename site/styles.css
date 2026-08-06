@@ -319,7 +319,12 @@ main > section:nth-child(even) { background: var(--surface); }
 .cta p { color: var(--muted-foreground); margin: 0.8rem auto 1.6rem; max-width: 32rem; }
 
 /* ---------- Footer ---------- */
-.site-footer { border-top: 1px solid var(--border); padding: 2.25rem 0; }
+/* One consistent gap above the footer on every page: neutralise whatever bottom
+   padding each page's last block carries, and let this single margin (which
+   collapses through the trailing content margins) set the distance everywhere. */
+main > *:last-child,
+main > *:last-child section:last-child { padding-bottom: 0; }
+.site-footer { border-top: 1px solid var(--border); margin-top: 4rem; padding: 2.25rem 0; }
 .footer-inner {
   display: flex; flex-direction: column; gap: 1rem; align-items: center; text-align: center;
   color: var(--muted-foreground); font-size: 0.88rem;
