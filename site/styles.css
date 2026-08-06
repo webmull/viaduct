@@ -325,6 +325,11 @@ main > section:nth-child(even) { background: var(--surface); }
 .footer-links { display: flex; flex-wrap: wrap; gap: 1.25rem; justify-content: center; }
 .footer-links a { text-decoration: none; color: var(--muted-foreground); }
 .footer-links a:hover { color: var(--foreground); }
+/* On phones the footer can crowd the last line of content; give it a little
+   air above, on top of whatever bottom padding each page already carries. */
+@media (max-width: 640px) {
+  .site-footer { margin-top: 2rem; }
+}
 
 /* ---------- Responsive ---------- */
 @media (min-width: 640px) {
