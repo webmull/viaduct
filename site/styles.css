@@ -47,11 +47,6 @@ h1, h2, h3 { font-family: var(--font-display); letter-spacing: -0.02em; margin: 
 .wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 1.5rem; }
 
 /* ---------- Header ---------- */
-/* Reserve the header's height on the empty mount before header.js fills it.
-   Without this the header appears after first paint, shoves all content down
-   65px and breaks scroll restoration, so a reload flashed the page to the top
-   and then snapped back to where you were. */
-#site-header { display: block; height: 65px; }
 .site-header {
   position: sticky; top: 0; z-index: 50;
   border-bottom: 1px solid var(--border);
@@ -344,6 +339,9 @@ main > *:last-child section:last-child { padding-bottom: 0; }
 .footer-links { display: flex; flex-wrap: wrap; gap: 1.25rem; justify-content: center; }
 .footer-links a { text-decoration: none; color: var(--muted-foreground); }
 .footer-links a:hover { color: var(--foreground); }
+.footer-cred { display: flex; align-items: center; gap: 0.6rem; text-decoration: none; color: inherit; }
+.footer-cred img { border-radius: 999px; border: 1px solid var(--border-strong); }
+.footer-cred strong { color: var(--foreground); font-weight: 600; }
 
 /* ---------- Responsive ---------- */
 @media (min-width: 640px) {
