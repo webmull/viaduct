@@ -325,11 +325,6 @@ main > section:nth-child(even) { background: var(--surface); }
 .footer-links { display: flex; flex-wrap: wrap; gap: 1.25rem; justify-content: center; }
 .footer-links a { text-decoration: none; color: var(--muted-foreground); }
 .footer-links a:hover { color: var(--foreground); }
-/* On phones the footer can crowd the last line of content; give it a little
-   air above, on top of whatever bottom padding each page already carries. */
-@media (max-width: 640px) {
-  .site-footer { margin-top: 2rem; }
-}
 
 /* ---------- Responsive ---------- */
 @media (min-width: 640px) {
@@ -346,6 +341,9 @@ main > section:nth-child(even) { background: var(--surface); }
 @media (max-width: 560px) {
   .wrap { padding: 0 1.35rem; }
   section { padding: 1.6rem 0; }
+  /* article / prose pages (about, docs, news posts) have no section padding at
+     the foot, so give them a little extra air above the footer on phones */
+  .article-body { padding-bottom: 6rem; }
   .hero { padding-top: 1.5rem; }
   .hero-mark { height: 4.75rem; width: 4.75rem; }
   .section-head { margin-bottom: 1rem; }
