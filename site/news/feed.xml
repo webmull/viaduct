@@ -7,6 +7,13 @@
     <description>Updates and notes from the viaduct project.</description>
     <language>en</language>
     <item>
+      <title>Name your own tunnel</title>
+      <link>https://viaduct.sh/news/name-your-tunnel/</link>
+      <guid>https://viaduct.sh/news/name-your-tunnel/</guid>
+      <pubDate>Fri, 07 Aug 2026 09:00:00 GMT</pubDate>
+      <description>viaduct handed out random names on purpose. Now you can request a specific subdomain with --name, pinned if it is free.</description>
+    </item>
+    <item>
       <title>Why I built my own reverse tunnel</title>
       <link>https://viaduct.sh/news/built-a-tunnel/</link>
       <guid>https://viaduct.sh/news/built-a-tunnel/</guid>

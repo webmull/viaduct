@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#14171f" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="icon" sizes="32x32" href="/favicon-32.png" />
+  <link rel="mask-icon" href="/favicon.svg" color="#f5b544" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500;600&display=swap" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500;600&display=swap" media="print" onload="this.media='all'" />
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500;600&display=swap" /></noscript>
+  <link rel="stylesheet" href="/styles.css" />
+  <title>Name your own tunnel with --name: viaduct.sh</title>
+  <meta name="description" content="viaduct now lets you request a specific subdomain with --name, pinned if it is free. First come, first served, bar a short reserved list." />
+  <link rel="canonical" href="https://viaduct.sh/news/name-your-tunnel/" />
+  <meta property="og:type" content="article" />
+  <meta property="og:title" content="Name your own tunnel" />
+  <meta property="og:description" content="Request a specific subdomain with --name, pinned if it is free. First come, first served, bar a short reserved list." />
+  <meta property="og:url" content="https://viaduct.sh/news/name-your-tunnel/" />
+  <meta property="og:image" content="https://viaduct.sh/og.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Name your own tunnel" />
+  <meta name="twitter:description" content="Request a specific subdomain with --name, pinned if it is free. First come, first served, bar a short reserved list." />
+  <meta name="twitter:image" content="https://viaduct.sh/og.png" />
+  <link rel="alternate" type="application/rss+xml" title="viaduct.sh news" href="/news/feed.xml" />
+  <style>
+    .article { max-width: 44rem; margin: 0 auto; }
+    .byline { display: flex; align-items: center; justify-content: center; gap: 0.7rem; margin: 1.4rem 0 0; color: var(--muted-foreground); font-size: 0.9rem; }
+    .byline img { width: 2.4rem; height: 2.4rem; border-radius: 999px; border: 1px solid var(--border-strong); }
+    .byline b { color: var(--foreground); font-weight: 600; }
+    .byline .dot { opacity: 0.5; }
+    .prose { margin-top: 2.2rem; color: var(--foreground); font-size: 1.02rem; line-height: 1.7; }
+    .prose > p { margin: 0 0 1.15rem; color: #cdd3de; }
+    .prose h2 { font-family: var(--font-display); font-size: 1.35rem; margin: 2.2rem 0 0.7rem; letter-spacing: -0.01em; }
+    .prose a { color: var(--primary); text-decoration: none; }
+    .prose a:hover { text-decoration: underline; }
+    .prose code { font-family: var(--font-mono); font-size: 0.86em; background: var(--secondary); padding: 0.1rem 0.35rem; border-radius: 0.3rem; }
+    .prose b { color: var(--foreground); font-weight: 600; }
+    .back { display: inline-block; margin-top: 2.4rem; color: var(--muted-foreground); text-decoration: none; font-size: 0.92rem; }
+    .back:hover { color: var(--foreground); }
+
+    .tw { max-width: none; margin: 1.6rem 0 1.4rem; }
+    .tw pre { font-family: var(--font-mono); font-size: 0.8rem; line-height: 1.75;
+      color: #e9ebef; white-space: pre; margin: 0; overflow-x: auto; }
+    .tw .g { color: #3fb950; }
+    .tw .url { color: #7ee2b8; }
+    .tw .dim { color: #6b7280; }
+    .tw .warn { color: #e3b341; }
+    .tw .prompt { color: #6b7280; }
+    .tw b { color: #e6edf3; font-weight: 600; }
+    .cap { color: var(--muted-foreground); font-size: 0.85rem; margin: 0 0 1.6rem; text-align: center; }
+    @media (max-width: 560px) { .tw pre { font-size: 0.7rem; } }
+  </style>
+</head>
+<body>
+  <!-- BUILT header -->
+<header class="site-header has-menu"><div class="wrap header-inner"><a class="brand" href="/"><img src="/viaduct-mark.png" alt="" width="320" height="320" /><span>viaduct<span class="tld">.sh</span></span></a><button class="nav-toggle" type="button" aria-label="Menu" aria-expanded="false" aria-controls="site-nav"><svg class="ico-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg><svg class="ico-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg></button><nav class="site-nav" id="site-nav"><a class="nav-desktop" href="/#how">How it works</a><a class="nav-desktop" href="/#install">Install</a><a class="nav-desktop" href="/network/">Network</a><a class="nav-desktop" href="/docs/">Docs</a><a class="nav-desktop" href="/news/" aria-current="page">News</a><a class="nav-desktop" href="/about/">About</a><a class="gh-pill" href="https://github.com/webmull/viaduct" target="_blank" rel="noreferrer"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.419 2.865 8.17 6.839 9.49.5.092.682-.218.682-.486 0-.236-.009-.866-.014-1.7-2.782.605-3.369-1.343-3.369-1.343-.454-1.156-1.11-1.464-1.11-1.464-.908-.62.069-.608.069-.608 1.004.07 1.532 1.03 1.532 1.03.892 1.529 2.341 1.087 2.91.831.092-.646.35-1.086.636-1.337-2.22-.251-4.555-1.111-4.555-4.943 0-1.091.39-1.984 1.03-2.683-.103-.253-.447-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0 1 12 6.836c.85.004 1.705.115 2.504.337 1.909-1.294 2.747-1.025 2.747-1.025.547 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.167 22 16.418 22 12c0-5.523-4.477-10-10-10z"/></svg>GitHub</a></nav></div></header>
+<!-- /BUILT header -->
+
+  <main>
+    <section class="docs-hero">
+      <div class="wrap article">
+        <p class="eyebrow">News</p>
+        <h1>Name your own tunnel</h1>
+        <p class="lede">For most of viaduct's life the server handed out a random name and would not let you choose. That was deliberate. Now you can ask for a specific one, pinned if it is free.</p>
+        <div class="byline">
+          <img src="/adam.png" alt="Adam Davis" />
+          <span>By <a href="/about/"><b>Adam Davis</b></a></span>
+          <span class="dot">&middot;</span>
+          <span>August 2026</span>
+        </div>
+      </div>
+    </section>
+
+    <div class="wrap article article-body">
+      <div class="prose">
+        <p>
+          A viaduct tunnel has always come with a random name, something like
+          <code>funny-otter.viaduct.sh</code>, and that was on purpose. A URL you can
+          choose is a URL someone can squat, or dress up to look like a brand or a
+          login page. <code>--pin</code> softened it: it keeps the same URL across
+          reconnects, which is what a webhook or a long-lived demo needs. But the name
+          stayed derived from a secret on your machine, not something you type. You
+          could keep a name; you could not pick one.
+        </p>
+        <p>
+          A chosen name is a small, reasonable thing to want, though. A demo link you
+          can read down the phone. A webhook endpoint whose name still means something
+          months later. A project's name instead of a random animal. So
+          <code>--name</code> is here.
+        </p>
+        <p>
+          <code>viaduct http 8080 --name myapp</code> gives you
+          <code>myapp.viaduct.sh</code> if the name is free, and pins it so it stays
+          put across reconnects. It has to be a plain, well-formed label, and a short
+          list is reserved, region codes, <code>www</code>, <code>api</code>,
+          <code>admin</code>, the names that would only be used to confuse someone.
+          Everything else is first come, first served.
+        </p>
+
+        <div class="terminal tw">
+          <div class="terminal-bar">
+            <span class="dot dot-red"></span><span class="dot dot-amber"></span><span class="dot dot-teal"></span>
+            <span class="terminal-title">viaduct http 8080 --name myapp</span>
+          </div>
+          <div class="terminal-body">
+<pre><span class="g">✓</span> tunnel live
+
+  <span class="url">https://myapp.viaduct.sh</span>
+  <span class="dim">→ http://localhost:8080</span>
+  <span class="dim">press q to stop</span>
+
+<span class="dim"># taken or reserved names are refused up front, before any tunnel</span>
+<span class="prompt">$ </span>viaduct http 8080 --name <b>admin</b>
+<span class="warn">viaduct: that --name is not allowed (some names are reserved)</span></pre>
+          </div>
+        </div>
+        <p class="cap">Free, well-formed, and not reserved: the name is yours until you disconnect.</p>
+
+        <h2>A few honest edges</h2>
+        <p>
+          A name is held only while the tunnel is live. Drop the connection and it is
+          free again, so nothing is squatted for good. Availability is per server, so a
+          name taken on one region can still be free on another.
+        </p>
+
+        <h2>Using it</h2>
+        <p>
+          Pick a name and start the tunnel as usual:
+        </p>
+        <p>
+          <code>viaduct http 8080 --name myapp</code>
+        </p>
+        <p>
+          It cannot be combined with <code>--pin</code>, which asks for the same thing
+          a different way, and there is more in the <a href="/docs/#name">docs</a>.
+        </p>
+        <p class="release-note">
+          Available in viaduct <b>1.5.0</b>. Already installed? Run <code>viaduct upgrade</code> to get it.
+        </p>
+
+        <a class="back" href="/news/">&larr; All news</a>
+      </div>
+    </div>
+  </main>
+
+  <!-- BUILT footer -->
+<footer class="site-footer"><div class="wrap footer-inner"><a class="footer-cred" href="/about/"><img src="/adam.png" alt="Adam Davis" width="34" height="34" /><span>Built by <strong>Adam Davis</strong></span></a><div class="footer-links"><a href="https://github.com/webmull/viaduct" target="_blank" rel="noreferrer">GitHub</a><a href="/network/">Network</a><a href="/docs/">Docs</a><a href="/news/">News</a><a href="/terms/">Fair use</a><a href="https://github.com/webmull/viaduct/blob/main/LICENSE" target="_blank" rel="noreferrer">MIT License</a></div></div></footer>
+<!-- /BUILT footer -->
+  <script src="/nav-toggle.js" defer></script>
+  <script src="/to-top.js" defer></script>
+</body>
+</html>
