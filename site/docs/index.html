@@ -16,9 +16,9 @@
   <link rel="stylesheet" href="/styles.css" />
   <link rel="canonical" href="https://viaduct.sh/docs/" />
   <title>Docs: getting started with viaduct.sh</title>
-  <meta name="description" content="Get started with viaduct: install, start a tunnel, keep the same URL with --pin, and inspect requests live with --inspect. Every option, with copy-paste commands." />
+  <meta name="description" content="Get started with viaduct: install, start a tunnel, keep the same URL with --pin, choose a subdomain with --name, and inspect requests live with --inspect. Every option, with copy-paste commands." />
   <meta property="og:title" content="viaduct.sh docs: getting started" />
-  <meta property="og:description" content="Install, start a tunnel, pin a stable URL, and inspect requests live. Copy-paste commands for every step." />
+  <meta property="og:description" content="Install, start a tunnel, pin or name a stable URL, and inspect requests live. Copy-paste commands for every step." />
   <meta property="og:type" content="website" />
 </head>
 <body>
@@ -46,6 +46,7 @@
           <li><a href="#install">Install</a></li>
           <li><a href="#start">Start a tunnel</a></li>
           <li><a href="#pin">Keep the same URL</a></li>
+          <li><a href="#name">Choose a name</a></li>
           <li><a href="#inspect">Inspect requests</a></li>
           <li><a href="#protect">Protect a tunnel</a></li>
           <li><a href="#combine">Combine flags</a></li>
@@ -152,11 +153,49 @@
             </div>
           </div>
           <div class="doc-note">
-            <strong>The name is still assigned by the server.</strong> You cannot
-            choose the string, so no squatting on someone else's brand. It is
+            <strong>With <code>--pin</code> the name is server-assigned.</strong> It is
             derived from a random secret stored once at
-            <code>~/.config/viaduct/pin.key</code>. Different ports get different
-            stable names; delete that file to rotate to a new one.
+            <code>~/.config/viaduct/pin.key</code>; different ports get different
+            stable names, and deleting that file rotates to a new one. To choose the
+            string yourself, use <a href="#name"><code>--name</code></a> below.
+          </div>
+        </section>
+
+        <section class="doc-section" id="name">
+          <h2>Choose a name <span class="h-flag">(--name)</span></h2>
+          <p>
+            Want a specific subdomain rather than a random one? Pass
+            <code>--name</code>. If it is free and passes a quick check, the server
+            assigns it and pins it, so it stays put across reconnects, like
+            <code>--pin</code> but with a name you picked.
+          </p>
+          <div class="code-block">
+            <pre><span class="c-prompt">$ </span><span class="cmd">viaduct http 8080 --name myapp</span></pre>
+            <button class="copy-btn" type="button" data-copy="viaduct http 8080 --name myapp">Copy</button>
+          </div>
+          <div class="terminal doc-term">
+            <div class="terminal-bar">
+              <span class="dot dot-red"></span>
+              <span class="dot dot-amber"></span>
+              <span class="dot dot-teal"></span>
+              <span class="terminal-title">bash</span>
+            </div>
+            <div class="terminal-body">
+<pre class="doc-screen"><span class="c-ok">✓</span> tunnel live
+
+  <span class="c-url">https://myapp.viaduct.sh</span>
+  <span class="c-dim">→ http://localhost:8080</span>
+  <span class="c-dim">press q to stop</span></pre>
+            </div>
+          </div>
+          <div class="doc-note">
+            <strong>Names are first come, first served and validated on the server.</strong>
+            Use 3 to 63 characters of <code>a-z</code>, <code>0-9</code> and hyphens
+            (no leading or trailing hyphen). Reserved and unsuitable names are
+            refused. Availability is per server, so if a name is already taken on the
+            one you connect to you will be told, pick another or try a
+            <a href="#regions"><code>--region</code></a>. <code>--name</code> and
+            <code>--pin</code> cannot be combined.
           </div>
         </section>
 
@@ -340,7 +379,8 @@
               <tbody>
                 <tr><td><code>--server host:port</code></td><td><code>viaduct.sh:4443</code></td><td>The <code>viaductd</code> server to dial.</td></tr>
                 <tr><td><code>--region lon|nyc|sg|syd|blr</code></td><td>none</td><td>Pick a server region; a shortcut for <code>--server</code>.</td></tr>
-                <tr><td><code>--pin</code></td><td>off</td><td>Keep the same public URL across reconnects (stable subdomain).</td></tr>
+                <tr><td><code>--pin</code></td><td>off</td><td>Keep the same public URL across reconnects (server-assigned stable subdomain).</td></tr>
+                <tr><td><code>--name SUBDOMAIN</code></td><td>none</td><td>Request a specific subdomain, pinned if it is free. Validated server-side; 3 to 63 chars of <code>a-z</code>, <code>0-9</code>, hyphens. Not combinable with <code>--pin</code>.</td></tr>
                 <tr><td><code>--host-header HOST</code></td><td>off</td><td>Rewrite the <code>Host</code> header your app sees (e.g. <code>localhost</code>), for dev servers that reject unknown hosts.</td></tr>
                 <tr><td><code>--basic-auth USER:PASS</code></td><td>off</td><td>Require HTTP Basic auth, checked at the edge. Omit <code>:PASS</code> to be prompted for it.</td></tr>
                 <tr><td><code>--bearer TOKEN</code></td><td>off</td><td>Require an <code>Authorization: Bearer TOKEN</code> header.</td></tr>

@@ -91,7 +91,8 @@ tunnel, and serves `502` until your app comes up.
 | `--tls-ca PATH` | none | Extra CA bundle to trust (for a self-signed server) |
 | `--pool-size N` | 40 | Idle data connections kept ready for incoming requests |
 | `--inspect` | off | Log each request: method, path, status, and time |
-| `--pin` | off | Keep the same public URL across reconnects (stable subdomain) |
+| `--pin` | off | Keep the same public URL across reconnects (server-assigned stable subdomain) |
+| `--name SUBDOMAIN` | none | Request a specific subdomain, pinned if free. Validated server-side; not combinable with `--pin` |
 | `--host-header HOST` | off | Rewrite the `Host` header your app sees (e.g. `localhost`), for dev servers that reject unknown hosts |
 | `--basic-auth USER:PASS` | off | Require HTTP Basic auth. Omit `:PASS` to be prompted for the password |
 | `--bearer TOKEN` | off | Require an `Authorization: Bearer TOKEN` header |
@@ -102,9 +103,16 @@ tunnel, and serves `502` until your app comes up.
 
 By default every reconnect gets a fresh random URL. `--pin` keeps the same URL
 for a given local port across reconnects, which is handy for a webhook endpoint
-or a long-lived demo. The name is still server-assigned (you can't choose the
-string); it is derived from a random secret stored once at
+or a long-lived demo. With `--pin` the name is still server-assigned (you can't
+choose the string); it is derived from a random secret stored once at
 `~/.config/viaduct/pin.key`, so it stays stable without any server-side state.
+
+`--name SUBDOMAIN` instead lets you choose the string:
+`viaduct http 8080 --name myapp` pins `myapp.viaduct.sh` if it is free and passes
+a server-side check (3 to 63 characters of `a-z`, `0-9` and hyphens, no leading
+or trailing hyphen; reserved and unsuitable names are refused). Availability is
+per server, so if the name is taken on the one you connect to, pick another or
+try another `--region`. `--name` and `--pin` can't be combined.
 
 Flags can live in `~/.config/viaduct/config.toml` instead:
 
