@@ -13,17 +13,31 @@ import re
 import secrets
 from collections.abc import Container
 
-#: labels a custom --name may not take: region codes and common system hosts.
-RESERVED: frozenset[str] = frozenset(
+from viaduct.config import REGION_CODES
+
+#: Labels a custom --name may not take. Region codes come from the shared
+#: REGION_CODES so they can't drift; the rest are hosts that would be confusing
+#: or exploitable to impersonate on the wildcard domain, mail autodiscovery
+#: (autoconfig/autodiscover) most of all.
+RESERVED: frozenset[str] = frozenset(REGION_CODES) | frozenset(
     {
-        "lon", "nyc", "sg", "syd", "blr",  # region codes
-        "www", "api", "app", "admin", "root", "status", "health", "mail", "ftp",
-        "cdn", "assets", "static", "viaduct",
+        # brand / app
+        "www", "api", "app", "apps", "admin", "root", "viaduct", "dashboard",
+        "status", "health", "docs", "blog", "help", "support", "metrics", "grafana",
+        "cdn", "assets", "static", "dev", "staging", "test", "demo", "localhost",
+        # mail + DNS: claimable labels that clients or resolvers trust
+        "mail", "email", "webmail", "smtp", "imap", "pop", "ftp",
+        "autoconfig", "autodiscover", "mx", "ns", "ns1", "ns2",
+        "dkim", "dmarc", "spf", "_dmarc",
     }
 )
 
 #: a single DNS label: 3-63 chars, [a-z0-9-], no leading/trailing hyphen.
 _LABEL = re.compile(r"^[a-z0-9](?:[a-z0-9-]{1,61}[a-z0-9])?$")
+
+#: three or more consecutive single-character segments read as an attempt to
+#: spell a word past the per-segment profanity screen (e.g. ``d-a-m-n``).
+_FRAGMENTED = re.compile(r"(?:^|-)[a-z0-9](?:-[a-z0-9]){2,}(?:-|$)")
 
 
 def validate_custom(name: str) -> str | None:
@@ -40,7 +54,9 @@ def validate_custom(name: str) -> str | None:
         return None
     if "--" in label:  # avoid double hyphens (and IDN-ish "xn--" confusion)
         return None
-    if label.isdigit():  # a bare number would be an odd, squatting-prone subdomain
+    if label.replace("-", "").isdigit():  # bare/hyphenated numbers: odd, squattable
+        return None
+    if _FRAGMENTED.search(label):  # anti-obfuscation, see _FRAGMENTED
         return None
     if label in RESERVED:
         return None

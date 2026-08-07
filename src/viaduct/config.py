@@ -9,6 +9,11 @@ import secrets
 import tomllib
 from pathlib import Path
 
+#: Canonical region codes. Kept here (a leaf module) so both the client's REGIONS
+#: map and names.RESERVED derive from one source and cannot drift apart, which
+#: would otherwise let a new region's code be claimed as a custom --name.
+REGION_CODES: tuple[str, ...] = ("lon", "nyc", "sg", "syd", "blr")
+
 
 class ConfigError(Exception):
     """The config file exists but cannot be read or parsed."""

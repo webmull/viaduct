@@ -1,9 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://viaduct.sh/</loc></url>
-  <url><loc>https://viaduct.sh/docs/</loc></url>
-  <url><loc>https://viaduct.sh/network/</loc></url>
-  <url><loc>https://viaduct.sh/news/</loc><lastmod>2026-08-02</lastmod></url>
+  <url><loc>https://viaduct.sh/</loc><lastmod>2026-08-07</lastmod></url>
+  <url><loc>https://viaduct.sh/docs/</loc><lastmod>2026-08-07</lastmod></url>
+  <url><loc>https://viaduct.sh/network/</loc><lastmod>2026-08-07</lastmod></url>
+  <url><loc>https://viaduct.sh/integrations/</loc><lastmod>2026-08-07</lastmod></url>
+  <url><loc>https://viaduct.sh/news/</loc><lastmod>2026-08-07</lastmod></url>
+  <url><loc>https://viaduct.sh/about/</loc><lastmod>2026-08-07</lastmod></url>
+  <url><loc>https://viaduct.sh/terms/</loc><lastmod>2026-08-07</lastmod></url>
+  <url><loc>https://viaduct.sh/news/name-your-tunnel/</loc><lastmod>2026-08-07</lastmod></url>
+  <url><loc>https://viaduct.sh/news/built-a-tunnel/</loc><lastmod>2026-08-06</lastmod></url>
+  <url><loc>https://viaduct.sh/news/traffic-inspector/</loc><lastmod>2026-08-04</lastmod></url>
+  <url><loc>https://viaduct.sh/news/protect-your-tunnel/</loc><lastmod>2026-08-04</lastmod></url>
+  <url><loc>https://viaduct.sh/news/idle-tunnels-stay-ready/</loc><lastmod>2026-08-04</lastmod></url>
   <url><loc>https://viaduct.sh/news/welcome-to-viaduct/</loc><lastmod>2026-08-02</lastmod></url>
-  <url><loc>https://viaduct.sh/terms/</loc></url>
 </urlset>

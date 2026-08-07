@@ -14,12 +14,16 @@ import hashlib
 import hmac
 import html
 import ipaddress
+import re
 import time
 
 from viaduct import routing
 
 #: cap on owner-supplied message length (chars).
 _MSG_MAX = 200
+#: control characters (incl. CR/LF) are stripped from owner-supplied strings so
+#: none can inject into a response header (the realm) or the branded error page.
+_CTRL = re.compile(r"[\x00-\x1f\x7f]")
 #: failed-auth throttle: this many failures from one IP within the window blocks
 #: further attempts for a bit (a light brute-force speed bump).
 _FAIL_WINDOW = 60.0
@@ -64,7 +68,9 @@ def client_payload(
 
 
 def _clip(value: object, limit: int = _MSG_MAX) -> str | None:
-    return (str(value)[:limit].strip() or None) if isinstance(value, str) else None
+    if not isinstance(value, str):
+        return None
+    return _CTRL.sub("", value[:limit]).strip() or None
 
 
 def resolve_ip(head: bytes, peer_ip: str | None, trust_peer: bool) -> IPAddr | None:

@@ -6,7 +6,9 @@ Words come from a public multi-language list
 lands in this repo; the hashing is obfuscation, not security. A requested name
 is "exploded" per hyphen segment: each segment is checked as a whole (any
 length) and for embedded substrings (of at least ``MIN_SUBSTRING``). Matching
-never spans a hyphen, so ``adam-name`` is fine while ``adamname`` is caught.
+never spans a hyphen, so ``adam-name`` is fine while ``adamname`` is caught. As a
+backstop against hyphen obfuscation, the whole de-hyphenated name is also matched
+against the word list exactly (``d-a-m-n``/``da-mn`` -> ``damn``).
 
 Substring matching is deliberately blunt and can still flag an innocent name
 whose segment contains a bad word (the "Scunthorpe problem"); the minimum
@@ -67,7 +69,13 @@ class Screen:
                 for j in range(i + MIN_SUBSTRING, end + 1):
                     if hash_word(seg[i:j]) in self._hashes:
                         return True
-        return False
+        # A screened word split across hyphens (d-a-m-n, da-mn) has clean segments
+        # but a de-hyphenated form that IS the word. Match the whole compact form
+        # exactly (not by substring), so an innocent compound like adam-name ->
+        # adamname is still allowed. (names.validate_custom also blocks runs of
+        # single-character segments, the other common obfuscation.)
+        compact = _norm(name)
+        return bool(compact) and hash_word(compact) in self._hashes
 
 
 def load(path: Path = _DATA) -> Screen:

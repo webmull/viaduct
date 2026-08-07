@@ -56,6 +56,11 @@ REGIONS: dict[str, tuple[str, str]] = {
     "syd": ("Sydney", "syd.viaduct.sh:4443"),
     "blr": ("Bangalore", "blr.viaduct.sh:4443"),
 }
+# Keep REGIONS and the shared REGION_CODES in lockstep: a new region added to one
+# but not the other would let its code be claimed as a custom --name (or break
+# --region). Fail loudly at import rather than drift silently.
+if tuple(REGIONS) != config.REGION_CODES:
+    raise RuntimeError("client.REGIONS is out of sync with config.REGION_CODES")
 _REGION_HINT = ", ".join(f"{code} ({name})" for code, (name, _host) in REGIONS.items())
 
 #: A surge (temporary) pool connection retires if it sits idle this long unused,
