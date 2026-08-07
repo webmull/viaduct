@@ -37,9 +37,13 @@ def test_short_substring_not_matched_but_segment_is() -> None:
     assert s.blocks("my-cat")
 
 
-def test_separators_are_stripped_for_substring_check() -> None:
-    s = _screen("frob")
-    assert s.blocks("f-r-o-b")  # hyphens stripped -> compact 'frob' matches
+def test_matching_never_spans_a_hyphen() -> None:
+    # embedded matching is scoped to each segment, so a hyphen splits a word apart
+    s = _screen("frob", "damn")
+    assert not s.blocks("f-r-o-b")  # each segment is one letter
+    assert not s.blocks("adam-name")  # 'damn' would span the hyphen; allowed
+    assert s.blocks("xxfrobyy")  # intact within one segment -> caught
+    assert s.blocks("adamname")  # no hyphen: 'damn' is embedded -> caught
 
 
 def test_empty_screen_blocks_nothing() -> None:

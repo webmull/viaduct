@@ -4,14 +4,14 @@ Words come from a public multi-language list
 (github.com/censor-text/profanity-list). Only *hashes* of the words are shipped
 (regenerate with ``tools/build_profanity.py``) so a plaintext slur list never
 lands in this repo; the hashing is obfuscation, not security. A requested name
-is "exploded" into candidate tokens, its hyphen segments (any length) and its
-substrings (of at least ``MIN_SUBSTRING``), and rejected if any token hashes
-into the set.
+is "exploded" per hyphen segment: each segment is checked as a whole (any
+length) and for embedded substrings (of at least ``MIN_SUBSTRING``). Matching
+never spans a hyphen, so ``adam-name`` is fine while ``adamname`` is caught.
 
-Substring matching is deliberately blunt and will occasionally flag an innocent
-name that merely contains a bad word (the "Scunthorpe problem"); the minimum
-substring length curbs the worst of it. This runs server-side only: the client
-ships no word list and the server is authoritative.
+Substring matching is deliberately blunt and can still flag an innocent name
+whose segment contains a bad word (the "Scunthorpe problem"); the minimum
+substring length and the per-segment scope curb the worst of it. This runs
+server-side only: the client ships no word list and the server is authoritative.
 """
 
 from __future__ import annotations
@@ -51,19 +51,22 @@ class Screen:
     def blocks(self, name: str) -> bool:
         if not self._hashes:
             return False
-        # 1) whole hyphen segments, exact match at any length (catches short words)
+        # Matching is scoped to each hyphen segment, so a word never spans a
+        # hyphen ("adam-name" is fine; "adamname" is not). Within a segment:
+        # an exact whole-segment match (catches short words), plus embedded
+        # substrings of at least MIN_SUBSTRING (catches "xxfrobyy").
         for seg in name.lower().split("-"):
             seg = _norm(seg)
-            if seg and hash_word(seg) in self._hashes:
+            n = len(seg)
+            if not n:
+                continue
+            if hash_word(seg) in self._hashes:
                 return True
-        # 2) substrings of the compact form, MIN_SUBSTRING..maxlen (catches embedded)
-        compact = _norm(name)
-        n = len(compact)
-        for i in range(n):
-            end = min(i + self._maxlen, n)
-            for j in range(i + MIN_SUBSTRING, end + 1):
-                if hash_word(compact[i:j]) in self._hashes:
-                    return True
+            for i in range(n):
+                end = min(i + self._maxlen, n)
+                for j in range(i + MIN_SUBSTRING, end + 1):
+                    if hash_word(seg[i:j]) in self._hashes:
+                        return True
         return False
 
 
