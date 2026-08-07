@@ -51,3 +51,32 @@ def test_derived_name_varies_by_seed() -> None:
     names_seen = {names.derived_name(f"seed-{i}") for i in range(500)}
     # Distinct seeds almost never collide over the widened space.
     assert len(names_seen) >= 495
+
+
+def test_validate_custom_accepts_clean_labels() -> None:
+    for good in ("myfriendlysubdomain", "adam-blog", "acme-staging", "app123", "a-b-c"):
+        assert names.validate_custom(good) == good
+
+
+def test_validate_custom_normalises_case_and_whitespace() -> None:
+    assert names.validate_custom("  My-App  ") == "my-app"
+
+
+def test_validate_custom_rejects_bad_syntax() -> None:
+    for bad in (
+        "ab",              # too short
+        "x" * 64,          # too long
+        "-lead",           # leading hyphen
+        "trail-",          # trailing hyphen
+        "dou--ble",        # double hyphen
+        "under_score",     # illegal char
+        "space name",      # space
+        "12345",           # all-numeric
+        "Bad!",            # punctuation
+    ):
+        assert names.validate_custom(bad) is None, bad
+
+
+def test_validate_custom_rejects_reserved() -> None:
+    for reserved in ("nyc", "lon", "www", "api", "admin", "viaduct"):
+        assert names.validate_custom(reserved) is None, reserved

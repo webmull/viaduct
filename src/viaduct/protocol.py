@@ -153,8 +153,11 @@ def hello(
     pin: str | None = None,
     auth: dict | None = None,
     client: str | None = None,
+    name: str | None = None,
 ) -> Frame:
     frame: Frame = {"type": "hello", "local_port": local_port}
+    if name:
+        frame["name"] = name  # --name: a specific subdomain the server validates and pins
     if pin:
         frame["pin"] = pin  # opaque --pin seed; the server derives a stable name
     if auth:

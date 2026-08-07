@@ -9,8 +9,42 @@ names are not predictable from one another.
 from __future__ import annotations
 
 import hashlib
+import re
 import secrets
 from collections.abc import Container
+
+#: labels a custom --name may not take: region codes and common system hosts.
+RESERVED: frozenset[str] = frozenset(
+    {
+        "lon", "nyc", "sg", "syd", "blr",  # region codes
+        "www", "api", "app", "admin", "root", "status", "health", "mail", "ftp",
+        "cdn", "assets", "static", "viaduct",
+    }
+)
+
+#: a single DNS label: 3-63 chars, [a-z0-9-], no leading/trailing hyphen.
+_LABEL = re.compile(r"^[a-z0-9](?:[a-z0-9-]{1,61}[a-z0-9])?$")
+
+
+def validate_custom(name: str) -> str | None:
+    """Normalise and validate a user-requested subdomain label.
+
+    Returns the canonical label to use, or ``None`` if it is syntactically
+    invalid or reserved. Does not check profanity or availability, the caller
+    layers those on top.
+    """
+    label = name.strip().lower()
+    if not (3 <= len(label) <= 63):
+        return None
+    if not _LABEL.match(label):
+        return None
+    if "--" in label:  # avoid double hyphens (and IDN-ish "xn--" confusion)
+        return None
+    if label.isdigit():  # a bare number would be an odd, squatting-prone subdomain
+        return None
+    if label in RESERVED:
+        return None
+    return label
 
 ADJECTIVES: tuple[str, ...] = (
     "amber",

@@ -22,7 +22,7 @@ from urllib.parse import parse_qs, urlsplit
 
 import typer
 
-from viaduct import auth, dns, names, protocol, routing, update
+from viaduct import auth, dns, names, profanity, protocol, routing, update
 from viaduct.relay import splice
 
 log = logging.getLogger("viaduct.server")
@@ -234,8 +234,26 @@ class TunnelServer:
             await self._reject(writer, "ip_tunnel_limit")
             return
 
+        name = frame.get("name")
         pin = frame.get("pin")
-        if isinstance(pin, str) and pin:
+        if isinstance(name, str) and name:
+            # --name: a specific subdomain the client asked for. Validate it
+            # server-side (syntax, reserved, profanity) and pin it if free on
+            # this server; availability is per-server, not fleet-wide.
+            subdomain = names.validate_custom(name)
+            if subdomain is None:
+                log.info("custom name invalid ip=%s", ip)
+                await self._reject(writer, "name_invalid")
+                return
+            if profanity.blocks(subdomain):
+                log.info("custom name screened subdomain=%s ip=%s", subdomain, ip)
+                await self._reject(writer, "name_rejected")
+                return
+            if subdomain in self.tunnels:
+                log.info("custom name in use subdomain=%s ip=%s", subdomain, ip)
+                await self._reject(writer, "name_taken")
+                return
+        elif isinstance(pin, str) and pin:
             # --pin: a stable, server-derived name (no state; same seed -> same
             # name). Reject rather than reassign if it is already live.
             subdomain = names.derived_name(pin)

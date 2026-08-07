@@ -92,6 +92,7 @@ class TunnelClient:
         pin_seed: str | None = None,
         host_header: str | None = None,
         auth: dict | None = None,
+        name: str | None = None,
     ) -> None:
         self._server_host = server_host
         self._server_port = server_port
@@ -102,6 +103,8 @@ class TunnelClient:
         self._inspect = inspect
         #: opaque --pin seed; when set the server derives a stable subdomain
         self._pin_seed = pin_seed
+        #: --name: a specific subdomain to request; the server validates and pins it
+        self._name = name
         #: when set, each request's Host header is rewritten to this before the
         #: local app sees it (fixes dev servers that reject "unknown" hosts)
         self._host_header = host_header.encode("latin-1") if host_header else None
@@ -144,6 +147,7 @@ class TunnelClient:
                     self._pin_seed,
                     self._auth,
                     client=update.installed_version(),
+                    name=self._name,
                 ),
             )
             resp = await protocol.read_frame(reader)
@@ -553,6 +557,14 @@ def http(
         bool,
         typer.Option("--pin", help="Keep the same public URL across reconnects (stable subdomain)"),
     ] = False,
+    name: Annotated[
+        str | None,
+        typer.Option(
+            "--name",
+            metavar="SUBDOMAIN",
+            help="Request a specific subdomain, pinned if it is free (the server validates it)",
+        ),
+    ] = None,
     tls: _TlsOpt = None,
     tls_ca: _TlsCaOpt = None,
     host_header: Annotated[
@@ -655,6 +667,9 @@ def http(
     auth_payload = auth.client_payload(
         basic_auth, bearer, allow_ips, auth_message, deny_message, auth_realm
     )
+    if name and pin:
+        console.print("[bold red]viaduct: use --name or --pin, not both[/]")
+        raise typer.Exit(2)
     try:
         pin_seed = config.pin_seed(port) if pin else None
     except config.ConfigError as exc:
@@ -664,7 +679,7 @@ def http(
         asyncio.run(
             _run_http(
                 host, srv_port, port, pool_size, ssl_ctx, inspect, pin_seed,
-                host_header, auth_payload,
+                host_header, auth_payload, name,
             )
         )
     except KeyboardInterrupt:
@@ -684,6 +699,11 @@ def http(
             "auth_unsupported": "the server did not confirm it applied your auth "
             "(--basic-auth/--bearer/--allow-ip); it is likely too old. Upgrade the "
             "server or drop the auth flags. Refusing to serve unprotected.",
+            "name_invalid": "that --name is not allowed (use 3 to 63 characters of "
+            "a-z, 0-9 and hyphens, no leading or trailing hyphen; some names are reserved)",
+            "name_rejected": "that --name was rejected by the name filter; pick another",
+            "name_taken": "that --name is already in use on this server; pick another "
+            "(or try a different --region)",
         }
         msg = messages.get(str(exc), f"server refused tunnel: {exc}")
         console.print(f"[bold red]viaduct: {msg}[/]")
@@ -764,7 +784,15 @@ def _cfg_str(cfg: dict[str, str | bool], key: str) -> str | None:
 
 
 #: Refusal reasons the client should not retry; it reports them and exits.
-FATAL_REASONS = ("ip_tunnel_limit", "pin_in_use", "auth_unsupported", "client_too_old")
+FATAL_REASONS = (
+    "ip_tunnel_limit",
+    "pin_in_use",
+    "auth_unsupported",
+    "client_too_old",
+    "name_invalid",
+    "name_rejected",
+    "name_taken",
+)
 
 
 def _expand_allow_ips(values: list[str] | None) -> list[str]:
@@ -929,6 +957,7 @@ async def _run_http(
     pin_seed: str | None = None,
     host_header: str | None = None,
     auth: dict | None = None,
+    name: str | None = None,
 ) -> None:
     """Keep the tunnel up: reconnect on drop with 1s→30s exponential backoff."""
     stop = asyncio.Event()
@@ -985,6 +1014,7 @@ async def _run_http(
                 pin_seed=pin_seed,
                 host_header=host_header,
                 auth=auth,
+                name=name,
             )
             inspect_state["client"] = client
             connecting = (
