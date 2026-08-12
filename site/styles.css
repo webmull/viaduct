@@ -1,28 +1,28 @@
 /* viaduct.sh: open-source site. Design system carried over from the brand kit
-   (Space Grotesk / DM Sans / JetBrains Mono, dark oklch palette). Dark by intent:
-   a developer tool that lives in the terminal. */
+   (DM Sans throughout / JetBrains Mono for terminals, light oklch palette). Light ground,
+   orange accent, dark terminals turned light so the whole page reads on white. */
 
 :root {
   --radius: 0.625rem;
 
-  --background: oklch(0.185 0.035 250.5);
-  --surface: oklch(0.21 0.038 250.5);
-  --foreground: oklch(0.96 0.01 250.5);
-  --card: oklch(0.225 0.04 250.5);
-  --primary: oklch(0.72 0.16 62);        /* viaduct orange */
-  --primary-strong: oklch(0.78 0.16 66);
-  --primary-foreground: oklch(0.16 0.03 60);
-  --secondary: oklch(0.25 0.04 250.5);
-  --muted-foreground: oklch(0.68 0.035 250.5);
-  --accent: oklch(0.72 0.11 190);        /* teal */
-  --success: oklch(0.78 0.16 150);
-  --destructive: oklch(0.62 0.2 25);
-  --border: oklch(1 0 0 / 12%);
-  --border-strong: oklch(1 0 0 / 18%);
-  --ring: oklch(0.72 0.16 62);
+  --background: oklch(0.99 0.004 250.5);
+  --surface: oklch(0.965 0.006 250.5);
+  --foreground: oklch(0.26 0.02 250.5);
+  --card: oklch(0.975 0.005 250.5);
+  --primary: oklch(0.63 0.18 52);        /* viaduct orange, deepened for white */
+  --primary-strong: oklch(0.57 0.18 50);
+  --primary-foreground: oklch(0.99 0.01 80);
+  --secondary: oklch(0.94 0.006 250.5);
+  --muted-foreground: oklch(0.47 0.02 250.5);
+  --accent: oklch(0.52 0.10 205);        /* teal, deepened for white */
+  --success: oklch(0.52 0.15 150);
+  --destructive: oklch(0.55 0.2 25);
+  --border: oklch(0 0 0 / 12%);
+  --border-strong: oklch(0 0 0 / 20%);
+  --ring: oklch(0.63 0.18 52);
 
   --font-sans: "DM Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-display: "Space Grotesk", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-display: "DM Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
   --maxw: 68rem;
@@ -59,16 +59,21 @@ h1, h2, h3 { font-family: var(--font-display); letter-spacing: -0.02em; margin: 
 .brand { display: flex; align-items: center; gap: 0.7rem; text-decoration: none; }
 .brand img { height: 3.25rem; width: 3.25rem; }
 .brand span { font-family: var(--font-display); font-size: 1.85rem; font-weight: 600; }
-.brand .tld { color: var(--primary); }
+.brand .tld { color: var(--foreground); }   /* header wordmark stays fully black */
+
+/* Light brand: the orange viaduct mark and the white DigitalOcean wordmark both
+   render as solid black on the white ground (the accent orange stays on .sh and
+   throughout the UI). Avatars, flags and photos are untouched. */
+.brand img, .hero-mark, .deploy-logo img { filter: brightness(0); }
 
 /* Preview of the branded page a blocked visitor sees (mirrors the real
-   error_response output): dark ground, orange numeral, viaduct.sh wordmark. */
+   error_response output): light ground, orange numeral, viaduct.sh wordmark. */
 .error-preview {
   position: relative; border: 1px solid var(--border); border-radius: 0.9rem; overflow: hidden;
-  background: radial-gradient(60% 60% at 50% 0%, rgba(245, 181, 68, 0.13), transparent 70%), #14171f;
+  background: radial-gradient(60% 60% at 50% 0%, rgba(245, 181, 68, 0.12), transparent 70%), oklch(0.975 0.005 250.5);
   padding: 2.6rem 1.5rem; text-align: center;
 }
-.error-preview .wm { font-weight: 600; letter-spacing: -0.01em; font-size: 0.9rem; color: #cfd3da; }
+.error-preview .wm { font-weight: 600; letter-spacing: -0.01em; font-size: 0.9rem; color: var(--muted-foreground); }
 .error-preview .wm b { color: var(--primary); font-weight: 600; }
 .error-preview .code {
   font-size: 3rem; font-weight: 800; line-height: 1; color: var(--primary);
@@ -76,9 +81,9 @@ h1, h2, h3 { font-family: var(--font-display); letter-spacing: -0.02em; margin: 
 }
 .error-preview h3 {
   font-family: var(--font-display); font-size: 1.2rem; font-weight: 650;
-  margin: 0.5rem 0 0; color: #e8e8ea;
+  margin: 0.5rem 0 0; color: var(--foreground);
 }
-.error-preview p { color: #8b929e; margin: 0.5rem auto 0; max-width: 22rem; font-size: 0.9rem; line-height: 1.6; }
+.error-preview p { color: var(--muted-foreground); margin: 0.5rem auto 0; max-width: 22rem; font-size: 0.9rem; line-height: 1.6; }
 .error-preview + .cap { text-align: center; color: var(--muted-foreground); font-size: 0.85rem; margin: 0.55rem 0 0; }
 
 /* Utility and one-off classes (replacing former inline styles) */
@@ -151,7 +156,7 @@ h1, h2, h3 { font-family: var(--font-display); letter-spacing: -0.02em; margin: 
     radial-gradient(55% 38% at 50% 0%, color-mix(in oklab, var(--primary) 8%, transparent), transparent 68%),
     radial-gradient(45% 32% at 85% 12%, color-mix(in oklab, var(--accent) 5%, transparent), transparent 68%);
 }
-.hero-mark { margin: 0 auto 1.35rem; height: clamp(6rem, 15vw, 9rem); width: clamp(6rem, 15vw, 9rem); }
+.hero-mark { margin: 0 auto 1.35rem; height: clamp(6rem, 16vw, 12rem); width: clamp(6rem, 16vw, 12rem); }
 .hero h1 {
   font-weight: 600; font-size: clamp(2.1rem, 6vw, 3.6rem); line-height: 1.05;
   margin: 0; text-wrap: balance;
@@ -173,8 +178,8 @@ h1, h2, h3 { font-family: var(--font-display); letter-spacing: -0.02em; margin: 
 .terminal {
   margin: 1.9rem auto 0; max-width: 40rem; text-align: left;
   border: 1px solid var(--border-strong); border-radius: 0.85rem; overflow: hidden;
-  background: oklch(0.16 0.03 250.5);
-  box-shadow: 0 30px 60px -30px oklch(0 0 0 / 65%), 0 0 0 1px oklch(1 0 0 / 3%);
+  background: oklch(0.965 0.006 250.5);
+  box-shadow: 0 18px 44px -28px oklch(0 0 0 / 28%), 0 0 0 1px oklch(0 0 0 / 4%);
 }
 .terminal-bar {
   display: flex; align-items: center; gap: 0.4rem;
@@ -204,9 +209,9 @@ h1, h2, h3 { font-family: var(--font-display); letter-spacing: -0.02em; margin: 
 .c-url { color: var(--success); font-weight: 600; }
 .c-local { color: var(--accent); }
 .c-ok { color: var(--success); font-weight: 600; }
-.c-req { color: #cfd3da; }
-.c-warn { color: #e0b23c; font-weight: 600; }
-.c-err { color: #ff6b6b; font-weight: 600; }
+.c-req { color: #24292f; }
+.c-warn { color: #9a6700; font-weight: 600; }
+.c-err { color: #cf222e; font-weight: 600; }
 .cursor {
   display: inline-block; width: 0.55em; height: 1.05em; margin-bottom: -0.18em;
   background: var(--primary); animation: blink 1s steps(1) infinite;
@@ -222,6 +227,11 @@ main > section:nth-child(even) { background: var(--surface); }
   font-size: 0.72rem; letter-spacing: 0.28em; text-transform: uppercase;
   color: var(--primary); font-weight: 600; margin: 0 0 0.6rem;
 }
+/* Eyebrows earn their place only on the homepage, where they label sections of a
+   long scrolling page. On interior/hero pages they just repeat the page identity,
+   so hide everything and re-show the homepage's section labels. */
+.eyebrow { display: none; }
+.section-head .eyebrow, .deploy-copy .eyebrow { display: block; }
 .section-head h2 { font-size: clamp(1.6rem, 4vw, 2.25rem); line-height: 1.15; margin: 0; text-wrap: balance; }
 .section-head p:not(.eyebrow) { margin: 0.9rem auto 0; max-width: 34rem; color: var(--muted-foreground); }
 
@@ -282,7 +292,7 @@ main > section:nth-child(even) { background: var(--surface); }
 @media (min-width: 760px) {
   .deploy-band { grid-template-columns: 1.35fr 1fr; }
   .deploy-logo { justify-content: flex-end; order: 0; }
-  .deploy-logo img { width: 13rem; }
+  .deploy-logo img { width: 18rem; }
 }
 
 /* ---------- Install ---------- */
@@ -290,7 +300,7 @@ main > section:nth-child(even) { background: var(--surface); }
 .code-block {
   display: flex; align-items: center;
   border: 1px solid var(--border-strong); border-radius: 0.75rem;
-  background: oklch(0.16 0.03 250.5); overflow: hidden;
+  background: oklch(0.965 0.006 250.5); overflow: hidden;
 }
 .code-block + .code-block { margin-top: 0.9rem; }
 .code-block pre {

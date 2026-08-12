@@ -35,12 +35,20 @@ beyond the milestones.
 - **Never use inline styles** (`style="..."` attributes) in any markup. All
   styling goes through classes in `site/styles.css` or a scoped `<style>` block
   on the page. If you find yourself reaching for `style="..."`, add a class.
+- **The site is light-themed.** Light ground, dark text, with orange (`--primary`)
+  as the only accent. Terminals and code blocks are light too, with retuned
+  GitHub-light syntax colours (do not reintroduce the old dark terminals). The
+  viaduct mark and the DigitalOcean wordmark render solid black on white via
+  `filter: brightness(0)` (`.brand img`, `.hero-mark`, `.deploy-logo img`), and the
+  header `.sh` is black, not orange. Fonts: DM Sans (headings and body), JetBrains
+  Mono (terminals). The favicon is a theme-adaptive mark (black on light chrome,
+  white on dark).
 - **Error pages must always match the error brand.** `site/errors.html` is the
   visual reference for every viaductd error page (404, 502, 503, etc.). Any change
   to `error_response` in `src/viaduct/routing.py` and the reference must stay in
-  sync: same dark ground, orange accent, `viaduct.sh` wordmark, big code numeral,
+  sync: same light ground, orange numeral, `viaduct.sh` wordmark, big code numeral,
   and self-contained styling (no external fonts/CSS). 503s auto-refresh.
-- **The "Around 1,600 lines of Python" figure drifts.** The site (`site/index.html`,
+- **The "around 3,500 lines of Python" figure drifts.** The site (`site/index.html`,
   open-source section) hardcodes an approximate line count. It goes stale as the
   code changes, so re-check it periodically with
   `find src/viaduct -name '*.py' | xargs wc -l` and update the copy to the nearest

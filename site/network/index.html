@@ -3,16 +3,16 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="theme-color" content="#14171f" />
+  <meta name="theme-color" content="#fbfcfd" />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <link rel="icon" sizes="32x32" href="/favicon-32.png" />
-  <link rel="mask-icon" href="/favicon.svg" color="#f5b544" />
+  <link rel="mask-icon" href="/favicon.svg" color="#111418" />
   <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500;600&display=swap" />
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500;600&display=swap" media="print" onload="this.media='all'" />
-  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500;600&display=swap" /></noscript>
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" media="print" onload="this.media='all'" />
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" /></noscript>
   <link rel="stylesheet" href="/styles.css" />
   <link rel="canonical" href="https://viaduct.sh/network/" />
   <title>The viaduct network: regions we operate</title>
@@ -46,9 +46,9 @@
     .reg-status { color:var(--muted-foreground); font-variant-numeric:tabular-nums; }
     .reg-status .dot { display:inline-block; width:0.5rem; height:0.5rem; border-radius:999px; background:var(--muted-foreground); margin-right:0.45rem; vertical-align:middle; transition:background 0.2s ease; }
     .reg-status.up { color:var(--foreground); }
-    .reg-status.up .dot { background:#3fb950; box-shadow:0 0 0 3px color-mix(in oklab,#3fb950 20%,transparent); }
-    .reg-status.down { color:#f0836b; }
-    .reg-status.down .dot { background:#f85149; }
+    .reg-status.up .dot { background:#1a7f37; box-shadow:0 0 0 3px color-mix(in oklab,#1a7f37 20%,transparent); }
+    .reg-status.down { color:#cf222e; }
+    .reg-status.down .dot { background:#cf222e; }
     .reg-def { color:var(--muted-foreground); font-size:0.82em; }
     @media (max-width: 560px) {
       /* fit the three columns on a phone instead of forcing a scrollbar */
@@ -195,7 +195,7 @@
           ctx.lineWidth = 3.5; ctx.lineJoin = "round";
           ctx.strokeStyle = "rgba(14,17,23,0.92)";
           ctx.strokeText(nd.city, lx, qy);
-          ctx.fillStyle = "#e9ebef";
+          ctx.fillStyle = "#eef1f5";
           ctx.fillText(nd.city, lx, qy);
           ctx.globalAlpha = 1;
         }

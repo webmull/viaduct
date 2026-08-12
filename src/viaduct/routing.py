@@ -117,20 +117,20 @@ def plain_response(status: str, body: str) -> bytes:
 #: constants; never interpolate request data here (HTTP response-splitting).
 _ERROR_CSS = (
     "*{box-sizing:border-box}html,body{margin:0;height:100%}"
-    "body{background:radial-gradient(60% 50% at 50% 0%,rgba(245,181,68,.13),transparent 70%),"
-    "#14171f;color:#e8e8ea;font-family:ui-sans-serif,-apple-system,BlinkMacSystemFont,"
+    "body{background:radial-gradient(60% 50% at 50% 0%,rgba(245,181,68,.16),transparent 70%),"
+    "#fbfbfd;color:#1f2328;font-family:ui-sans-serif,-apple-system,BlinkMacSystemFont,"
     "'Segoe UI',Roboto,Helvetica,Arial,sans-serif;display:grid;place-items:center;"
     "text-align:center;padding:3rem 1.5rem;line-height:1.6}main{max-width:28rem}"
-    ".m{font-weight:600;letter-spacing:-.01em;font-size:.95rem;color:#cfd3da}"
-    ".m b{color:#f5b544;font-weight:600}.code{font-size:3.5rem;font-weight:800;line-height:1;"
-    "color:#f5b544;margin-top:1.75rem;font-variant-numeric:tabular-nums}"
-    "h1{font-size:1.35rem;font-weight:650;margin:.6rem 0 0}p{color:#8b929e;margin:.6rem auto 0;"
+    ".m{font-weight:600;letter-spacing:-.01em;font-size:.95rem;color:#57606a}"
+    ".m b{color:#d97706;font-weight:600}.code{font-size:3.5rem;font-weight:800;line-height:1;"
+    "color:#d97706;margin-top:1.75rem;font-variant-numeric:tabular-nums}"
+    "h1{font-size:1.35rem;font-weight:650;margin:.6rem 0 0}p{color:#57606a;margin:.6rem auto 0;"
     "max-width:24rem;font-size:.95rem}.a{margin-top:1.6rem;display:flex;gap:.75rem;"
     "justify-content:center;align-items:center;flex-wrap:wrap}"
-    ".lnk{display:inline-block;color:#8b929e;text-decoration:none;font-size:.85rem;"
-    "border:1px solid rgba(255,255,255,.14);padding:.5rem 1rem;border-radius:.55rem}"
-    ".lnk:hover{color:#e8e8ea;border-color:#f5b544}.ct{color:#8b929e;font-size:.85rem}"
-    ".ct b{color:#e8e8ea;font-weight:600}"
+    ".lnk{display:inline-block;color:#57606a;text-decoration:none;font-size:.85rem;"
+    "border:1px solid rgba(0,0,0,.16);padding:.5rem 1rem;border-radius:.55rem}"
+    ".lnk:hover{color:#1f2328;border-color:#d97706}.ct{color:#57606a;font-size:.85rem}"
+    ".ct b{color:#1f2328;font-weight:600}"
 )
 
 
