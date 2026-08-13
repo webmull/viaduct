@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#fbfcfd" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="icon" sizes="32x32" href="/favicon-32.png" />
+  <link rel="mask-icon" href="/favicon.svg" color="#111418" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" media="print" onload="this.media='all'" />
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" /></noscript>
+  <link rel="stylesheet" href="/styles.css" />
+  <title>Self-hosting viaduct: your own tunnel server</title>
+  <meta name="description" content="Run your own viaduct server: one Ubuntu droplet, one script, and your own domain. Caddy for public HTTPS, viaductd for the tunnel, in about five minutes." />
+  <link rel="canonical" href="https://viaduct.sh/self-hosting/" />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Self-hosting viaduct" />
+  <meta property="og:description" content="One droplet, one script, your own domain. Run the whole thing yourself so nothing routes through a third party." />
+  <meta property="og:url" content="https://viaduct.sh/self-hosting/" />
+  <meta property="og:image" content="https://viaduct.sh/og.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Self-hosting viaduct" />
+  <meta name="twitter:description" content="One droplet, one script, your own domain. Run the whole thing yourself so nothing routes through a third party." />
+  <meta name="twitter:image" content="https://viaduct.sh/og.png" />
+  <style>
+    .article { max-width: 44rem; margin: 0 auto; }
+    .prose { margin-top: 2.2rem; color: var(--foreground); font-size: 1.02rem; line-height: 1.7; }
+    .prose > p { margin: 0 0 1.15rem; color: #3a414d; }
+    .prose h2 { font-family: var(--font-display); font-size: 1.35rem; margin: 2.4rem 0 0.7rem; letter-spacing: -0.01em; }
+    .prose a { color: var(--primary); text-decoration: none; }
+    .prose a:hover { text-decoration: underline; }
+    .prose code { font-family: var(--font-mono); font-size: 0.86em; background: var(--secondary); padding: 0.1rem 0.35rem; border-radius: 0.3rem; }
+    .prose b, .prose strong { color: var(--foreground); font-weight: 600; }
+    .prose .code-block { margin: 1rem 0; }
+    .back { display: inline-block; margin-top: 2.6rem; color: var(--muted-foreground); text-decoration: none; font-size: 0.92rem; }
+    .back:hover { color: var(--foreground); }
+  </style>
+</head>
+<body>
+  <!-- BUILT header -->
+<header class="site-header has-menu"><div class="wrap header-inner"><a class="brand" href="/"><img src="/viaduct-mark.png" alt="" width="320" height="320" /><span>viaduct<span class="tld">.sh</span></span></a><button class="nav-toggle" type="button" aria-label="Menu" aria-expanded="false" aria-controls="site-nav"><svg class="ico-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg><svg class="ico-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg></button><nav class="site-nav" id="site-nav"><a class="nav-desktop" href="/#how">How it works</a><a class="nav-desktop" href="/#install">Install</a><a class="nav-desktop" href="/network/">Network</a><a class="nav-desktop" href="/docs/">Docs</a><a class="nav-desktop" href="/news/">News</a><a class="nav-desktop" href="/about/">About</a><a class="gh-pill" href="https://github.com/webmull/viaduct" target="_blank" rel="noreferrer"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.419 2.865 8.17 6.839 9.49.5.092.682-.218.682-.486 0-.236-.009-.866-.014-1.7-2.782.605-3.369-1.343-3.369-1.343-.454-1.156-1.11-1.464-1.11-1.464-.908-.62.069-.608.069-.608 1.004.07 1.532 1.03 1.532 1.03.892 1.529 2.341 1.087 2.91.831.092-.646.35-1.086.636-1.337-2.22-.251-4.555-1.111-4.555-4.943 0-1.091.39-1.984 1.03-2.683-.103-.253-.447-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0 1 12 6.836c.85.004 1.705.115 2.504.337 1.909-1.294 2.747-1.025 2.747-1.025.547 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.167 22 16.418 22 12c0-5.523-4.477-10-10-10z"/></svg>GitHub</a></nav></div></header>
+<!-- /BUILT header -->
+
+  <main>
+    <section class="docs-hero">
+      <div class="wrap article">
+        <h1>Self-hosting viaduct</h1>
+        <p class="lede">The hosted service is free, but the point of viaduct is that you run your own. One droplet, one script, your own domain, about five minutes.</p>
+      </div>
+    </section>
+
+    <div class="wrap article article-body">
+      <div class="prose">
+        <p>
+          When you run your own server, nothing routes through a third party: your
+          domain, your box, your data. There are no accounts and no database to manage.
+          You decide who can reach it at the firewall, and the whole thing is small
+          enough to read if you want to know exactly what it does.
+        </p>
+
+        <div class="doc-note">
+          <strong>These steps assume DigitalOcean.</strong> It is what the hosted service
+          runs on, so the DNS records, the API token, and <code>provision.sh</code> are
+          written for it. viaduct itself is not tied to any host: any box with a domain
+          works, you would just point DNS and issue the wildcard certificate the way your
+          own provider does it.
+        </div>
+
+        <h2>What you need</h2>
+        <p>
+          A small Ubuntu droplet (1&nbsp;GB of RAM is plenty), a domain you can point at
+          it, and a DigitalOcean API token so Caddy can issue a wildcard certificate
+          over DNS. The token lives only on the droplet, never in the repo.
+        </p>
+
+        <h2>1. Point DNS at the box</h2>
+        <p>
+          Two records: the apex to the droplet's IP, and a wildcard so every tunnel
+          subdomain resolves to the same box.
+        </p>
+        <div class="code-block">
+<pre>A      your-domain.com    &rarr; &lt;droplet-ip&gt;
+CNAME  *.your-domain.com  &rarr; your-domain.com</pre>
+        </div>
+
+        <h2>2. Run the script</h2>
+        <p>
+          SSH in, clone the repo, and run the provisioner. It installs Caddy for public
+          HTTPS with automatic wildcard TLS, sets up <code>viaductd</code> under systemd,
+          and locks the firewall down to the ports it needs. It prompts for your
+          DigitalOcean token as it goes.
+        </p>
+        <div class="code-block">
+<pre><span class="c-prompt">$ </span>git clone https://github.com/webmull/viaduct
+<span class="c-prompt">$ </span>cd viaduct &amp;&amp; ./deploy/provision.sh</pre>
+        </div>
+
+        <h2>3. Point the client at it</h2>
+        <p>
+          Everything else works exactly as it does against the hosted service, just aim
+          the client at your server on port <code>4443</code>:
+        </p>
+        <div class="code-block">
+<pre><span class="c-prompt">$ </span>viaduct http 8080 --server your-domain.com:4443</pre>
+        </div>
+        <p>
+          Set <code>server</code> once in <code>~/.config/viaduct/config.toml</code> and
+          you can drop the flag entirely.
+        </p>
+
+        <div class="doc-note">
+          <strong>The tunnel port has no auth, by design.</strong> Public HTTPS rides
+          through Caddy on 443, but tunnel connections are not HTTP, so
+          <code>viaductd</code> terminates TLS itself on port <code>4443</code>. Anyone
+          who can reach that port can open a tunnel, so restrict it to your own users'
+          source IPs at the firewall unless you are happy to leave it internet-open. If
+          you front the server with something other than Caddy, start <code>viaductd</code>
+          with <code>--trust-peer-ip</code> so <a href="/docs/#protect"><code>--allow-ip</code></a>
+          reads the real address.
+        </div>
+
+        <h2>Rehearse it first</h2>
+        <p>
+          You do not have to learn this on a live box. <code>deploy/local/</code> runs
+          the whole provisioning flow locally so you can watch it work before pointing it
+          at a real droplet. The annotated, step-by-step breakdown of what the script
+          does lives in the <a href="https://github.com/webmull/viaduct/blob/main/deploy/setup.md" target="_blank" rel="noreferrer">deployment guide</a>,
+          and the <a href="https://github.com/webmull/viaduct#readme" target="_blank" rel="noreferrer">README</a>
+          covers the rest.
+        </p>
+
+        <a class="back" href="/docs/#server">&larr; Back to the docs</a>
+      </div>
+    </div>
+  </main>
+
+  <!-- BUILT footer -->
+<footer class="site-footer"><div class="wrap footer-inner"><a class="footer-cred" href="/about/"><img src="/adam.png" alt="Adam Davis" width="34" height="34" /><span>Built by <strong>Adam Davis</strong></span></a><div class="footer-links"><a href="https://github.com/webmull/viaduct" target="_blank" rel="noreferrer">GitHub</a><a href="/network/">Network</a><a href="/docs/">Docs</a><a href="/compare/">Compare</a><a href="/news/">News</a><a href="/terms/">Fair use</a><a href="https://github.com/webmull/viaduct/blob/main/LICENSE" target="_blank" rel="noreferrer">MIT License</a></div></div></footer>
+<!-- /BUILT footer -->
+  <script src="/nav-toggle.js" defer></script>
+  <script src="/to-top.js" defer></script>
+</body>
+</html>

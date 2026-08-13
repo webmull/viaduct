@@ -65,6 +65,7 @@ FOOTER_HTML = (
     '<a href="https://github.com/webmull/viaduct" target="_blank" rel="noreferrer">GitHub</a>'
     '<a href="/network/">Network</a>'
     '<a href="/docs/">Docs</a>'
+    '<a href="/compare/">Compare</a>'
     '<a href="/news/">News</a>'
     '<a href="/terms/">Fair use</a>'
     '<a href="https://github.com/webmull/viaduct/blob/main/LICENSE" target="_blank" rel="noreferrer">MIT License</a>'

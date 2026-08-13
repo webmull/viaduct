@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#fbfcfd" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="icon" sizes="32x32" href="/favicon-32.png" />
+  <link rel="mask-icon" href="/favicon.svg" color="#111418" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" media="print" onload="this.media='all'" />
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" /></noscript>
+  <link rel="stylesheet" href="/styles.css" />
+  <title>Receiving webhooks on localhost with viaduct</title>
+  <meta name="description" content="Test Stripe, GitHub, or any webhook against your local handler: a public URL for localhost, a stable name so you configure the provider once, and a live view of every delivery." />
+  <link rel="canonical" href="https://viaduct.sh/webhooks/" />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Receiving webhooks on localhost" />
+  <meta property="og:description" content="A public URL for your local handler, a stable name so you configure the provider once, and a live view of every delivery." />
+  <meta property="og:url" content="https://viaduct.sh/webhooks/" />
+  <meta property="og:image" content="https://viaduct.sh/og.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Receiving webhooks on localhost" />
+  <meta name="twitter:description" content="A public URL for your local handler, a stable name so you configure the provider once, and a live view of every delivery." />
+  <meta name="twitter:image" content="https://viaduct.sh/og.png" />
+  <style>
+    .article { max-width: 44rem; margin: 0 auto; }
+    .prose { margin-top: 2.2rem; color: var(--foreground); font-size: 1.02rem; line-height: 1.7; }
+    .prose > p { margin: 0 0 1.15rem; color: #3a414d; }
+    .prose h2 { font-family: var(--font-display); font-size: 1.35rem; margin: 2.4rem 0 0.7rem; letter-spacing: -0.01em; }
+    .prose a { color: var(--primary); text-decoration: none; }
+    .prose a:hover { text-decoration: underline; }
+    .prose code { font-family: var(--font-mono); font-size: 0.86em; background: var(--secondary); padding: 0.1rem 0.35rem; border-radius: 0.3rem; }
+    .prose b, .prose strong { color: var(--foreground); font-weight: 600; }
+    .prose .code-block { margin: 1rem 0; }
+
+    .tw { max-width: none; margin: 1.6rem 0 0.4rem; }
+    .tw pre { font-family: var(--font-mono); font-size: 0.8rem; line-height: 1.75;
+      color: #24292f; white-space: pre; margin: 0; overflow-x: auto; }
+    .tw .g { color: #1a7f37; }
+    .tw .url { color: #116329; }
+    .tw .dim { color: #57606a; }
+    .tw .ok { color: #1a7f37; }
+    .tw .warn { color: #9a6700; }
+    .tw b { color: #1f2328; font-weight: 600; }
+    .cap { color: var(--muted-foreground); font-size: 0.85rem; margin: 0.5rem 0 1.6rem; text-align: center; }
+
+    .back { display: inline-block; margin-top: 2.6rem; color: var(--muted-foreground); text-decoration: none; font-size: 0.92rem; }
+    .back:hover { color: var(--foreground); }
+  </style>
+</head>
+<body>
+  <!-- BUILT header -->
+<header class="site-header has-menu"><div class="wrap header-inner"><a class="brand" href="/"><img src="/viaduct-mark.png" alt="" width="320" height="320" /><span>viaduct<span class="tld">.sh</span></span></a><button class="nav-toggle" type="button" aria-label="Menu" aria-expanded="false" aria-controls="site-nav"><svg class="ico-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg><svg class="ico-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg></button><nav class="site-nav" id="site-nav"><a class="nav-desktop" href="/#how">How it works</a><a class="nav-desktop" href="/#install">Install</a><a class="nav-desktop" href="/network/">Network</a><a class="nav-desktop" href="/docs/">Docs</a><a class="nav-desktop" href="/news/">News</a><a class="nav-desktop" href="/about/">About</a><a class="gh-pill" href="https://github.com/webmull/viaduct" target="_blank" rel="noreferrer"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.419 2.865 8.17 6.839 9.49.5.092.682-.218.682-.486 0-.236-.009-.866-.014-1.7-2.782.605-3.369-1.343-3.369-1.343-.454-1.156-1.11-1.464-1.11-1.464-.908-.62.069-.608.069-.608 1.004.07 1.532 1.03 1.532 1.03.892 1.529 2.341 1.087 2.91.831.092-.646.35-1.086.636-1.337-2.22-.251-4.555-1.111-4.555-4.943 0-1.091.39-1.984 1.03-2.683-.103-.253-.447-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0 1 12 6.836c.85.004 1.705.115 2.504.337 1.909-1.294 2.747-1.025 2.747-1.025.547 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.167 22 16.418 22 12c0-5.523-4.477-10-10-10z"/></svg>GitHub</a></nav></div></header>
+<!-- /BUILT header -->
+
+  <main>
+    <section class="docs-hero">
+      <div class="wrap article">
+        <h1>Receiving webhooks on localhost</h1>
+        <p class="lede">A webhook needs a public URL, but your handler runs on localhost. viaduct bridges the two, and the inspector shows every delivery as it lands.</p>
+      </div>
+    </section>
+
+    <div class="wrap article article-body">
+      <div class="prose">
+        <p>
+          Stripe, GitHub, and the rest deliver events by POSTing to a URL you give them.
+          That URL has to be reachable from the internet, which your machine is not. A
+          tunnel gives your local handler a public address so the real events arrive
+          while you develop, with nothing deployed.
+        </p>
+
+        <h2>1. Run your handler locally</h2>
+        <p>
+          Start your app on whatever port it listens on. Here it is on
+          <code>4242</code>, with the webhook route at <code>/webhook</code>.
+        </p>
+        <div class="code-block">
+<pre><span class="c-prompt">$ </span>npm run dev   <span class="c-dim"># or however you start it, listening on :4242</span></pre>
+        </div>
+
+        <h2>2. Open a tunnel with a stable name</h2>
+        <p>
+          Providers store the URL and retry against it, so you want one that survives
+          reconnects. Give it a <a href="/docs/#name"><code>--name</code></a> and you
+          configure the provider once, not every time you restart.
+        </p>
+        <div class="code-block">
+<pre><span class="c-prompt">$ </span>viaduct http 4242 --name my-hooks</pre>
+        </div>
+        <p>
+          That is <code>https://my-hooks.viaduct.sh</code>, pinned to your machine for as
+          long as the tunnel is live.
+        </p>
+
+        <h2>3. Point the provider at it</h2>
+        <p>
+          Paste the full endpoint into the provider's webhook settings, for example
+          <code>https://my-hooks.viaduct.sh/webhook</code> in the Stripe or GitHub
+          dashboard, and send a test event.
+        </p>
+
+        <h2>4. Watch them land</h2>
+        <p>
+          Press <code>i</code> on the running tunnel (or start it with
+          <a href="/docs/#inspect"><code>--inspect</code></a>) and each delivery prints a
+          line: method, path, status, and timing. No dashboard, no redeploy.
+        </p>
+        <div class="terminal tw">
+          <div class="terminal-bar">
+            <span class="dot dot-red"></span><span class="dot dot-amber"></span><span class="dot dot-teal"></span>
+            <span class="terminal-title">viaduct http 4242 --name my-hooks</span>
+          </div>
+          <div class="terminal-body">
+<pre><span class="g">✓</span> tunnel live
+
+  <span class="url">https://my-hooks.viaduct.sh</span>
+  <span class="dim">→ http://localhost:4242</span>
+
+<span class="g">●</span> traffic inspector ON <span class="dim">· press i to turn off</span>
+<span class="dim">14:02:01</span>  <b>POST</b> /webhook            <span class="ok">200</span> <span class="dim">8ms</span>
+<span class="dim">14:02:04</span>  <b>POST</b> /webhook            <span class="ok">200</span> <span class="dim">6ms</span>
+<span class="dim">14:03:10</span>  <b>POST</b> /webhook            <span class="warn">400</span> <span class="dim">2ms</span></pre>
+          </div>
+        </div>
+        <p class="cap">Every delivery, method, path, status and timing, as it happens.</p>
+
+        <h2>A few things worth knowing</h2>
+        <p>
+          viaduct opens the tunnel even before your app is listening, so a delivery that
+          arrives before your handler is ready gets a clean 502. Providers retry, so this
+          sorts itself out; if it does not, check the handler is up on the right port.
+        </p>
+        <p>
+          The tunnel is a raw byte splice: it passes the request body through untouched,
+          so signature checks like <code>Stripe-Signature</code> or GitHub's HMAC verify
+          exactly as they would in production. Keep verifying signatures, that is the
+          real check on a webhook, rather than trusting the tunnel. If you also want to
+          fence the endpoint off while testing, add a
+          <a href="/docs/#protect"><code>--bearer</code></a> token.
+        </p>
+
+        <a class="back" href="/docs/#inspect">&larr; More on the inspector</a>
+      </div>
+    </div>
+  </main>
+
+  <!-- BUILT footer -->
+<footer class="site-footer"><div class="wrap footer-inner"><a class="footer-cred" href="/about/"><img src="/adam.png" alt="Adam Davis" width="34" height="34" /><span>Built by <strong>Adam Davis</strong></span></a><div class="footer-links"><a href="https://github.com/webmull/viaduct" target="_blank" rel="noreferrer">GitHub</a><a href="/network/">Network</a><a href="/docs/">Docs</a><a href="/compare/">Compare</a><a href="/news/">News</a><a href="/terms/">Fair use</a><a href="https://github.com/webmull/viaduct/blob/main/LICENSE" target="_blank" rel="noreferrer">MIT License</a></div></div></footer>
+<!-- /BUILT footer -->
+  <script src="/nav-toggle.js" defer></script>
+  <script src="/to-top.js" defer></script>
+</body>
+</html>

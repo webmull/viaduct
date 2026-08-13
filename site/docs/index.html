@@ -49,6 +49,7 @@
           <li><a href="#name">Choose a name</a></li>
           <li><a href="#inspect">Inspect requests</a></li>
           <li><a href="#protect">Protect a tunnel</a></li>
+          <li><a href="#security">Security and privacy</a></li>
           <li><a href="#combine">Combine flags</a></li>
           <li><a href="#domains">Custom domains</a></li>
           <li><a href="#regions">Regions</a></li>
@@ -57,6 +58,7 @@
           <li><a href="#manage">List and stop tunnels</a></li>
           <li><a href="#code">From your code</a></li>
           <li><a href="#server">Run your own server</a></li>
+          <li><a href="#troubleshoot">Troubleshooting</a></li>
         </ul>
       </aside>
 
@@ -235,6 +237,10 @@
             and no change to your URL. Starting with <code>--inspect</code> just
             has it on from the first request.
           </p>
+          <p>
+            For a full walkthrough of pointing a provider at your machine, see
+            <a href="/webhooks/">receiving webhooks on localhost</a>.
+          </p>
         </section>
 
         <section class="doc-section" id="combine">
@@ -300,6 +306,45 @@
             Only hashes of your password and token ever leave your machine, never the
             plaintext. This is access control for sharing a link with the right
             people, not a shield against denial-of-service traffic.
+          </div>
+        </section>
+
+        <section class="doc-section" id="security">
+          <h2>Security and privacy</h2>
+          <p>
+            viaduct is a raw byte splice. The server reads only the head of each request
+            (the request line and headers) to find the <code>Host</code> it should route
+            to, then splices the bytes both ways untouched. Request and response bodies
+            are never parsed or buffered, and WebSocket upgrades pass straight through.
+            It is a pipe, not a proxy that reads your traffic.
+          </p>
+          <h3>What leaves your machine</h3>
+          <p>
+            The tunnel carries your app's traffic to whoever holds the URL, so treat a
+            public tunnel like any public link. The one thing never sent in the clear is
+            your credentials: with <code>--basic-auth</code> or <code>--bearer</code>,
+            only a hash of the password or token leaves your machine, never the plaintext.
+          </p>
+          <h3>Auth is checked at the edge</h3>
+          <p>
+            viaductd verifies <code>--basic-auth</code>, <code>--bearer</code> and
+            <code>--allow-ip</code> before it opens a connection to you, so an
+            unauthorised visitor gets a clean 401 or 403 and never reaches your app. The
+            flags are in <a href="#protect">Protect a tunnel</a>.
+          </p>
+          <h3>The inspector reads the line, not the body</h3>
+          <p>
+            <a href="#inspect"><code>--inspect</code></a> peeks at the first packet of
+            each request and response to read the method, path and status code, once,
+            and prints a line. It never buffers the body, it is off by default, and it
+            costs nothing when off.
+          </p>
+          <div class="doc-note">
+            <strong>Want no third party in the path at all?</strong> Run your own server.
+            Point the client at your own <code>viaductd</code> and your traffic never
+            touches viaduct.sh. See <a href="/self-hosting/">the self-hosting guide</a>.
+            Access control is for sharing a link with the right people, not a shield
+            against denial-of-service traffic.
           </div>
         </section>
 
@@ -535,9 +580,73 @@ console.log(t.url);'>Copy</button>
             forwarded-for header, otherwise a client could spoof its own address.
           </div>
           <div class="actions actions-start">
-            <a class="btn btn-primary" href="https://github.com/webmull/viaduct/blob/main/deploy/setup.md" target="_blank" rel="noreferrer">Deployment guide</a>
+            <a class="btn btn-primary" href="/self-hosting/">Self-hosting guide</a>
             <a class="btn btn-outline" href="https://github.com/webmull/viaduct#readme" target="_blank" rel="noreferrer">Full README</a>
           </div>
+        </section>
+
+        <section class="doc-section" id="troubleshoot">
+          <h2>Troubleshooting</h2>
+          <p>
+            The pages viaductd serves name the problem, and most come down to a handful
+            of causes. Here is what each one means and how to clear it.
+          </p>
+
+          <h3>404, tunnel not found</h3>
+          <p>
+            The address has no live tunnel behind it: the tunnel closed, or the link is
+            an old one. Start it again. By default each run gets a fresh URL, so use
+            <a href="#pin"><code>--pin</code></a> or <a href="#name"><code>--name</code></a>
+            to keep a stable one.
+          </p>
+
+          <h3>502, nothing is running here</h3>
+          <p>
+            The tunnel is up, but nothing is listening on the local port it forwards to.
+            Start your app on that port and refresh. viaduct opens the tunnel even before
+            your app is up, so the order you start them in does not matter.
+          </p>
+
+          <h3>503, tunnel busy</h3>
+          <p>
+            The tunnel ran out of free connections for a moment. The page carries a
+            <code>Retry-After</code> and refreshes itself, so it usually clears on its own
+            within a few seconds.
+          </p>
+
+          <h3>401 or 403 on a protected tunnel</h3>
+          <p>
+            The visitor has no valid credentials (401) or their address is not on the
+            allowlist (403). Share the password or token, or add their IP with
+            <a href="#protect"><code>--allow-ip</code></a>. Both are checked at the edge,
+            so neither reaches your app.
+          </p>
+
+          <h3>That name is not allowed, or already in use</h3>
+          <p>
+            The <a href="#name"><code>--name</code></a> you asked for is reserved or is
+            already taken on the server you reached. Pick another, or try a different
+            <a href="#regions"><code>--region</code></a>, availability is per server.
+          </p>
+
+          <h3>Your client is too old for this server</h3>
+          <p>Run <code>viaduct upgrade</code> and reconnect.</p>
+
+          <h3>The URL keeps changing on reconnect</h3>
+          <p>
+            On a dropped connection viaduct reconnects on its own, and by default each
+            reconnect gets a fresh URL. Pin it with <a href="#pin"><code>--pin</code></a>
+            or <a href="#name"><code>--name</code></a> to keep the same one across drops.
+          </p>
+
+          <h3>The first request to your own server is slow, or will not connect</h3>
+          <p>
+            On a server you run, the first request to a new subdomain provisions its TLS
+            certificate, which takes a few seconds, then it is instant. If it never
+            connects, check the client can reach the server's <code>host:port</code> and
+            that wildcard DNS points at the box. See <a href="/self-hosting/">the
+            self-hosting guide</a>.
+          </p>
         </section>
 
       </div>
@@ -545,7 +654,7 @@ console.log(t.url);'>Copy</button>
   </main>
 
   <!-- BUILT footer -->
-<footer class="site-footer"><div class="wrap footer-inner"><a class="footer-cred" href="/about/"><img src="/adam.png" alt="Adam Davis" width="34" height="34" /><span>Built by <strong>Adam Davis</strong></span></a><div class="footer-links"><a href="https://github.com/webmull/viaduct" target="_blank" rel="noreferrer">GitHub</a><a href="/network/">Network</a><a href="/docs/">Docs</a><a href="/news/">News</a><a href="/terms/">Fair use</a><a href="https://github.com/webmull/viaduct/blob/main/LICENSE" target="_blank" rel="noreferrer">MIT License</a></div></div></footer>
+<footer class="site-footer"><div class="wrap footer-inner"><a class="footer-cred" href="/about/"><img src="/adam.png" alt="Adam Davis" width="34" height="34" /><span>Built by <strong>Adam Davis</strong></span></a><div class="footer-links"><a href="https://github.com/webmull/viaduct" target="_blank" rel="noreferrer">GitHub</a><a href="/network/">Network</a><a href="/docs/">Docs</a><a href="/compare/">Compare</a><a href="/news/">News</a><a href="/terms/">Fair use</a><a href="https://github.com/webmull/viaduct/blob/main/LICENSE" target="_blank" rel="noreferrer">MIT License</a></div></div></footer>
 <!-- /BUILT footer -->
 
   <script>
