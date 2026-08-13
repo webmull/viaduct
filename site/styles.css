@@ -377,7 +377,7 @@ main > *:last-child section:last-child { padding-bottom: 0; }
   .docs-hero:has(.byline) { padding-top: 1.1rem; }
   .article .prose { margin-top: 1.5rem; }
   .article .back { margin-top: 1.5rem; }
-  .hero-mark { height: 4.75rem; width: 4.75rem; }
+  .hero-mark { height: 7rem; width: 7rem; }
   .section-head { margin-bottom: 1rem; }
   .actions { width: 100%; }
   .actions .btn { width: 100%; }
