@@ -393,11 +393,12 @@ main > *:last-child section:last-child { padding-bottom: 0; }
   .deploy-logo img { width: 9rem; }
   .terminal-title { display: none; }        /* free up the narrow terminal bar */
   .cta .wrap { padding: 1.75rem 1.15rem; }
-  /* let the footer links wrap onto a second centred line on phones rather than
-     scrolling horizontally */
+  /* wrap the footer links onto two balanced centred rows on phones (rather than
+     scrolling, or spilling one lone link onto its own line): the narrow max-width
+     forces the break near the middle instead of after whatever happens to fit */
   .footer-links {
-    flex-wrap: wrap; gap: 0.55rem 0.9rem; font-size: 0.82rem;
-    justify-content: center; max-width: 100%; margin: 0 auto;
+    flex-wrap: wrap; gap: 0.7rem 0.9rem; font-size: 0.82rem;
+    justify-content: center; max-width: 18rem; margin: 0 auto;
   }
   .footer-links a { white-space: nowrap; }
 }
