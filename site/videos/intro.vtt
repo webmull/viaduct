@@ -1,64 +1,64 @@
 WEBVTT
 
-00:00:00.000 --> 00:00:05.320
+00:00:00.000 --> 00:00:05.320 line:84% position:0% align:start size:76%
 If you build for the web you've hit this problem before: your app runs on localhost, but the
 
-00:00:05.320 --> 00:00:08.680
+00:00:05.320 --> 00:00:08.680 line:84% position:0% align:start size:76%
 thing that needs to reach it, a webhook, a client, your phone, is out on the internet
 
-00:00:08.680 --> 00:00:09.680
+00:00:08.680 --> 00:00:09.680 line:84% position:0% align:start size:76%
 and localhost isn't.
 
-00:00:09.680 --> 00:00:14.080
+00:00:09.680 --> 00:00:14.080 line:84% position:0% align:start size:76%
 You need a simple way to share what you're building with someone else, and you
 
-00:00:14.080 --> 00:00:16.840
+00:00:14.080 --> 00:00:16.840 line:84% position:0% align:start size:76%
 can easily do that with viaduct.
 
-00:00:16.840 --> 00:00:21.160
+00:00:16.840 --> 00:00:21.160 line:84% position:0% align:start size:76%
 I have a local app here, just running on this machine, in fact on
 
-00:00:21.160 --> 00:00:26.960
+00:00:21.160 --> 00:00:26.960 line:84% position:0% align:start size:76%
 port 8080. It's a little web app, and I want to share it with a friend. To
 
-00:00:26.960 --> 00:00:33.820
+00:00:26.960 --> 00:00:33.820 line:84% position:0% align:start size:76%
 do that I can ask viaduct to map port 8080 and give me a friendly URL I can share.
 
-00:00:33.820 --> 00:00:39.400
+00:00:33.820 --> 00:00:39.400 line:84% position:0% align:start size:76%
 It's given me calm-narwhal.viaduct.sh, and this maps directly to the application running
 
-00:00:39.400 --> 00:00:40.840
+00:00:39.400 --> 00:00:40.840 line:84% position:0% align:start size:76%
 on my machine.
 
-00:00:40.840 --> 00:00:45.120
+00:00:40.840 --> 00:00:45.120 line:84% position:0% align:start size:76%
 I can share this with anyone on the internet and they can see the same application.
 
-00:00:45.120 --> 00:00:48.440
+00:00:45.120 --> 00:00:48.440 line:84% position:0% align:start size:76%
 It's a nice, friendly way to quickly share what you're building.
 
-00:00:48.440 --> 00:00:51.520
+00:00:48.440 --> 00:00:51.520 line:84% position:0% align:start size:76%
 viaduct also comes with lots of different features.
 
-00:00:51.520 --> 00:00:55.280
+00:00:51.520 --> 00:00:55.280 line:84% position:0% align:start size:76%
 You can turn on the live traffic inspector to see what the app is doing, and interact
 
-00:00:55.280 --> 00:01:00.280
+00:00:55.280 --> 00:01:00.280 line:84% position:0% align:start size:76%
 with it in real time and see what's going on, all from your terminal.
 
-00:01:00.280 --> 00:01:01.960
+00:01:00.280 --> 00:01:01.960 line:84% position:0% align:start size:76%
 It's nice and simple, and free to use.
 
-00:01:01.960 --> 00:01:03.440
+00:01:01.960 --> 00:01:03.440 line:84% position:0% align:start size:76%
 There's no sign-up required.
 
-00:01:03.440 --> 00:01:06.200
+00:01:03.440 --> 00:01:06.200 line:84% position:0% align:start size:76%
 I built viaduct because I wanted a tunnel small enough to trust.
 
-00:01:06.200 --> 00:01:11.040
+00:01:06.200 --> 00:01:11.040 line:84% position:0% align:start size:76%
 It's completely open source, a few thousand lines of Python, easy to read, and the
 
-00:01:11.040 --> 00:01:13.280
+00:01:11.040 --> 00:01:13.280 line:84% position:0% align:start size:76%
 whole thing can be run on your own box.
 
-00:01:13.280 --> 00:01:14.480
+00:01:13.280 --> 00:01:14.480 line:84% position:0% align:start size:76%
 I'm Adam, and that's viaduct.
