@@ -146,6 +146,8 @@ ${redirect_rule}
 	header Cache-Control "no-cache"
 	header Strict-Transport-Security "max-age=31536000; includeSubDomains"
 	encode zstd gzip
+	@newsmove path_regexp nm ^/news(/.*)?\$
+	redir @newsmove /articles{re.nm.1} permanent
 	file_server
 	handle_errors {
 		rewrite * /404.html
@@ -187,6 +189,8 @@ ${redirect_rule}
 	header Cache-Control "no-cache"
 	header Strict-Transport-Security "max-age=31536000; includeSubDomains"
 	encode zstd gzip
+	@newsmove path_regexp nm ^/news(/.*)?\$
+	redir @newsmove /articles{re.nm.1} permanent
 	file_server
 	handle_errors {
 		rewrite * /404.html
