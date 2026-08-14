@@ -1,50 +1,50 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>viaduct.sh news</title>
-    <link>https://viaduct.sh/news/</link>
-    <atom:link href="https://viaduct.sh/news/feed.xml" rel="self" type="application/rss+xml" />
+    <title>viaduct.sh articles</title>
+    <link>https://viaduct.sh/articles/</link>
+    <atom:link href="https://viaduct.sh/articles/feed.xml" rel="self" type="application/rss+xml" />
     <description>Updates and notes from the viaduct project.</description>
     <language>en</language>
     <item>
       <title>Name your own tunnel</title>
-      <link>https://viaduct.sh/news/name-your-tunnel/</link>
-      <guid>https://viaduct.sh/news/name-your-tunnel/</guid>
+      <link>https://viaduct.sh/articles/name-your-tunnel/</link>
+      <guid>https://viaduct.sh/articles/name-your-tunnel/</guid>
       <pubDate>Fri, 07 Aug 2026 09:00:00 GMT</pubDate>
       <description>viaduct handed out random names on purpose. Now you can request a specific subdomain with --name, pinned if it is free.</description>
     </item>
     <item>
       <title>Why I built my own reverse tunnel</title>
-      <link>https://viaduct.sh/news/built-a-tunnel/</link>
-      <guid>https://viaduct.sh/news/built-a-tunnel/</guid>
+      <link>https://viaduct.sh/articles/built-a-tunnel/</link>
+      <guid>https://viaduct.sh/articles/built-a-tunnel/</guid>
       <pubDate>Thu, 06 Aug 2026 09:00:00 GMT</pubDate>
       <description>ngrok was my default for years, with localtunnel and Pinggy alongside it. I built my own anyway, and the tunnelling turned out to be the easy part.</description>
     </item>
     <item>
       <title>Idle tunnels stay ready</title>
-      <link>https://viaduct.sh/news/idle-tunnels-stay-ready/</link>
-      <guid>https://viaduct.sh/news/idle-tunnels-stay-ready/</guid>
+      <link>https://viaduct.sh/articles/idle-tunnels-stay-ready/</link>
+      <guid>https://viaduct.sh/articles/idle-tunnels-stay-ready/</guid>
       <pubDate>Tue, 04 Aug 2026 14:00:00 GMT</pubDate>
       <description>A tunnel you leave open but unused now stays live, so the first request after a quiet spell loads straight away instead of hanging.</description>
     </item>
     <item>
       <title>Protect a tunnel with a password, a token, or an IP allowlist</title>
-      <link>https://viaduct.sh/news/protect-your-tunnel/</link>
-      <guid>https://viaduct.sh/news/protect-your-tunnel/</guid>
+      <link>https://viaduct.sh/articles/protect-your-tunnel/</link>
+      <guid>https://viaduct.sh/articles/protect-your-tunnel/</guid>
       <pubDate>Tue, 04 Aug 2026 12:00:00 GMT</pubDate>
       <description>Tunnels are public by default. Now you can gate one with Basic auth, a bearer token, or an IP allowlist, checked at the edge so an unwanted request never reaches your machine.</description>
     </item>
     <item>
       <title>Inspect your traffic live, no restart</title>
-      <link>https://viaduct.sh/news/traffic-inspector/</link>
-      <guid>https://viaduct.sh/news/traffic-inspector/</guid>
+      <link>https://viaduct.sh/articles/traffic-inspector/</link>
+      <guid>https://viaduct.sh/articles/traffic-inspector/</guid>
       <pubDate>Tue, 04 Aug 2026 09:00:00 GMT</pubDate>
       <description>The traffic inspector now toggles on and off with a single key on a running tunnel, no reconnect and no new URL.</description>
     </item>
     <item>
       <title>Welcome to viaduct.sh</title>
-      <link>https://viaduct.sh/news/welcome-to-viaduct/</link>
-      <guid>https://viaduct.sh/news/welcome-to-viaduct/</guid>
+      <link>https://viaduct.sh/articles/welcome-to-viaduct/</link>
+      <guid>https://viaduct.sh/articles/welcome-to-viaduct/</guid>
       <pubDate>Sun, 02 Aug 2026 09:00:00 GMT</pubDate>
       <description>viaduct.sh is a free, open-source reverse tunnel: one command gives a service on your machine a public HTTPS URL, no inbound ports or NAT configuration required.</description>
     </item>

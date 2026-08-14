@@ -32,7 +32,7 @@ NAV = [
     ("/#install", "Install", None),
     ("/network/", "Network", "network"),
     ("/docs/", "Docs", "docs"),
-    ("/news/", "News", "news"),
+    ("/articles/", "Articles", "articles"),
     ("/about/", "About", "about"),
 ]
 
@@ -66,7 +66,7 @@ FOOTER_HTML = (
     '<a href="/network/">Network</a>'
     '<a href="/docs/">Docs</a>'
     '<a href="/compare/">Compare</a>'
-    '<a href="/news/">News</a>'
+    '<a href="/articles/">Articles</a>'
     '<a href="/terms/">Fair use</a>'
     '<a href="https://github.com/webmull/viaduct/blob/main/LICENSE" target="_blank" rel="noreferrer">MIT License</a>'
     "</div></div></footer>"
@@ -78,7 +78,7 @@ F_START, F_END = "<!-- BUILT footer -->", "<!-- /BUILT footer -->"
 
 def active_for(rel):
     seg = rel.split("/", 1)[0]
-    return seg if seg in ("network", "docs", "news", "about") else None
+    return seg if seg in ("network", "docs", "articles", "about") else None
 
 
 def wrap(start, end, markup):
