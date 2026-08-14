@@ -89,3 +89,23 @@ def terminate(pid: int) -> bool:
     except (ProcessLookupError, PermissionError):
         return False
     return True
+
+
+def is_alive(pid: int) -> bool:
+    """Whether *pid* is still running (public form of the liveness check)."""
+    return _alive(pid)
+
+
+def force_kill(pid: int) -> bool:
+    """SIGKILL a tunnel that ignored SIGTERM. True if the signal was sent."""
+    try:
+        os.kill(pid, signal.SIGKILL)
+    except (ProcessLookupError, PermissionError):
+        return False
+    return True
+
+
+def forget(pid: int) -> None:
+    """Drop a pid's record. Used after a force-kill, which cannot deregister itself."""
+    with contextlib.suppress(OSError):
+        _record_path(pid).unlink(missing_ok=True)

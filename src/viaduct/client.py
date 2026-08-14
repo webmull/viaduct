@@ -498,6 +498,10 @@ def list_tunnels() -> None:
     console.print(table)
 
 
+#: Grace after SIGTERM before `kill` force-stops a tunnel that ignores the drain.
+_KILL_GRACE = 5.0
+
+
 @app.command()
 def kill(
     targets: Annotated[
@@ -527,16 +531,33 @@ def kill(
     else:
         console.print("[bold red]viaduct: name a tunnel to stop, or pass --all[/]", highlight=False)
         raise typer.Exit(2)
-    stopped = 0
+    signalled: list[int] = []
     for t in chosen:
-        if registry.terminate(int(t["pid"])):
+        pid = int(t["pid"])
+        if registry.terminate(pid):
             console.print(
-                f"[green]✓[/] stopping [bold]{t.get('subdomain')}[/] [dim](pid {t['pid']})[/]",
+                f"[green]✓[/] stopping [bold]{t.get('subdomain')}[/] [dim](pid {pid})[/]",
                 highlight=False,
             )
-            stopped += 1
-    if stopped:
-        console.print(f"[dim]{stopped} tunnel(s) draining[/]", highlight=False)
+            signalled.append(pid)
+    if not signalled:
+        return
+    # SIGTERM asks them to drain and exit; give a short grace, then SIGKILL any that
+    # ignore it, so kill never silently leaves a tunnel running.
+    deadline = time.monotonic() + _KILL_GRACE
+    while time.monotonic() < deadline and any(registry.is_alive(p) for p in signalled):
+        time.sleep(0.2)
+    forced = 0
+    for pid in signalled:
+        if registry.is_alive(pid) and registry.force_kill(pid):
+            registry.forget(pid)
+            forced += 1
+    if forced:
+        console.print(
+            f"[yellow]{forced} tunnel(s) ignored the drain and were force-stopped[/]",
+            highlight=False,
+        )
+    console.print(f"[dim]{len(signalled)} tunnel(s) stopped[/]", highlight=False)
 
 
 @app.command()

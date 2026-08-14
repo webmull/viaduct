@@ -61,3 +61,11 @@ def test_active_ignores_unreadable_files(tmp_path, monkeypatch):
 
 def test_terminate_missing_process_returns_false():
     assert registry.terminate(999_999) is False
+
+
+def test_force_kill_missing_process_returns_false():
+    assert registry.force_kill(999_999) is False
+
+
+def test_is_alive_missing_process_returns_false():
+    assert registry.is_alive(999_999) is False
