@@ -231,7 +231,7 @@ figure.error-preview p { color: var(--muted-foreground); margin: 0.5rem auto 0; 
 @keyframes blink { 50% { opacity: 0; } }
 
 /* ---------- Embedded video ---------- */
-.video-section { padding: clamp(0.25rem, 1.5vw, 1rem) 0 clamp(1.5rem, 3vw, 2.5rem); }
+.video-section { padding: clamp(1.5rem, 3vw, 2.25rem) 0; }   /* symmetric grey around the video */
 .video-frame {
   max-width: 52rem; margin: 0 auto; border-radius: 1rem; overflow: hidden;
   border: 1px solid var(--border-strong);
