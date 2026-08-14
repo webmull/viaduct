@@ -230,6 +230,17 @@ figure.error-preview p { color: var(--muted-foreground); margin: 0.5rem auto 0; 
 }
 @keyframes blink { 50% { opacity: 0; } }
 
+/* ---------- Embedded video ---------- */
+.video-section { padding: clamp(0.25rem, 1.5vw, 1rem) 0 clamp(1.5rem, 3vw, 2.5rem); }
+.video-frame {
+  max-width: 52rem; margin: 0 auto; border-radius: 1rem; overflow: hidden;
+  border: 1px solid var(--border-strong);
+  box-shadow: 0 30px 70px -34px oklch(0 0 0 / 38%);
+  background: #000;
+}
+.video-frame video { width: 100%; display: block; aspect-ratio: 16 / 9; }
+.video-inline { margin: 1.9rem 0; }
+
 /* ---------- Section scaffolding ---------- */
 section { padding: clamp(1.6rem, 3vw, 2.25rem) 0; }
 /* alternate section grounds so each block is visually distinct as they sit closer */
